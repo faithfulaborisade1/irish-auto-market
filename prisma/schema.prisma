@@ -1,0 +1,387 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  firstName String
+  lastName  String
+  phone     String?
+  avatar    String?
+  role      UserRole @default(USER)
+  status    UserStatus @default(ACTIVE)
+  
+  // Authentication
+  password    String?
+  emailVerified DateTime?
+  
+  // Profile
+  bio         String?
+  location    Json?     // {county: string, city: string}
+  preferences Json?     // User preferences
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLoginAt DateTime?
+  
+  // Relations
+  cars        Car[]
+  inquiries   CarInquiry[]
+  favorites   FavoriteCar[]
+  savedSearches SavedSearch[]
+  dealerProfile DealerProfile?
+  sessions    Session[]
+  accounts    Account[]
+  
+  // NEW: Like System Relations
+  carLikes      CarLike[]
+  notifications Notification[]
+  
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Car {
+  id          String   @id @default(cuid())
+  userId      String
+  
+  // Basic Info
+  title       String
+  make        String
+  model       String
+  year        Int
+  price       Decimal  @db.Decimal(10, 2)
+  currency    String   @default("EUR")
+  
+  // Technical Details
+  mileage     Int?
+  fuelType    FuelType?
+  transmission TransmissionType?
+  engineSize  Decimal? @db.Decimal(3, 1)
+  bodyType    BodyType?
+  doors       Int?
+  seats       Int?
+  color       String?
+  
+  // Condition & History
+  condition   CarCondition @default(USED)
+  previousOwners Int?
+  nctExpiry   DateTime?
+  serviceHistory Boolean @default(false)
+  accidentHistory Boolean @default(false)
+  
+  // Listing Details
+  description String?
+  features    Json?    // Array of strings
+  location    Json?    // {county: string, city: string, coordinates?: {lat: number, lng: number}}
+  
+  // SEO & Status
+  slug        String   @unique
+  status      ListingStatus @default(ACTIVE)
+  featured    Boolean  @default(false)
+  featuredUntil DateTime?
+  
+  // Analytics
+  viewsCount     Int @default(0)
+  inquiriesCount Int @default(0)
+  
+  // NEW: Like System
+  likesCount     Int @default(0)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images      CarImage[]
+  inquiries   CarInquiry[]
+  favorites   FavoriteCar[]
+  
+  // NEW: Like System Relations
+  likes         CarLike[]
+  notifications Notification[]
+  priceHistory  PriceHistory[]
+  
+  @@map("cars")
+}
+
+model CarImage {
+  id          String @id @default(cuid())
+  carId       String
+  
+  originalUrl   String
+  thumbnailUrl  String
+  mediumUrl     String
+  largeUrl      String
+  
+  altText     String?
+  orderIndex  Int
+  fileSize    Int?
+  
+  uploadedAt  DateTime @default(now())
+  
+  car         Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  
+  @@map("car_images")
+}
+
+model CarInquiry {
+  id          String    @id @default(cuid())
+  carId       String
+  buyerId     String
+  
+  message     String
+  contactPhone String?
+  inquiryType InquiryType @default(GENERAL)
+  status      InquiryStatus @default(NEW)
+  
+  createdAt   DateTime  @default(now())
+  respondedAt DateTime?
+  response    String?
+  
+  car         Car       @relation(fields: [carId], references: [id], onDelete: Cascade)
+  buyer       User      @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  
+  @@map("car_inquiries")
+}
+
+model FavoriteCar {
+  id        String   @id @default(cuid())
+  userId    String
+  carId     String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, carId])
+  @@map("favorite_cars")
+}
+
+model SavedSearch {
+  id              String    @id @default(cuid())
+  userId          String
+  name            String
+  searchCriteria  Json      // CarSearchFilters
+  emailAlerts     Boolean   @default(true)
+  alertFrequency  AlertFrequency @default(DAILY)
+  lastNotified    DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("saved_searches")
+}
+
+model DealerProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  
+  businessName      String
+  businessRegistration String?
+  vatNumber         String?
+  description       String?
+  logo              String?
+  website           String?
+  
+  businessHours     Json?     // Opening hours
+  specialties       Json?     // Array of specializations
+  
+  // Subscription
+  subscriptionType  SubscriptionType @default(BASIC)
+  subscriptionExpires DateTime?
+  
+  // Verification
+  verified          Boolean   @default(false)
+  verifiedAt        DateTime?
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("dealer_profiles")
+}
+
+// NEW: Car Like Model
+model CarLike {
+  id        String   @id @default(cuid())
+  userId    String
+  carId     String
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, carId])
+  @@map("car_likes")
+}
+
+// NEW: Notification Model
+model Notification {
+  id        String            @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  carId     String?
+  read      Boolean           @default(false)
+  actionUrl String?
+  metadata  Json?             // Extra data like old_price, new_price
+  createdAt DateTime          @default(now())
+  
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  car       Car?              @relation(fields: [carId], references: [id], onDelete: Cascade)
+  
+  @@map("notifications")
+}
+
+// NEW: Price History Model
+model PriceHistory {
+  id        String   @id @default(cuid())
+  carId     String
+  oldPrice  Decimal  @db.Decimal(10, 2)
+  newPrice  Decimal  @db.Decimal(10, 2)
+  changedAt DateTime @default(now())
+  
+  car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  
+  @@map("price_history")
+}
+
+// Existing Enums
+enum UserRole {
+  USER
+  DEALER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum FuelType {
+  PETROL
+  DIESEL
+  ELECTRIC
+  HYBRID
+  PLUGIN_HYBRID
+  LPG
+  CNG
+}
+
+enum TransmissionType {
+  MANUAL
+  AUTOMATIC
+  SEMI_AUTOMATIC
+  CVT
+}
+
+enum BodyType {
+  HATCHBACK
+  SALOON
+  ESTATE
+  SUV
+  COUPE
+  CONVERTIBLE
+  MPV
+  VAN
+  PICKUP
+  OTHER
+}
+
+enum CarCondition {
+  NEW
+  USED
+  CERTIFIED_PRE_OWNED
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  PENDING
+  EXPIRED
+  DRAFT
+}
+
+enum InquiryType {
+  GENERAL
+  PRICE_NEGOTIATION
+  VIEWING_REQUEST
+  FINANCE_INQUIRY
+  TRADE_IN
+}
+
+enum InquiryStatus {
+  NEW
+  READ
+  RESPONDED
+  CLOSED
+}
+
+enum AlertFrequency {
+  INSTANT
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum SubscriptionType {
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+// NEW: Notification Type Enum
+enum NotificationType {
+  CAR_LIKED
+  PRICE_DROP
+  CAR_SOLD
+  INQUIRY_RECEIVED
+  SYSTEM_UPDATE
+}
