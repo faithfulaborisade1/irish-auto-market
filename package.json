@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
@@ -13,13 +13,12 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
-    "@radix-ui/react-slot": "^1.2.3",
     "bcryptjs": "^2.4.3",
-    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",
     "jsonwebtoken": "^9.0.2",
@@ -27,8 +26,7 @@
     "next": "^14.2.29",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tailwind-merge": "^2.2.0",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwind-merge": "^2.2.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
