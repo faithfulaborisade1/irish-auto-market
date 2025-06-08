@@ -13,16 +13,17 @@ export default function Footer() {
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
-              <img 
-                src="/images/logo.png" 
-                alt="Irish Auto Market Logo" 
-                className="h-10 w-10"
-              />
+              {/* CSS-based logo matching header */}
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-600 via-green-500 to-orange-500 flex items-center justify-center shadow-lg">
+                <div className="text-white font-bold text-lg tracking-tight">
+                  IA
+                </div>
+              </div>
               <div className="flex items-center space-x-2">
                 <div className="text-xl font-bold text-white">
                   IRISH
                 </div>
-                <div className="text-xl font-bold text-secondary">
+                <div className="text-xl font-bold text-orange-500">
                   AUTO MARKET
                 </div>
               </div>
@@ -125,7 +126,7 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-4">Contact Info</h3>
             <div className="space-y-3">
               <div className="flex items-start space-x-3">
-                <MapPin className="w-5 h-5 text-secondary mt-0.5 flex-shrink-0" />
+                <MapPin className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-gray-300">
                   <p>Irish Auto Market Ltd.</p>
                   <p>123 O'Connell Street</p>
@@ -135,7 +136,7 @@ export default function Footer() {
               </div>
               
               <div className="flex items-center space-x-3">
-                <Phone className="w-5 h-5 text-secondary flex-shrink-0" />
+                <Phone className="w-5 h-5 text-orange-500 flex-shrink-0" />
                 <div className="text-sm text-gray-300">
                   <a href="tel:+35318001234" className="hover:text-white transition-colors">
                     +353 1 800 1234
@@ -144,7 +145,7 @@ export default function Footer() {
               </div>
               
               <div className="flex items-center space-x-3">
-                <Mail className="w-5 h-5 text-secondary flex-shrink-0" />
+                <Mail className="w-5 h-5 text-orange-500 flex-shrink-0" />
                 <div className="text-sm text-gray-300">
                   <a href="mailto:info@irishautomarket.ie" className="hover:text-white transition-colors">
                     info@irishautomarket.ie
@@ -205,7 +206,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center space-x-2">
                 <span>Powered by</span>
-                <span className="text-secondary font-medium">Irish Auto Market Technology</span>
+                <span className="text-orange-500 font-medium">Irish Auto Market Technology</span>
               </div>
             </div>
           </div>
