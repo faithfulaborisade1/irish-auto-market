@@ -1,3 +1,6 @@
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic'
+
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
