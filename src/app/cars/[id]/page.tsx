@@ -12,11 +12,26 @@ import LikeButton from '@/components/LikeButton'
 // Fetch single car from API
 async function getCar(id: string) {
   try {
-    const response = await fetch(`${process.env.APP_URL || 'http://localhost:3000'}/api/cars/${id}`, {
+    // For server-side rendering, we need an absolute URL
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NEXTAUTH_URL || 'http://localhost:3000'
+    
+    const apiUrl = `${baseUrl}/api/cars/${id}`
+    console.log('Fetching from:', apiUrl) // Debug log
+    
+    const response = await fetch(apiUrl, {
       cache: 'no-store',
     })
-    if (!response.ok) return null
-    return await response.json()
+    
+    if (!response.ok) {
+      console.error(`API response not ok: ${response.status}`)
+      return null
+    }
+    
+    const data = await response.json()
+    console.log('API response:', data) // Debug log
+    return data
   } catch (error) {
     console.error('Error fetching car:', error)
     return null
