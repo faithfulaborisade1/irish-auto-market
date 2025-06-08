@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/database'
 import jwt from 'jsonwebtoken'
 
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic'
+
 // Get current user from JWT token
 async function getCurrentUser(request: NextRequest) {
   try {

@@ -1,7 +1,9 @@
-// apps/web/src/app/api/auth/me/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/database';
 import jwt from 'jsonwebtoken';
+
+// Force dynamic rendering for this API route
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
