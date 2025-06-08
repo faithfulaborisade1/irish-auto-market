@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+// Remove this line: import Image from 'next/image'
 import { User, LogOut, Settings, Heart, FileText, ChevronDown } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import NotificationBell from './NotificationBell'
@@ -63,8 +64,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-
-         <div className="flex items-center">
+          <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-3">
               {/* CSS-based logo that always works */}
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-600 via-green-500 to-orange-500 flex items-center justify-center shadow-lg">
