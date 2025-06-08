@@ -176,9 +176,13 @@ function CarsContent() {
         <div className={`gap-6 ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'space-y-6'}`}>
           {cars.map((car) => (
             <div key={car.id} className={`bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow ${
-              viewMode === 'list' ? 'flex' : ''
+              viewMode === 'list' ? 'md:flex' : ''
             }`}>
-              <div className={`relative ${viewMode === 'list' ? 'w-80 h-48 flex-shrink-0' : 'h-48'}`}>
+              <div className={`relative ${
+                viewMode === 'list' 
+                  ? 'h-48 md:w-80 md:h-56 md:flex-shrink-0' 
+                  : 'h-48'
+              }`}>
                 <Image
                   src={car.images[0]?.url || '/placeholder-car.jpg'}
                   alt={car.images[0]?.alt || car.title}
@@ -207,9 +211,15 @@ function CarsContent() {
                 </div>
               </div>
 
-              <div className={`p-6 ${viewMode === 'list' ? 'flex-1 flex flex-col justify-between' : ''}`}>
+              <div className={`p-6 ${
+                viewMode === 'list' 
+                  ? 'md:flex-1 md:flex md:flex-col md:justify-between' 
+                  : ''
+              }`}>
                 <div>
-                  <h3 className={`font-bold text-gray-900 mb-2 ${viewMode === 'list' ? 'text-2xl' : 'text-xl'}`}>
+                  <h3 className={`font-bold text-gray-900 mb-2 ${
+                    viewMode === 'list' ? 'text-xl md:text-2xl' : 'text-xl'
+                  }`}>
                     {car.title}
                   </h3>
                   
@@ -219,7 +229,9 @@ function CarsContent() {
                   </div>
 
                   <div className={`grid gap-4 mb-4 text-sm ${
-                    viewMode === 'list' ? 'grid-cols-4' : 'grid-cols-2'
+                    viewMode === 'list' 
+                      ? 'grid-cols-2 md:grid-cols-4' 
+                      : 'grid-cols-2'
                   }`}>
                     <div>
                       <span className="text-gray-500">Year:</span>
@@ -240,7 +252,9 @@ function CarsContent() {
                   </div>
                 </div>
 
-                <div className={`flex items-center justify-between ${viewMode === 'list' ? 'mt-4' : ''}`}>
+                <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 ${
+                  viewMode === 'list' ? 'md:mt-4' : ''
+                }`}>
                   <div className="flex items-center space-x-3">
                     <span className="text-sm text-gray-600">
                       {car.seller.verified ? '✓ Verified' : ''} {car.seller.type}
@@ -254,7 +268,7 @@ function CarsContent() {
                   </div>
                   <Link
                     href={`/cars/${car.id}`}
-                    className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors"
+                    className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors text-center sm:text-left"
                   >
                     View Details
                   </Link>
