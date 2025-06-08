@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { User, LogOut, Settings, Heart, FileText, ChevronDown } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import NotificationBell from './NotificationBell'
@@ -65,11 +66,15 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-3">
-              <img 
-                src="/images/logo.png" 
-                alt="Irish Auto Market Logo" 
-                className="h-10 w-10"
-              />
+              <div className="relative h-10 w-10">
+                <Image 
+                  src="/images/logo.png" 
+                  alt="Irish Auto Market Logo" 
+                  fill
+                  className="object-contain"
+                  priority
+                />
+              </div>
               <div className="flex items-center space-x-2">
                 <div className="text-xl font-bold text-gray-900">
                   IRISH
