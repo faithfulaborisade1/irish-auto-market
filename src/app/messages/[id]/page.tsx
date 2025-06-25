@@ -75,7 +75,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout>()
 
-  // Initialize socket connection
+  // Initialize socket connection (disabled in production)
   const { socket, connected, joinConversation, leaveConversation, sendTyping, stopTyping, broadcastMessage, broadcastRead } = useSocket(currentUser?.id)
 
   // Get current user and set up socket
@@ -104,49 +104,16 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     scrollToBottom()
   }, [messages])
 
-  // Socket event listeners
+  // Socket event listeners (disabled in production)
   useEffect(() => {
     if (!socket || !currentUser) return
 
-    // Join conversation room
+    // All WebSocket functionality disabled for production
+    // These functions do nothing but prevent errors
     joinConversation(conversationId)
-
-    // Listen for new messages
-    socket.on('new_message', (data) => {
-      // Don't add message if it's from current user (to avoid duplicates)
-      if (data.senderId !== currentUser.id) {
-        setMessages(prev => [...prev, data.message])
-      }
-    })
-
-    // Listen for typing indicators
-    socket.on('user_typing', (data) => {
-      if (data.userId !== currentUser.id) {
-        setTypingUsers(prev => {
-          if (data.isTyping) {
-            return prev.includes(data.userName) ? prev : [...prev, data.userName]
-          } else {
-            return prev.filter(name => name !== data.userName)
-          }
-        })
-      }
-    })
-
-    // Listen for message read status
-    socket.on('message_read', (data) => {
-      setMessages(prev => 
-        prev.map(msg => ({
-          ...msg,
-          readAt: data.readAt
-        }))
-      )
-    })
 
     return () => {
       leaveConversation(conversationId)
-      socket.off('new_message')
-      socket.off('user_typing')
-      socket.off('message_read')
     }
   }, [socket, currentUser, conversationId])
 
@@ -233,7 +200,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
           )
         )
         
-        // Broadcast message to other users via WebSocket
+        // Broadcast message (disabled in production)
         if (currentUser) {
           broadcastMessage(conversationId, data.message, currentUser.id)
         }

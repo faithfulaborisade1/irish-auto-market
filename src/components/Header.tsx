@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { User, LogOut, Settings, Heart, FileText, ChevronDown, MessageCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import NotificationBell from './NotificationBell'
-import { useSocket } from '@/hooks/useSocket'
 
 interface HeaderProps {
   currentPage?: 'home' | 'cars' | 'sell' | 'dealers' | 'about' | 'messages'
@@ -15,9 +14,6 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [loading, setLoading] = useState(true)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
-
-  // Initialize socket for real-time unread count updates
-  const { socket } = useSocket(user?.id)
 
   // Check if user is logged in
   useEffect(() => {
@@ -36,26 +32,6 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
     }
     checkAuth()
   }, [])
-
-  // Socket event listeners for real-time updates
-  useEffect(() => {
-    if (!socket || !user) return
-
-    // Listen for unread count updates
-    socket.on('unread_count_update', (data) => {
-      if (data.increment) {
-        setUnreadMessagesCount(prev => prev + data.increment)
-      } else if (data.decrement) {
-        setUnreadMessagesCount(prev => Math.max(0, prev - data.decrement))
-      } else if (typeof data.count === 'number') {
-        setUnreadMessagesCount(data.count)
-      }
-    })
-
-    return () => {
-      socket.off('unread_count_update')
-    }
-  }, [socket, user])
 
   // Fetch unread messages count when user is logged in
   useEffect(() => {
@@ -113,7 +89,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
               {/* CSS-based logo that always works */}
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-600 via-green-500 to-orange-500 flex items-center justify-center shadow-lg">
                 <div className="text-white font-bold text-lg tracking-tight">
-                  IAM
+                  IA
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -189,8 +165,8 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                   )}
                 </Link>
 
-                {/* Notification Bell
-                <NotificationBell userId={user.id} /> */}
+                {/* Notification Bell */}
+                <NotificationBell userId={user.id} />
                 
                 {/* User Menu */}
                 <div className="relative" id="user-dropdown">

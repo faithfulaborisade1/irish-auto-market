@@ -1,11 +1,9 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { Socket } from 'socket.io-client'
-import { useSocket } from '@/hooks/useSocket'
+import { createContext, useContext, ReactNode } from 'react'
 
 interface SocketContextType {
-  socket: Socket | null
+  socket: null
   connected: boolean
   onlineUsers: string[]
   unreadCounts: Record<string, number>
@@ -24,40 +22,12 @@ interface SocketProviderProps {
 }
 
 export function SocketProvider({ children, userId }: SocketProviderProps) {
-  const { socket, connected } = useSocket(userId)
-  const [onlineUsers, setOnlineUsers] = useState<string[]>([])
-  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({})
-
-  useEffect(() => {
-    if (!socket) return
-
-    // Listen for user status changes
-    socket.on('user_status_change', (data) => {
-      setOnlineUsers(prev => {
-        if (data.status === 'online') {
-          return prev.includes(data.userId) ? prev : [...prev, data.userId]
-        } else {
-          return prev.filter(id => id !== data.userId)
-        }
-      })
-    })
-
-    // Listen for global unread count updates
-    socket.on('unread_counts_update', (data) => {
-      setUnreadCounts(data.counts)
-    })
-
-    return () => {
-      socket.off('user_status_change')
-      socket.off('unread_counts_update')
-    }
-  }, [socket])
-
+  // Disabled for production - no WebSocket functionality
   const value = {
-    socket,
-    connected,
-    onlineUsers,
-    unreadCounts
+    socket: null,
+    connected: false,
+    onlineUsers: [],
+    unreadCounts: {}
   }
 
   return (
