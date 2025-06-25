@@ -44,9 +44,14 @@ model User {
   sessions    Session[]
   accounts    Account[]
   
-  // NEW: Like System Relations
+  // Like System Relations
   carLikes      CarLike[]
   notifications Notification[]
+  
+  // NEW: Messaging Relations
+  buyerConversations  Conversation[] @relation("BuyerConversations")
+  sellerConversations Conversation[] @relation("SellerConversations")
+  sentMessages        Message[]
   
   @@map("users")
 }
@@ -124,8 +129,6 @@ model Car {
   // Analytics
   viewsCount     Int @default(0)
   inquiriesCount Int @default(0)
-  
-  // NEW: Like System
   likesCount     Int @default(0)
   
   // Timestamps
@@ -137,11 +140,12 @@ model Car {
   images      CarImage[]
   inquiries   CarInquiry[]
   favorites   FavoriteCar[]
-  
-  // NEW: Like System Relations
-  likes         CarLike[]
+  likes       CarLike[]
   notifications Notification[]
   priceHistory  PriceHistory[]
+  
+  // NEW: Messaging Relations
+  conversations Conversation[]
   
   @@map("cars")
 }
@@ -245,7 +249,6 @@ model DealerProfile {
   @@map("dealer_profiles")
 }
 
-// NEW: Car Like Model
 model CarLike {
   id        String   @id @default(cuid())
   userId    String
@@ -259,7 +262,6 @@ model CarLike {
   @@map("car_likes")
 }
 
-// NEW: Notification Model
 model Notification {
   id        String            @id @default(cuid())
   userId    String
@@ -278,7 +280,6 @@ model Notification {
   @@map("notifications")
 }
 
-// NEW: Price History Model
 model PriceHistory {
   id        String   @id @default(cuid())
   carId     String
@@ -291,7 +292,68 @@ model PriceHistory {
   @@map("price_history")
 }
 
-// Existing Enums
+// NEW: Messaging Models
+model Conversation {
+  id          String   @id @default(cuid())
+  carId       String
+  buyerId     String
+  sellerId    String
+  
+  // Conversation status
+  status      ConversationStatus @default(ACTIVE)
+  lastMessageAt DateTime?
+  
+  // Quick access to latest message for inbox display
+  lastMessage   String?
+  lastMessageBy String?  // userId who sent last message
+  
+  // Read status for both participants
+  buyerLastRead    DateTime?
+  sellerLastRead   DateTime?
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  car         Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  buyer       User     @relation("BuyerConversations", fields: [buyerId], references: [id], onDelete: Cascade)
+  seller      User     @relation("SellerConversations", fields: [sellerId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  
+  // Ensure one conversation per car per buyer
+  @@unique([carId, buyerId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  
+  // Message content
+  content        String
+  messageType    MessageType @default(TEXT)
+  
+  // File attachments (for images)
+  attachments    Json?    // Array of {url: string, type: string, name: string}
+  
+  // Message status
+  readAt         DateTime?
+  editedAt       DateTime?
+  
+  // Timestamps
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  
+  @@map("messages")
+}
+
+// Enums
 enum UserRole {
   USER
   DEALER
@@ -377,11 +439,24 @@ enum SubscriptionType {
   ENTERPRISE
 }
 
-// NEW: Notification Type Enum
 enum NotificationType {
   CAR_LIKED
   PRICE_DROP
   CAR_SOLD
   INQUIRY_RECEIVED
   SYSTEM_UPDATE
+  MESSAGE_RECEIVED  // NEW: For messaging notifications
+}
+
+// NEW: Messaging Enums
+enum ConversationStatus {
+  ACTIVE
+  ARCHIVED
+  BLOCKED
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  SYSTEM  // For system messages like "Car price updated"
 }

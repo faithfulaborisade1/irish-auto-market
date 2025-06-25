@@ -1,19 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-// Remove this line: import Image from 'next/image'
-import { User, LogOut, Settings, Heart, FileText, ChevronDown } from 'lucide-react'
+import { User, LogOut, Settings, Heart, FileText, ChevronDown, MessageCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import NotificationBell from './NotificationBell'
+import { useSocket } from '@/hooks/useSocket'
 
 interface HeaderProps {
-  currentPage?: 'home' | 'cars' | 'sell' | 'dealers' | 'about'
+  currentPage?: 'home' | 'cars' | 'sell' | 'dealers' | 'about' | 'messages'
 }
 
 export default function Header({ currentPage = 'home' }: HeaderProps) {
   const [user, setUser] = useState<any>(null)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+
+  // Initialize socket for real-time unread count updates
+  const { socket } = useSocket(user?.id)
 
   // Check if user is logged in
   useEffect(() => {
@@ -32,6 +36,46 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
     }
     checkAuth()
   }, [])
+
+  // Socket event listeners for real-time updates
+  useEffect(() => {
+    if (!socket || !user) return
+
+    // Listen for unread count updates
+    socket.on('unread_count_update', (data) => {
+      if (data.increment) {
+        setUnreadMessagesCount(prev => prev + data.increment)
+      } else if (data.decrement) {
+        setUnreadMessagesCount(prev => Math.max(0, prev - data.decrement))
+      } else if (typeof data.count === 'number') {
+        setUnreadMessagesCount(data.count)
+      }
+    })
+
+    return () => {
+      socket.off('unread_count_update')
+    }
+  }, [socket, user])
+
+  // Fetch unread messages count when user is logged in
+  useEffect(() => {
+    if (user) {
+      fetchUnreadMessagesCount()
+    }
+  }, [user])
+
+  const fetchUnreadMessagesCount = async () => {
+    try {
+      const response = await fetch('/api/conversations')
+      const data = await response.json()
+      if (data.success) {
+        const unreadCount = data.conversations.filter((conv: any) => conv.hasUnread).length
+        setUnreadMessagesCount(unreadCount)
+      }
+    } catch (error) {
+      console.error('Error fetching unread messages count:', error)
+    }
+  }
 
   const handleLogout = async () => {
     try {
@@ -69,7 +113,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
               {/* CSS-based logo that always works */}
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-600 via-green-500 to-orange-500 flex items-center justify-center shadow-lg">
                 <div className="text-white font-bold text-lg tracking-tight">
-                  IA
+                  IAM
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -127,8 +171,26 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
             ) : user ? (
               // Logged in user section
               <div className="flex items-center space-x-3">
-                {/* Notification Bell */}
-                <NotificationBell userId={user.id} />
+                {/* Messages Link with Badge */}
+                <Link
+                  href="/messages"
+                  className={`relative flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
+                    currentPage === 'messages'
+                      ? 'bg-primary text-white'
+                      : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                  }`}
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  <span className="hidden sm:block font-medium">Messages</span>
+                  {unreadMessagesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                    </span>
+                  )}
+                </Link>
+
+                {/* Notification Bell
+                <NotificationBell userId={user.id} /> */}
                 
                 {/* User Menu */}
                 <div className="relative" id="user-dropdown">
@@ -164,6 +226,20 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                       >
                         <User className="w-4 h-4 mr-3" />
                         Profile
+                      </Link>
+
+                      <Link 
+                        href="/messages" 
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <MessageCircle className="w-4 h-4 mr-3" />
+                        Messages
+                        {unreadMessagesCount > 0 && (
+                          <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                            {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                          </span>
+                        )}
                       </Link>
                       
                       {(user.role === 'DEALER' || user.role === 'USER') && (

@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowLeft, Phone, Mail, MapPin, Calendar, Gauge, Fuel, Settings, Eye, MessageCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, Phone, Mail, MapPin, Calendar, Gauge, Fuel, Settings, Eye, MessageCircle, X } from 'lucide-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import LikeButton from '@/components/LikeButton'
@@ -16,38 +17,113 @@ interface CarDetailPageProps {
 }
 
 export default function CarDetailPage({ params }: CarDetailPageProps) {
+  const router = useRouter()
   const [car, setCar] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [showMessageModal, setShowMessageModal] = useState(false)
+  const [messageText, setMessageText] = useState('')
+  const [sendingMessage, setSendingMessage] = useState(false)
 
   useEffect(() => {
-    async function fetchCar() {
-      try {
-        setLoading(true)
-        // Client-side fetch uses relative URL
-        const response = await fetch(`/api/cars/${params.id}`)
-        
-        if (!response.ok) {
-          setError(true)
-          return
-        }
-        
-        const data = await response.json()
-        if (data.success && data.car) {
-          setCar(data.car)
-        } else {
-          setError(true)
-        }
-      } catch (error) {
-        console.error('Error fetching car:', error)
-        setError(true)
-      } finally {
-        setLoading(false)
+    fetchCar()
+    checkAuth()
+  }, [params.id])
+
+  const checkAuth = async () => {
+    try {
+      const response = await fetch('/api/auth/me')
+      const data = await response.json()
+      if (data.success) {
+        setUser(data.user)
       }
+    } catch (error) {
+      console.log('User not logged in')
+    }
+  }
+
+  async function fetchCar() {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/cars/${params.id}`)
+      
+      if (!response.ok) {
+        setError(true)
+        return
+      }
+      
+      const data = await response.json()
+      if (data.success && data.car) {
+        setCar(data.car)
+      } else {
+        setError(true)
+      }
+    } catch (error) {
+      console.error('Error fetching car:', error)
+      setError(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || sendingMessage) return
+    
+    if (!user) {
+      router.push('/login')
+      return
     }
 
-    fetchCar()
-  }, [params.id])
+    if (user.id === car.userId) {
+      alert("You can't message yourself about your own car!")
+      return
+    }
+
+    try {
+      setSendingMessage(true)
+      
+      const response = await fetch('/api/conversations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          carId: params.id,
+          message: messageText.trim()
+        })
+      })
+
+      const data = await response.json()
+      
+      if (data.success) {
+        // Redirect to the conversation
+        router.push(`/messages/${data.conversation.id}`)
+      } else {
+        alert('Failed to send message: ' + data.error)
+      }
+    } catch (error) {
+      console.error('Error sending message:', error)
+      alert('Failed to send message. Please try again.')
+    } finally {
+      setSendingMessage(false)
+    }
+  }
+
+  const openMessageModal = () => {
+    if (!user) {
+      router.push('/login')
+      return
+    }
+    
+    if (user.id === car.userId) {
+      alert("You can't message yourself about your own car!")
+      return
+    }
+    
+    setShowMessageModal(true)
+    setMessageText(`Hi, I'm interested in your ${car.make} ${car.model} ${car.year}. Is it still available?`)
+  }
 
   if (loading) {
     return (
@@ -84,7 +160,6 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Shared Header */}
       <Header />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
@@ -198,8 +273,12 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
                 </div>
               </div>
 
-              <button className="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 font-medium mb-3 transition-colors">
-                Contact Seller
+              <button 
+                onClick={openMessageModal}
+                className="w-full bg-primary text-white py-3 px-4 rounded-lg hover:bg-primary/90 font-medium mb-3 transition-colors flex items-center justify-center"
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Send Message
               </button>
               
               <div className="flex space-x-3">
@@ -244,8 +323,11 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
                   <Phone className="w-4 h-4 mr-2" />
                   Call Now
                 </a>
-                <button className="flex items-center justify-center w-full border border-blue-600 text-blue-600 py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors">
-                  <Mail className="w-4 h-4 mr-2" />
+                <button 
+                  onClick={openMessageModal}
+                  className="flex items-center justify-center w-full border border-blue-600 text-blue-600 py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
                   Send Message
                 </button>
               </div>
@@ -254,7 +336,72 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
         </div>
       </div>
 
-      {/* Shared Footer */}
+      {/* Message Modal */}
+      {showMessageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Send Message to Seller</h3>
+                <button
+                  onClick={() => setShowMessageModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="mb-4">
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <img
+                    src={car.images[0]?.url || '/placeholder-car.jpg'}
+                    alt={car.title}
+                    className="w-12 h-12 rounded object-cover"
+                  />
+                  <div>
+                    <div className="font-medium text-sm">{car.make} {car.model} {car.year}</div>
+                    <div className="text-primary font-semibold">€{car.price.toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Your message
+                </label>
+                <textarea
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  placeholder="Write your message here..."
+                  rows={4}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowMessageModal(false)}
+                  className="flex-1 border border-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!messageText.trim() || sendingMessage}
+                  className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                    messageText.trim() && !sendingMessage
+                      ? 'bg-primary text-white hover:bg-primary/90'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {sendingMessage ? 'Sending...' : 'Send Message'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </div>
   )

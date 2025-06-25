@@ -113,9 +113,9 @@ export async function GET(request: NextRequest) {
     const cars = await db.car.findMany({
       where,
       include: {
+        // FIXED: Get ALL images, not just first one
         images: {
           orderBy: { orderIndex: 'asc' },
-          take: 1,
         },
         user: {
           include: {
@@ -161,11 +161,16 @@ export async function GET(request: NextRequest) {
       likesCount: car.likesCount,
       isLiked: currentUserId ? car.likes.length > 0 : false,
       
-      images: car.images.map(img => ({
+      // FIXED: More robust image handling
+      images: car.images.length > 0 ? car.images.map(img => ({
         id: img.id,
         url: img.largeUrl,
         alt: img.altText || `${car.make} ${car.model}`,
-      })),
+      })) : [{
+        id: 'placeholder',
+        url: '/placeholder-car.jpg',
+        alt: `${car.make} ${car.model}`,
+      }],
       seller: {
         name: car.user.dealerProfile?.businessName || `${car.user.firstName} ${car.user.lastName}`,
         type: car.user.role === 'DEALER' ? 'dealer' : 'private',

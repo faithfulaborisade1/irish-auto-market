@@ -14,6 +14,7 @@ dist/
 # Environment variables
 .env
 .env.local
+.env*.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -113,3 +114,13 @@ temp/
 # Prisma
 prisma/migrations/
 *.db-journal
+
+# Database utility scripts (development only)
+fix-dealer-password.js
+prisma/add-images.ts
+prisma/cleanup-and-fix.ts
+prisma/debug-*.ts
+prisma/fix-*.ts
+prisma/fresh-cars.ts
+prisma/replace-cars.ts
+prisma/seed.ts

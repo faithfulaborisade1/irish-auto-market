@@ -9,19 +9,101 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import LikeButton from '@/components/LikeButton'
 
+// Irish Car Market Data - Real makes and models
+const CAR_DATA = {
+  'BMW': ['1 Series', '2 Series', '3 Series', '4 Series', '5 Series', 'X1', 'X3', 'X5', 'i3', 'i4'],
+  'Audi': ['A1', 'A3', 'A4', 'A6', 'Q2', 'Q3', 'Q5', 'Q7', 'e-tron'],
+  'Mercedes-Benz': ['A-Class', 'C-Class', 'E-Class', 'S-Class', 'GLA', 'GLC', 'GLE', 'EQA'],
+  'Volkswagen': ['Polo', 'Golf', 'Passat', 'Tiguan', 'Touareg', 'ID.3', 'ID.4'],
+  'Toyota': ['Yaris', 'Corolla', 'Camry', 'RAV4', 'Highlander', 'Prius', 'C-HR'],
+  'Ford': ['Fiesta', 'Focus', 'Mondeo', 'Kuga', 'EcoSport', 'Mustang'],
+  'Nissan': ['Micra', 'Qashqai', 'X-Trail', 'Juke', 'Leaf'],
+  'Hyundai': ['i10', 'i20', 'i30', 'Tucson', 'Santa Fe', 'Kona'],
+  'Kia': ['Picanto', 'Rio', 'Ceed', 'Sportage', 'Sorento', 'Niro'],
+  'Renault': ['Clio', 'Megane', 'Kadjar', 'Captur', 'Zoe'],
+  'Peugeot': ['108', '208', '308', '508', '2008', '3008', '5008'],
+  'Opel': ['Corsa', 'Astra', 'Insignia', 'Crossland', 'Grandland'],
+  'Skoda': ['Citigo', 'Fabia', 'Octavia', 'Superb', 'Karoq', 'Kodiaq'],
+  'SEAT': ['Ibiza', 'Leon', 'Arona', 'Ateca', 'Tarraco'],
+  'Mazda': ['2', '3', '6', 'CX-3', 'CX-5', 'CX-30'],
+  'Honda': ['Jazz', 'Civic', 'Accord', 'CR-V', 'HR-V'],
+  'Subaru': ['Impreza', 'Legacy', 'Outback', 'Forester', 'XV'],
+  'Tesla': ['Model 3', 'Model S', 'Model X', 'Model Y'],
+  'Volvo': ['V40', 'V60', 'V90', 'XC40', 'XC60', 'XC90'],
+  'Jaguar': ['XE', 'XF', 'F-Pace', 'E-Pace', 'I-Pace'],
+  'Land Rover': ['Range Rover Evoque', 'Range Rover Sport', 'Discovery', 'Defender'],
+  'Lexus': ['IS', 'ES', 'NX', 'RX', 'UX'],
+  'Alfa Romeo': ['Giulia', 'Stelvio', 'Giulietta'],
+  'Fiat': ['500', 'Panda', 'Tipo', '500X'],
+  'Jeep': ['Renegade', 'Compass', 'Cherokee', 'Grand Cherokee'],
+  'Mini': ['Cooper', 'Countryman', 'Clubman'],
+  'Porsche': ['911', 'Cayenne', 'Macan', 'Panamera', 'Taycan']
+}
+
+// Price ranges for dropdown
+const PRICE_RANGES = [
+  { value: '1000', label: '€1,000' },
+  { value: '2000', label: '€2,000' },
+  { value: '3000', label: '€3,000' },
+  { value: '4000', label: '€4,000' },
+  { value: '5000', label: '€5,000' },
+  { value: '7500', label: '€7,500' },
+  { value: '10000', label: '€10,000' },
+  { value: '12500', label: '€12,500' },
+  { value: '15000', label: '€15,000' },
+  { value: '17500', label: '€17,500' },
+  { value: '20000', label: '€20,000' },
+  { value: '25000', label: '€25,000' },
+  { value: '30000', label: '€30,000' },
+  { value: '35000', label: '€35,000' },
+  { value: '40000', label: '€40,000' },
+  { value: '45000', label: '€45,000' },
+  { value: '50000', label: '€50,000' },
+  { value: '60000', label: '€60,000' },
+  { value: '70000', label: '€70,000' },
+  { value: '80000', label: '€80,000' },
+  { value: '90000', label: '€90,000' },
+  { value: '100000', label: '€100,000' },
+  { value: '125000', label: '€125,000' },
+  { value: '150000', label: '€150,000' },
+  { value: '200000', label: '€200,000' },
+  { value: '250000', label: '€250,000' }
+]
+
+// Year ranges for dropdown
+const YEAR_OPTIONS: { value: string; label: string }[] = []
+for (let year = 2025; year >= 2000; year--) {
+  YEAR_OPTIONS.push({ value: year.toString(), label: year.toString() })
+}
+
+// Irish counties
+const IRISH_COUNTIES = [
+  'Antrim', 'Armagh', 'Carlow', 'Cavan', 'Clare', 'Cork', 'Derry', 'Donegal', 
+  'Down', 'Dublin', 'Fermanagh', 'Galway', 'Kerry', 'Kildare', 'Kilkenny', 
+  'Laois', 'Leitrim', 'Limerick', 'Longford', 'Louth', 'Mayo', 'Meath', 
+  'Monaghan', 'Offaly', 'Roscommon', 'Sligo', 'Tipperary', 'Tyrone', 
+  'Waterford', 'Westmeath', 'Wexford', 'Wicklow'
+]
+
 export default function HomePage() {
   const router = useRouter()
   const [cars, setCars] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [carCount, setCarCount] = useState(0)
   const [searchFilters, setSearchFilters] = useState({
     searchText: '',
     make: '',
-    priceRange: '',
-    year: '',
-    county: ''
+    model: '',
+    minPrice: '',
+    maxPrice: '',
+    minYear: '',
+    maxYear: ''
   })
 
-  // Fetch cars on client side only
+  // Available models based on selected make
+  const availableModels = searchFilters.make ? CAR_DATA[searchFilters.make as keyof typeof CAR_DATA] || [] : []
+
+  // Fetch cars and count on client side only
   useEffect(() => {
     async function fetchCars() {
       try {
@@ -29,6 +111,7 @@ export default function HomePage() {
         const data = await response.json()
         if (data.success) {
           setCars(data.cars)
+          setCarCount(data.cars.length)
         }
       } catch (error) {
         console.error('Error fetching cars:', error)
@@ -39,6 +122,13 @@ export default function HomePage() {
     fetchCars()
   }, [])
 
+  // Reset model when make changes
+  useEffect(() => {
+    if (searchFilters.make) {
+      setSearchFilters(prev => ({ ...prev, model: '' }))
+    }
+  }, [searchFilters.make])
+
   const featuredCars = cars.filter((car: any) => car.featured)
 
   const handleSearch = (e: React.FormEvent) => {
@@ -47,9 +137,11 @@ export default function HomePage() {
     const params = new URLSearchParams()
     if (searchFilters.searchText) params.set('q', searchFilters.searchText)
     if (searchFilters.make) params.set('make', searchFilters.make)
-    if (searchFilters.priceRange) params.set('priceRange', searchFilters.priceRange)
-    if (searchFilters.year) params.set('year', searchFilters.year)
-    if (searchFilters.county) params.set('county', searchFilters.county)
+    if (searchFilters.model) params.set('model', searchFilters.model)
+    if (searchFilters.minPrice) params.set('minPrice', searchFilters.minPrice)
+    if (searchFilters.maxPrice) params.set('maxPrice', searchFilters.maxPrice)
+    if (searchFilters.minYear) params.set('minYear', searchFilters.minYear)
+    if (searchFilters.maxYear) params.set('maxYear', searchFilters.maxYear)
     
     router.push(`/cars?${params.toString()}`)
   }
@@ -91,7 +183,7 @@ export default function HomePage() {
             </p>
 
             <form onSubmit={handleSearch} className="mx-auto max-w-4xl rounded-lg bg-white p-6 shadow-xl">
-              <div className="mb-6">
+              <div className="mb-4">
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                   What car are you looking for?
                 </label>
@@ -101,68 +193,107 @@ export default function HomePage() {
                     placeholder="Search for BMW 3 Series, Golf GTI, Tesla Model 3..."
                     value={searchFilters.searchText}
                     onChange={(e) => setSearchFilters({...searchFilters, searchText: e.target.value})}
-                    className="w-full rounded-lg border border-gray-300 p-4 pr-12 text-lg focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    className="w-full rounded-lg border border-gray-300 p-3 pr-10 text-base focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
-                  <Search className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                  <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 </div>
               </div>
 
               <div className="border-t pt-4">
-                <h3 className="mb-4 text-sm font-medium text-gray-700">Refine your search</h3>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <h3 className="mb-3 text-sm font-medium text-gray-700">Refine your search</h3>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+                  {/* Make Dropdown */}
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">Make</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Make</label>
                     <select 
                       value={searchFilters.make}
                       onChange={(e) => setSearchFilters({...searchFilters, make: e.target.value})}
-                      className="w-full rounded-lg border border-gray-300 p-3 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary/20"
                     >
                       <option value="">Any Make</option>
-                      <option value="BMW">BMW</option>
-                      <option value="Tesla">Tesla</option>
-                      <option value="Volkswagen">Volkswagen</option>
+                      {Object.keys(CAR_DATA).map(make => (
+                        <option key={make} value={make}>{make}</option>
+                      ))}
                     </select>
                   </div>
 
+                  {/* Model Dropdown - Dependent on Make */}
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">Price Range</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Model</label>
                     <select 
-                      value={searchFilters.priceRange}
-                      onChange={(e) => setSearchFilters({...searchFilters, priceRange: e.target.value})}
-                      className="w-full rounded-lg border border-gray-300 p-3 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      value={searchFilters.model}
+                      onChange={(e) => setSearchFilters({...searchFilters, model: e.target.value})}
+                      disabled={!searchFilters.make}
+                      className={`w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary/20 ${
+                        !searchFilters.make ? 'bg-gray-50 cursor-not-allowed text-gray-400' : ''
+                      }`}
                     >
-                      <option value="">Any Price</option>
-                      <option value="0-30000">Under €30,000</option>
-                      <option value="30000-50000">€30,000 - €50,000</option>
-                      <option value="50000-999999">Over €50,000</option>
+                      <option value="">
+                        {searchFilters.make ? 'Any Model' : 'Select Make First'}
+                      </option>
+                      {availableModels.map(model => (
+                        <option key={model} value={model}>{model}</option>
+                      ))}
                     </select>
                   </div>
 
+                  {/* Min Price */}
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">Year</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Min Price</label>
                     <select 
-                      value={searchFilters.year}
-                      onChange={(e) => setSearchFilters({...searchFilters, year: e.target.value})}
-                      className="w-full rounded-lg border border-gray-300 p-3 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      value={searchFilters.minPrice}
+                      onChange={(e) => setSearchFilters({...searchFilters, minPrice: e.target.value})}
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary/20"
                     >
-                      <option value="">Any Year</option>
-                      <option value="2021">2021</option>
-                      <option value="2020">2020</option>
-                      <option value="2019">2019</option>
+                      <option value="">No Min</option>
+                      {PRICE_RANGES.map(price => (
+                        <option key={price.value} value={price.value}>{price.label}</option>
+                      ))}
                     </select>
                   </div>
 
+                  {/* Max Price */}
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">County</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Max Price</label>
                     <select 
-                      value={searchFilters.county}
-                      onChange={(e) => setSearchFilters({...searchFilters, county: e.target.value})}
-                      className="w-full rounded-lg border border-gray-300 p-3 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      value={searchFilters.maxPrice}
+                      onChange={(e) => setSearchFilters({...searchFilters, maxPrice: e.target.value})}
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary/20"
                     >
-                      <option value="">All Ireland</option>
-                      <option value="Dublin">Dublin</option>
-                      <option value="Cork">Cork</option>
-                      <option value="Galway">Galway</option>
+                      <option value="">No Max</option>
+                      {PRICE_RANGES.map(price => (
+                        <option key={price.value} value={price.value}>{price.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Min Year */}
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Min Year</label>
+                    <select 
+                      value={searchFilters.minYear}
+                      onChange={(e) => setSearchFilters({...searchFilters, minYear: e.target.value})}
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    >
+                      <option value="">No Min</option>
+                      {YEAR_OPTIONS.map(year => (
+                        <option key={year.value} value={year.value}>{year.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Max Year */}
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Max Year</label>
+                    <select 
+                      value={searchFilters.maxYear}
+                      onChange={(e) => setSearchFilters({...searchFilters, maxYear: e.target.value})}
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    >
+                      <option value="">No Max</option>
+                      {YEAR_OPTIONS.map(year => (
+                        <option key={year.value} value={year.value}>{year.label}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -170,10 +301,10 @@ export default function HomePage() {
 
               <button 
                 type="submit"
-                className="mt-6 flex w-full items-center justify-center rounded-lg bg-primary px-6 py-4 text-lg font-bold text-white hover:bg-primary/90 transition-colors"
+                className="mt-4 flex w-full items-center justify-center rounded-lg bg-primary px-6 py-3 text-base font-bold text-white hover:bg-primary/90 transition-colors"
               >
-                <Search className="mr-2 h-5 w-5" />
-                SEARCH CARS
+                <Search className="mr-2 h-4 w-4" />
+                SEARCH {carCount.toLocaleString()} CARS
               </button>
             </form>
           </div>
@@ -186,7 +317,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 gap-8 text-center text-white md:grid-cols-4">
             <div>
               <Car className="mx-auto mb-4 h-12 w-12" />
-              <div className="mb-2 text-3xl font-bold">{cars.length}+</div>
+              <div className="mb-2 text-3xl font-bold">{carCount}+</div>
               <div className="text-lg">Cars Available</div>
             </div>
             <div>
@@ -221,11 +352,10 @@ export default function HomePage() {
               {featuredCars.map((car: any) => (
                 <div key={car.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                   <div className="relative h-48">
-                    <Image
+                  <img
                       src={car.images[0]?.url || '/placeholder-car.jpg'}
                       alt={car.images[0]?.alt || car.title}
-                      fill
-                      className="object-cover"
+                      className="w-full h-full object-cover"
                     />
                     <div className="absolute top-4 left-4">
                       <span className="bg-primary text-white px-3 py-1 rounded-full text-sm font-medium">
