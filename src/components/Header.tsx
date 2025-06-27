@@ -1,12 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { User, LogOut, Settings, Heart, FileText, ChevronDown, MessageCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { User, LogOut, Settings, Heart, FileText, ChevronDown, MessageCircle, Plus, Car } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import NotificationBell from './NotificationBell'
 
 interface HeaderProps {
-  currentPage?: 'home' | 'cars' | 'sell' | 'dealers' | 'about' | 'messages'
+  currentPage?: 'home' | 'cars' | 'sell' | 'dealers' | 'about' | 'messages' | 'place-ad'
 }
 
 export default function Header({ currentPage = 'home' }: HeaderProps) {
@@ -14,6 +15,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [loading, setLoading] = useState(true)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+  const router = useRouter()
 
   // Check if user is logged in
   useEffect(() => {
@@ -64,6 +66,15 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
     }
   }
 
+  const handlePlaceAd = () => {
+    if (!user) {
+      // Redirect to login with return URL
+      router.push('/login?redirect=/place-ad')
+    } else {
+      router.push('/place-ad')
+    }
+  }
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -86,14 +97,14 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-3">
-              {/* CSS-based logo that always works */}
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-600 via-green-500 to-orange-500 flex items-center justify-center shadow-lg">
-                <div className="text-white font-bold text-lg tracking-tight">
-                  IA
+              {/* Irish Flag Colors Logo: Green, White, Orange */}
+              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-green-600 via-white to-orange-500 flex items-center justify-center shadow-lg border-2 border-gray-200">
+                <div className="text-green-700 font-bold text-sm tracking-tight drop-shadow-sm">
+                  IAM
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="text-xl font-bold text-gray-900">
+                <div className="text-xl font-bold text-green-700">
                   IRISH
                 </div>
                 <div className="text-xl font-bold text-orange-600">
@@ -107,32 +118,33 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
           <nav className="hidden space-x-8 md:flex">
             <Link 
               href="/cars" 
-              className={`font-medium hover:text-primary ${
-                currentPage === 'cars' ? 'text-primary' : 'text-gray-700'
+              className={`font-medium hover:text-green-600 transition-colors flex items-center space-x-1 ${
+                currentPage === 'cars' ? 'text-green-600' : 'text-gray-700'
               }`}
             >
-              BUY
+              <Car size={18} />
+              <span>BUY</span>
             </Link>
             <Link 
               href="/sell" 
-              className={`font-medium hover:text-primary ${
-                currentPage === 'sell' ? 'text-primary' : 'text-gray-700'
+              className={`font-medium hover:text-green-600 transition-colors ${
+                currentPage === 'sell' ? 'text-green-600' : 'text-gray-700'
               }`}
             >
               SELL
             </Link>
             <Link 
               href="/dealers" 
-              className={`font-medium hover:text-primary ${
-                currentPage === 'dealers' ? 'text-primary' : 'text-gray-700'
+              className={`font-medium hover:text-green-600 transition-colors ${
+                currentPage === 'dealers' ? 'text-green-600' : 'text-gray-700'
               }`}
             >
               DEALERS
             </Link>
             <Link 
               href="/about" 
-              className={`font-medium hover:text-primary ${
-                currentPage === 'about' ? 'text-primary' : 'text-gray-700'
+              className={`font-medium hover:text-green-600 transition-colors ${
+                currentPage === 'about' ? 'text-green-600' : 'text-gray-700'
               }`}
             >
               ABOUT
@@ -147,13 +159,26 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
             ) : user ? (
               // Logged in user section
               <div className="flex items-center space-x-3">
+                {/* Place Ad Button - Primary CTA */}
+                <button
+                  onClick={handlePlaceAd}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    currentPage === 'place-ad'
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg'
+                  }`}
+                >
+                  <Plus size={18} />
+                  <span className="hidden sm:block">Place Ad</span>
+                </button>
+
                 {/* Messages Link with Badge */}
                 <Link
                   href="/messages"
                   className={`relative flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
                     currentPage === 'messages'
-                      ? 'bg-primary text-white'
-                      : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                      ? 'bg-green-600 text-white'
+                      : 'text-gray-700 hover:text-green-600 hover:bg-green-50'
                   }`}
                 >
                   <MessageCircle className="w-5 h-5" />
@@ -174,7 +199,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="flex items-center space-x-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                   >
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white font-medium text-sm">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white font-medium text-sm">
                       {user.firstName?.[0]}{user.lastName?.[0]}
                     </div>
                     <span className="hidden md:block">{user.firstName}</span>
@@ -189,7 +214,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                         </p>
                         <p className="text-xs text-gray-500">{user.email}</p>
                         {user.role !== 'USER' && (
-                          <p className="text-xs text-primary font-medium capitalize">
+                          <p className="text-xs text-green-600 font-medium capitalize">
                             {user.role.toLowerCase()}
                           </p>
                         )}
@@ -261,22 +286,44 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                 </div>
               </div>
             ) : (
-              // Not logged in - show login/register buttons
-              <>
+              // Not logged in - show login/register buttons + Place Ad
+              <div className="flex items-center space-x-3">
+                {/* Place Ad Button for Non-Authenticated Users */}
+                <button
+                  onClick={handlePlaceAd}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-medium transition-colors shadow-md hover:shadow-lg"
+                >
+                  <Plus size={18} />
+                  <span className="hidden sm:block">Place Ad</span>
+                </button>
+
                 <Link 
                   href="/login" 
-                  className="font-medium text-gray-700 hover:text-primary transition-colors"
+                  className="font-medium text-gray-700 hover:text-green-600 transition-colors"
                 >
                   LOGIN
                 </Link>
                 <Link 
                   href="/register" 
-                  className="rounded bg-primary px-4 py-2 font-medium text-white hover:bg-primary/90 transition-colors"
+                  className="rounded bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700 transition-colors"
                 >
                   REGISTER
                 </Link>
-              </>
+              </div>
             )}
+
+            {/* Mobile Menu Button */}
+            <button 
+              className="md:hidden p-2 rounded-md hover:bg-gray-100"
+              onClick={() => {
+                // Add mobile menu toggle logic here if needed
+                console.log('Mobile menu clicked')
+              }}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>

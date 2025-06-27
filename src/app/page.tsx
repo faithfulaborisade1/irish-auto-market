@@ -8,37 +8,8 @@ import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import LikeButton from '@/components/LikeButton'
-
-// Irish Car Market Data - Real makes and models
-const CAR_DATA = {
-  'BMW': ['1 Series', '2 Series', '3 Series', '4 Series', '5 Series', 'X1', 'X3', 'X5', 'i3', 'i4'],
-  'Audi': ['A1', 'A3', 'A4', 'A6', 'Q2', 'Q3', 'Q5', 'Q7', 'e-tron'],
-  'Mercedes-Benz': ['A-Class', 'C-Class', 'E-Class', 'S-Class', 'GLA', 'GLC', 'GLE', 'EQA'],
-  'Volkswagen': ['Polo', 'Golf', 'Passat', 'Tiguan', 'Touareg', 'ID.3', 'ID.4'],
-  'Toyota': ['Yaris', 'Corolla', 'Camry', 'RAV4', 'Highlander', 'Prius', 'C-HR'],
-  'Ford': ['Fiesta', 'Focus', 'Mondeo', 'Kuga', 'EcoSport', 'Mustang'],
-  'Nissan': ['Micra', 'Qashqai', 'X-Trail', 'Juke', 'Leaf'],
-  'Hyundai': ['i10', 'i20', 'i30', 'Tucson', 'Santa Fe', 'Kona'],
-  'Kia': ['Picanto', 'Rio', 'Ceed', 'Sportage', 'Sorento', 'Niro'],
-  'Renault': ['Clio', 'Megane', 'Kadjar', 'Captur', 'Zoe'],
-  'Peugeot': ['108', '208', '308', '508', '2008', '3008', '5008'],
-  'Opel': ['Corsa', 'Astra', 'Insignia', 'Crossland', 'Grandland'],
-  'Skoda': ['Citigo', 'Fabia', 'Octavia', 'Superb', 'Karoq', 'Kodiaq'],
-  'SEAT': ['Ibiza', 'Leon', 'Arona', 'Ateca', 'Tarraco'],
-  'Mazda': ['2', '3', '6', 'CX-3', 'CX-5', 'CX-30'],
-  'Honda': ['Jazz', 'Civic', 'Accord', 'CR-V', 'HR-V'],
-  'Subaru': ['Impreza', 'Legacy', 'Outback', 'Forester', 'XV'],
-  'Tesla': ['Model 3', 'Model S', 'Model X', 'Model Y'],
-  'Volvo': ['V40', 'V60', 'V90', 'XC40', 'XC60', 'XC90'],
-  'Jaguar': ['XE', 'XF', 'F-Pace', 'E-Pace', 'I-Pace'],
-  'Land Rover': ['Range Rover Evoque', 'Range Rover Sport', 'Discovery', 'Defender'],
-  'Lexus': ['IS', 'ES', 'NX', 'RX', 'UX'],
-  'Alfa Romeo': ['Giulia', 'Stelvio', 'Giulietta'],
-  'Fiat': ['500', 'Panda', 'Tipo', '500X'],
-  'Jeep': ['Renegade', 'Compass', 'Cherokee', 'Grand Cherokee'],
-  'Mini': ['Cooper', 'Countryman', 'Clubman'],
-  'Porsche': ['911', 'Cayenne', 'Macan', 'Panamera', 'Taycan']
-}
+import { CAR_MAKES_MODELS, getAllCarMakes, getModelsForMake } from '@/data/car-makes-models'
+import { IRISH_LOCATIONS } from '@/data/irish-locations'
 
 // Price ranges for dropdown
 const PRICE_RANGES = [
@@ -76,15 +47,6 @@ for (let year = 2025; year >= 2000; year--) {
   YEAR_OPTIONS.push({ value: year.toString(), label: year.toString() })
 }
 
-// Irish counties
-const IRISH_COUNTIES = [
-  'Antrim', 'Armagh', 'Carlow', 'Cavan', 'Clare', 'Cork', 'Derry', 'Donegal', 
-  'Down', 'Dublin', 'Fermanagh', 'Galway', 'Kerry', 'Kildare', 'Kilkenny', 
-  'Laois', 'Leitrim', 'Limerick', 'Longford', 'Louth', 'Mayo', 'Meath', 
-  'Monaghan', 'Offaly', 'Roscommon', 'Sligo', 'Tipperary', 'Tyrone', 
-  'Waterford', 'Westmeath', 'Wexford', 'Wicklow'
-]
-
 export default function HomePage() {
   const router = useRouter()
   const [cars, setCars] = useState<any[]>([])
@@ -97,11 +59,16 @@ export default function HomePage() {
     minPrice: '',
     maxPrice: '',
     minYear: '',
-    maxYear: ''
+    maxYear: '',
+    county: '',
+    area: ''
   })
 
   // Available models based on selected make
-  const availableModels = searchFilters.make ? CAR_DATA[searchFilters.make as keyof typeof CAR_DATA] || [] : []
+  const availableModels = searchFilters.make ? getModelsForMake(searchFilters.make) : []
+  
+  // Available areas based on selected county
+  const availableAreas = searchFilters.county ? IRISH_LOCATIONS[searchFilters.county as keyof typeof IRISH_LOCATIONS] || [] : []
 
   // Fetch cars and count on client side only
   useEffect(() => {
@@ -129,6 +96,13 @@ export default function HomePage() {
     }
   }, [searchFilters.make])
 
+  // Reset area when county changes
+  useEffect(() => {
+    if (searchFilters.county) {
+      setSearchFilters(prev => ({ ...prev, area: '' }))
+    }
+  }, [searchFilters.county])
+
   const featuredCars = cars.filter((car: any) => car.featured)
 
   const handleSearch = (e: React.FormEvent) => {
@@ -142,6 +116,8 @@ export default function HomePage() {
     if (searchFilters.maxPrice) params.set('maxPrice', searchFilters.maxPrice)
     if (searchFilters.minYear) params.set('minYear', searchFilters.minYear)
     if (searchFilters.maxYear) params.set('maxYear', searchFilters.maxYear)
+    if (searchFilters.county) params.set('county', searchFilters.county)
+    if (searchFilters.area) params.set('area', searchFilters.area)
     
     router.push(`/cars?${params.toString()}`)
   }
@@ -201,8 +177,8 @@ export default function HomePage() {
 
               <div className="border-t pt-4">
                 <h3 className="mb-3 text-sm font-medium text-gray-700">Refine your search</h3>
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-                  {/* Make Dropdown */}
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+                  {/* Make Dropdown - UPDATED with comprehensive data */}
                   <div>
                     <label className="mb-1 block text-xs font-medium text-gray-600">Make</label>
                     <select 
@@ -211,13 +187,13 @@ export default function HomePage() {
                       className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary/20"
                     >
                       <option value="">Any Make</option>
-                      {Object.keys(CAR_DATA).map(make => (
+                      {getAllCarMakes().map(make => (
                         <option key={make} value={make}>{make}</option>
                       ))}
                     </select>
                   </div>
 
-                  {/* Model Dropdown - Dependent on Make */}
+                  {/* Model Dropdown - UPDATED with dependency */}
                   <div>
                     <label className="mb-1 block text-xs font-medium text-gray-600">Model</label>
                     <select 
@@ -233,6 +209,41 @@ export default function HomePage() {
                       </option>
                       {availableModels.map(model => (
                         <option key={model} value={model}>{model}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* County Dropdown - UPDATED with comprehensive data */}
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">County</label>
+                    <select 
+                      value={searchFilters.county}
+                      onChange={(e) => setSearchFilters({...searchFilters, county: e.target.value})}
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary/20"
+                    >
+                      <option value="">Any County</option>
+                      {Object.keys(IRISH_LOCATIONS).sort().map(county => (
+                        <option key={county} value={county}>{county}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Area Dropdown - NEW dependent selection */}
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Area</label>
+                    <select 
+                      value={searchFilters.area}
+                      onChange={(e) => setSearchFilters({...searchFilters, area: e.target.value})}
+                      disabled={!searchFilters.county}
+                      className={`w-full rounded-md border border-gray-300 p-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary/20 ${
+                        !searchFilters.county ? 'bg-gray-50 cursor-not-allowed text-gray-400' : ''
+                      }`}
+                    >
+                      <option value="">
+                        {searchFilters.county ? 'Any Area' : 'Select County First'}
+                      </option>
+                      {availableAreas.map(area => (
+                        <option key={area} value={area}>{area}</option>
                       ))}
                     </select>
                   </div>

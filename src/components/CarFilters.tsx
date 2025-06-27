@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { X, ChevronDown, ChevronUp, Search, RotateCcw } from 'lucide-react'
+import { CAR_MAKES_MODELS, getAllCarMakes, getModelsForMake } from '@/data/car-makes-models'
+import { IRISH_LOCATIONS } from '@/data/irish-locations'
 
 interface FilterState {
   // Basic filters
@@ -25,7 +27,8 @@ interface FilterState {
   mileageTo: string
   
   // Location
-  location: string
+  county: string
+  area: string
   radius: string
   
   // Fuel type
@@ -68,38 +71,6 @@ interface CarFiltersProps {
   onToggle: () => void
   className?: string
 }
-
-// Irish Car Market Data
-const CAR_DATA = {
-  'BMW': ['1 Series', '2 Series', '3 Series', '4 Series', '5 Series', 'X1', 'X3', 'X5', 'i3', 'i4'],
-  'Audi': ['A1', 'A3', 'A4', 'A6', 'Q2', 'Q3', 'Q5', 'Q7', 'e-tron'],
-  'Mercedes-Benz': ['A-Class', 'C-Class', 'E-Class', 'S-Class', 'GLA', 'GLC', 'GLE', 'EQA'],
-  'Volkswagen': ['Polo', 'Golf', 'Passat', 'Tiguan', 'Touareg', 'ID.3', 'ID.4'],
-  'Toyota': ['Yaris', 'Corolla', 'Camry', 'RAV4', 'Highlander', 'Prius', 'C-HR'],
-  'Ford': ['Fiesta', 'Focus', 'Mondeo', 'Kuga', 'EcoSport', 'Mustang'],
-  'Nissan': ['Micra', 'Qashqai', 'X-Trail', 'Juke', 'Leaf'],
-  'Hyundai': ['i10', 'i20', 'i30', 'Tucson', 'Santa Fe', 'Kona'],
-  'Kia': ['Picanto', 'Rio', 'Ceed', 'Sportage', 'Sorento', 'Niro'],
-  'Renault': ['Clio', 'Megane', 'Kadjar', 'Captur', 'Zoe'],
-  'Peugeot': ['108', '208', '308', '508', '2008', '3008', '5008'],
-  'Opel': ['Corsa', 'Astra', 'Insignia', 'Crossland', 'Grandland'],
-  'Skoda': ['Citigo', 'Fabia', 'Octavia', 'Superb', 'Karoq', 'Kodiaq'],
-  'SEAT': ['Ibiza', 'Leon', 'Arona', 'Ateca', 'Tarraco'],
-  'Mazda': ['2', '3', '6', 'CX-3', 'CX-5', 'CX-30'],
-  'Honda': ['Jazz', 'Civic', 'Accord', 'CR-V', 'HR-V'],
-  'Tesla': ['Model 3', 'Model S', 'Model X', 'Model Y'],
-  'Volvo': ['V40', 'V60', 'V90', 'XC40', 'XC60', 'XC90'],
-  'Mini': ['Cooper', 'Countryman', 'Clubman'],
-  'Jeep': ['Renegade', 'Compass', 'Cherokee', 'Grand Cherokee']
-}
-
-const IRISH_COUNTIES = [
-  'Antrim', 'Armagh', 'Carlow', 'Cavan', 'Clare', 'Cork', 'Derry', 'Donegal', 
-  'Down', 'Dublin', 'Fermanagh', 'Galway', 'Kerry', 'Kildare', 'Kilkenny', 
-  'Laois', 'Leitrim', 'Limerick', 'Longford', 'Louth', 'Mayo', 'Meath', 
-  'Monaghan', 'Offaly', 'Roscommon', 'Sligo', 'Tipperary', 'Tyrone', 
-  'Waterford', 'Westmeath', 'Wexford', 'Wicklow'
-]
 
 const PRICE_OPTIONS = [
   { value: '1000', label: '€1,000' },
@@ -146,7 +117,8 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
     yearTo: '',
     mileageFrom: '',
     mileageTo: '',
-    location: '',
+    county: '',
+    area: '',
     radius: '',
     fuelType: [],
     transmission: [],
@@ -182,8 +154,11 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
     verifications: false
   })
 
-  // Available models based on selected make
-  const availableModels = filters.make ? CAR_DATA[filters.make as keyof typeof CAR_DATA] || [] : []
+  // Get available models based on selected make
+  const availableModels = filters.make ? getModelsForMake(filters.make) : []
+
+  // Get available areas based on selected county
+  const availableAreas = filters.county ? IRISH_LOCATIONS[filters.county as keyof typeof IRISH_LOCATIONS] || [] : []
 
   // Reset model when make changes
   useEffect(() => {
@@ -191,6 +166,13 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
       setFilters(prev => ({ ...prev, model: '' }))
     }
   }, [filters.make, availableModels, filters.model])
+
+  // Reset area when county changes
+  useEffect(() => {
+    if (filters.county && !availableAreas.includes(filters.area)) {
+      setFilters(prev => ({ ...prev, area: '' }))
+    }
+  }, [filters.county, availableAreas, filters.area])
 
   // Notify parent of filter changes
   useEffect(() => {
@@ -216,7 +198,8 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
       yearTo: '',
       mileageFrom: '',
       mileageTo: '',
-      location: '',
+      county: '',
+      area: '',
       radius: '',
       fuelType: [],
       transmission: [],
@@ -387,7 +370,7 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
             </div>
           </FilterSection>
 
-          {/* Make / Model */}
+          {/* Make / Model - UPDATED with comprehensive data */}
           <FilterSection
             title="Make / Model"
             isExpanded={expandedSections.makeModel}
@@ -397,7 +380,10 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
               <Select
                 value={filters.make}
                 onChange={(value) => updateFilter('make', value)}
-                options={Object.keys(CAR_DATA).map(make => ({ value: make, label: make }))}
+                options={getAllCarMakes().map(make => ({ 
+                  value: make, 
+                  label: `${make} (${getModelsForMake(make).length})` 
+                }))}
                 placeholder="All Makes"
               />
               <Select
@@ -406,6 +392,11 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
                 options={availableModels.map(model => ({ value: model, label: model }))}
                 placeholder={filters.make ? "All Models" : "Select Make First"}
               />
+              {filters.make && (
+                <p className="text-xs text-gray-500">
+                  {availableModels.length} models available for {filters.make}
+                </p>
+              )}
             </div>
           </FilterSection>
 
@@ -475,7 +466,7 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
             </div>
           </FilterSection>
 
-          {/* Location */}
+          {/* Location - UPDATED with County → Area selection */}
           <FilterSection
             title="Location"
             isExpanded={expandedSections.location}
@@ -483,11 +474,25 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
           >
             <div className="space-y-3">
               <Select
-                value={filters.location}
-                onChange={(value) => updateFilter('location', value)}
-                options={IRISH_COUNTIES.map(county => ({ value: county, label: county }))}
-                placeholder="All Ireland"
+                value={filters.county}
+                onChange={(value) => updateFilter('county', value)}
+                options={Object.keys(IRISH_LOCATIONS).sort().map(county => ({ 
+                  value: county, 
+                  label: `${county} (${IRISH_LOCATIONS[county as keyof typeof IRISH_LOCATIONS]?.length || 0})` 
+                }))}
+                placeholder="All Counties"
               />
+              <Select
+                value={filters.area}
+                onChange={(value) => updateFilter('area', value)}
+                options={availableAreas.map(area => ({ value: area, label: area }))}
+                placeholder={filters.county ? "All Areas" : "Select County First"}
+              />
+              {filters.county && (
+                <p className="text-xs text-gray-500">
+                  {availableAreas.length} areas available in {filters.county}
+                </p>
+              )}
               <Select
                 value={filters.radius}
                 onChange={(value) => updateFilter('radius', value)}
