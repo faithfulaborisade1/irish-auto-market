@@ -37,34 +37,63 @@ interface Car {
   }
 }
 
+// FIXED: Updated FilterState to match CarFilters.tsx exactly
 interface FilterState {
+  // Basic filters
   searchText: string
   make: string
   model: string
-  sellerType: string[]
+  
+  // Seller type
+  sellerType: string[] // ['dealership', 'private']
+  
+  // Price
   priceFrom: string
   priceTo: string
+  
+  // Year
   yearFrom: string
   yearTo: string
+  
+  // Mileage
   mileageFrom: string
   mileageTo: string
-  location: string
+  
+  // Location - FIXED: Changed from 'location' to 'county' and 'area'
+  county: string
+  area: string
   radius: string
+  
+  // Fuel type
   fuelType: string[]
+  
+  // Transmission
   transmission: string[]
+  
+  // Body type
   bodyType: string[]
+  
+  // Engine
   engineSizeFrom: string
   engineSizeTo: string
   enginePowerFrom: string
   enginePowerTo: string
+  
+  // Electric
   batteryRange: string
+  
+  // Other filters
   seatCount: string
   doors: string
   color: string
   registrationCountry: string
+  
+  // Verifications
   nctValid: boolean
   warrantyDuration: string
   totalOwners: string
+  
+  // Ad type
   adType: string
 }
 
@@ -76,6 +105,8 @@ function CarsContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [filtersOpen, setFiltersOpen] = useState(true)
   const [sortBy, setSortBy] = useState('newest')
+  
+  // FIXED: Updated initial state to match new FilterState interface
   const [currentFilters, setCurrentFilters] = useState<FilterState>({
     searchText: '',
     make: '',
@@ -87,7 +118,8 @@ function CarsContent() {
     yearTo: '',
     mileageFrom: '',
     mileageTo: '',
-    location: '',
+    county: '',      // FIXED: Changed from 'location' to 'county'
+    area: '',        // FIXED: Added 'area'
     radius: '',
     fuelType: [],
     transmission: [],
@@ -119,7 +151,8 @@ function CarsContent() {
       priceTo: params.maxPrice || '',
       yearFrom: params.minYear || '',
       yearTo: params.maxYear || '',
-      location: params.county || ''
+      county: params.county || '',     // FIXED: Changed from 'location' to 'county'
+      area: params.area || ''          // FIXED: Added area parameter
     }))
   }, [searchParams])
 
@@ -146,8 +179,9 @@ function CarsContent() {
       if (currentFilters.mileageFrom) params.set('minMileage', currentFilters.mileageFrom)
       if (currentFilters.mileageTo) params.set('maxMileage', currentFilters.mileageTo)
       
-      // Location
-      if (currentFilters.location) params.set('county', currentFilters.location)
+      // Location - FIXED: Updated to use 'county' and 'area'
+      if (currentFilters.county) params.set('county', currentFilters.county)
+      if (currentFilters.area) params.set('area', currentFilters.area)
       
       // Array filters
       if (currentFilters.fuelType.length > 0) params.set('fuelType', currentFilters.fuelType.join(','))
@@ -199,7 +233,8 @@ function CarsContent() {
     if (currentFilters.priceFrom || currentFilters.priceTo) count++
     if (currentFilters.yearFrom || currentFilters.yearTo) count++
     if (currentFilters.mileageFrom || currentFilters.mileageTo) count++
-    if (currentFilters.location) count++
+    if (currentFilters.county) count++        // FIXED: Changed from 'location' to 'county'
+    if (currentFilters.area) count++          // FIXED: Added area count
     count += currentFilters.fuelType.length
     count += currentFilters.transmission.length
     count += currentFilters.bodyType.length
@@ -215,7 +250,7 @@ function CarsContent() {
     const terms = []
     if (currentFilters.searchText) terms.push(`"${currentFilters.searchText}"`)
     if (currentFilters.make) terms.push(currentFilters.make)
-    if (currentFilters.location) terms.push(currentFilters.location)
+    if (currentFilters.county) terms.push(currentFilters.county)    // FIXED: Changed from 'location' to 'county'
     
     if (terms.length > 0) {
       return `Search results for ${terms.join(', ')}`
