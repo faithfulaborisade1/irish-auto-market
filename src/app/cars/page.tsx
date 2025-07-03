@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Search, MapPin, Grid, List, ArrowLeft, Filter } from 'lucide-react'
+import { Search, MapPin, Grid, List, ArrowLeft, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
@@ -95,6 +95,134 @@ interface FilterState {
   
   // Ad type
   adType: string
+}
+
+// Minimal Image Carousel Component - Preserves existing layout
+interface CarImageCarouselProps {
+  images: Array<{ id: string; url: string; alt: string }>
+  title: string
+  featured: boolean
+  price: number
+  carId: string
+  likesCount: number
+  isLiked: boolean
+  className?: string
+}
+
+function CarImageCarousel({ 
+  images, 
+  title, 
+  featured, 
+  price, 
+  carId, 
+  likesCount, 
+  isLiked,
+  className = ''
+}: CarImageCarouselProps) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [isHovered, setIsHovered] = useState(false)
+  
+  const hasMultipleImages = images && images.length > 1
+  const currentImage = images?.[currentImageIndex] || null
+
+  const nextImage = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (hasMultipleImages) {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length)
+    }
+  }
+
+  const prevImage = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (hasMultipleImages) {
+      setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)
+    }
+  }
+
+  return (
+    <div 
+      className={`relative ${className}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Main Image - Keep original structure */}
+      <img
+        src={currentImage?.url || '/placeholder-car.jpg'}
+        alt={currentImage?.alt || title}
+        className="w-full h-full object-cover"
+      />
+
+      {/* Featured Badge */}
+      {featured && (
+        <div className="absolute top-4 left-4">
+          <span className="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+            Featured
+          </span>
+        </div>
+      )}
+
+      {/* Price & Like Button */}
+      <div className="absolute top-4 right-4 flex items-center space-x-2">
+        <span className="bg-white bg-opacity-90 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
+          €{price.toLocaleString()}
+        </span>
+        <LikeButton 
+          carId={carId}
+          initialLikesCount={likesCount}
+          initialIsLiked={isLiked}
+          size="sm"
+          showCount={false}
+          className="bg-white bg-opacity-90 rounded-full"
+        />
+      </div>
+
+      {/* Minimal Navigation - Only visible on hover and if multiple images */}
+      {hasMultipleImages && isHovered && (
+        <>
+          <button
+            onClick={prevImage}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-60 hover:bg-opacity-80 text-white p-1.5 rounded-full transition-all duration-200 z-10"
+            aria-label="Previous image"
+          >
+            <ChevronLeft className="w-3 h-3" />
+          </button>
+          
+          <button
+            onClick={nextImage}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-60 hover:bg-opacity-80 text-white p-1.5 rounded-full transition-all duration-200 z-10"
+            aria-label="Next image"
+          >
+            <ChevronRight className="w-3 h-3" />
+          </button>
+        </>
+      )}
+
+      {/* Subtle dot indicators - Only if multiple images */}
+      {hasMultipleImages && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-1">
+          {images.map((_, index) => (
+            <div
+              key={index}
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
+                index === currentImageIndex 
+                  ? 'bg-white' 
+                  : 'bg-white bg-opacity-50'
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Small image counter - Only visible on hover if many images */}
+      {hasMultipleImages && images.length > 5 && isHovered && (
+        <div className="absolute bottom-3 right-3 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
+          {currentImageIndex + 1}/{images.length}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function CarsContent() {
@@ -278,7 +406,7 @@ function CarsContent() {
           <div className="mb-6">
             <button
               onClick={() => router.back()}
-              className="inline-flex items-center text-primary hover:text-primary/80 mb-4 transition-colors"
+              className="inline-flex items-center text-green-600 hover:text-green-700 mb-4 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
@@ -293,7 +421,7 @@ function CarsContent() {
                 <p className="text-gray-600 mt-1">
                   {loading ? 'Loading...' : `${cars.length} car${cars.length !== 1 ? 's' : ''} found`}
                   {getActiveFilterCount() > 0 && (
-                    <span className="ml-2 text-primary">
+                    <span className="ml-2 text-green-600">
                       ({getActiveFilterCount()} filter{getActiveFilterCount() !== 1 ? 's' : ''} applied)
                     </span>
                   )}
@@ -302,7 +430,7 @@ function CarsContent() {
               
               <Link
                 href="/"
-                className="flex items-center text-primary hover:text-primary/80 transition-colors"
+                className="flex items-center text-green-600 hover:text-green-700 transition-colors"
               >
                 <Search className="w-4 h-4 mr-2" />
                 New Search
@@ -315,12 +443,12 @@ function CarsContent() {
                 {/* Mobile filter toggle */}
                 <button 
                   onClick={() => setFiltersOpen(!filtersOpen)}
-                  className="lg:hidden flex items-center text-gray-600 hover:text-primary transition-colors"
+                  className="lg:hidden flex items-center text-gray-600 hover:text-green-600 transition-colors"
                 >
                   <Filter className="w-4 h-4 mr-2" />
                   Filters
                   {getActiveFilterCount() > 0 && (
-                    <span className="ml-1 bg-primary text-white text-xs rounded-full px-2 py-1">
+                    <span className="ml-1 bg-green-600 text-white text-xs rounded-full px-2 py-1">
                       {getActiveFilterCount()}
                     </span>
                   )}
@@ -329,7 +457,7 @@ function CarsContent() {
                 {/* Desktop filter toggle */}
                 <button 
                   onClick={() => setFiltersOpen(!filtersOpen)}
-                  className="hidden lg:flex items-center text-gray-600 hover:text-primary transition-colors"
+                  className="hidden lg:flex items-center text-gray-600 hover:text-green-600 transition-colors"
                 >
                   <Filter className="w-4 h-4 mr-2" />
                   {filtersOpen ? 'Hide' : 'Show'} Filters
@@ -338,7 +466,7 @@ function CarsContent() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-1 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+                  className="border border-gray-300 rounded px-3 py-1 text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                 >
                   <option value="newest">Newest First</option>
                   <option value="price-low">Price: Low to High</option>
@@ -352,13 +480,13 @@ function CarsContent() {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-primary text-white' : 'text-gray-600 hover:text-primary'}`}
+                  className={`p-2 rounded transition-colors ${viewMode === 'grid' ? 'bg-green-600 text-white' : 'text-gray-600 hover:text-green-600'}`}
                 >
                   <Grid className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`p-2 rounded transition-colors ${viewMode === 'list' ? 'bg-primary text-white' : 'text-gray-600 hover:text-primary'}`}
+                  className={`p-2 rounded transition-colors ${viewMode === 'list' ? 'bg-green-600 text-white' : 'text-gray-600 hover:text-green-600'}`}
                 >
                   <List className="w-4 h-4" />
                 </button>
@@ -369,111 +497,93 @@ function CarsContent() {
           {/* Cars Grid/List */}
           {loading ? (
             <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
               <p className="text-gray-600 mt-4">Loading cars...</p>
             </div>
           ) : cars.length > 0 ? (
             <div className={`gap-6 ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'space-y-6'}`}>
               {cars.map((car) => (
-                <div key={car.id} className={`bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow ${
-                  viewMode === 'list' ? 'md:flex' : ''
-                }`}>
-                  <div className={`relative ${
-                    viewMode === 'list' 
-                      ? 'h-48 md:w-80 md:h-56 md:flex-shrink-0' 
-                      : 'h-48'
+                <Link href={`/cars/${car.id}`} key={car.id}>
+                  <div className={`bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer ${
+                    viewMode === 'list' ? 'md:flex' : ''
                   }`}>
-                    <img
-                      src={car.images[0]?.url || '/placeholder-car.jpg'}
-                      alt={car.images[0]?.alt || car.title}
-                      className="w-full h-full object-cover"
-                    />
-                    {car.featured && (
-                      <div className="absolute top-4 left-4">
-                        <span className="bg-primary text-white px-3 py-1 rounded-full text-sm font-medium">
-                          Featured
-                        </span>
-                      </div>
-                    )}
-                    <div className="absolute top-4 right-4 flex items-center space-x-2">
-                      <span className="bg-white bg-opacity-90 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
-                        €{car.price.toLocaleString()}
-                      </span>
-                      <LikeButton 
-                        carId={car.id}
-                        initialLikesCount={car.likesCount}
-                        initialIsLiked={car.isLiked}
-                        size="sm"
-                        showCount={false}
-                        className="bg-white bg-opacity-90 rounded-full"
-                      />
-                    </div>
-                  </div>
-
-                  <div className={`p-6 ${
-                    viewMode === 'list' 
-                      ? 'md:flex-1 md:flex md:flex-col md:justify-between' 
-                      : ''
-                  }`}>
-                    <div>
-                      <h3 className={`font-bold text-gray-900 mb-2 ${
-                        viewMode === 'list' ? 'text-xl md:text-2xl' : 'text-xl'
-                      }`}>
-                        {car.title}
-                      </h3>
-                      
-                      <div className="flex items-center text-gray-600 mb-3">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        <span className="text-sm">{car.location.city}, {car.location.county}</span>
-                      </div>
-
-                      <div className={`grid gap-4 mb-4 text-sm ${
+                    <CarImageCarousel
+                      images={car.images}
+                      title={car.title}
+                      featured={car.featured}
+                      price={car.price}
+                      carId={car.id}
+                      likesCount={car.likesCount}
+                      isLiked={car.isLiked}
+                      className={`${
                         viewMode === 'list' 
-                          ? 'grid-cols-2 md:grid-cols-4' 
-                          : 'grid-cols-2'
-                      }`}>
-                        <div>
-                          <span className="text-gray-500">Year:</span>
-                          <span className="font-medium ml-1">{car.year}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Mileage:</span>
-                          <span className="font-medium ml-1">{car.mileage?.toLocaleString()} km</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Fuel:</span>
-                          <span className="font-medium ml-1 capitalize">{car.fuelType?.toLowerCase()}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Transmission:</span>
-                          <span className="font-medium ml-1 capitalize">{car.transmission?.toLowerCase()}</span>
-                        </div>
-                      </div>
-                    </div>
+                          ? 'h-48 md:w-80 md:h-56 md:flex-shrink-0' 
+                          : 'h-48'
+                      }`}
+                    />
 
-                    <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 ${
-                      viewMode === 'list' ? 'md:mt-4' : ''
+                    <div className={`p-6 ${
+                      viewMode === 'list' 
+                        ? 'md:flex-1 md:flex md:flex-col md:justify-between' 
+                        : ''
                     }`}>
-                      <div className="flex items-center space-x-3">
-                        <span className="text-sm text-gray-600">
-                          {car.seller.verified ? '✓ Verified' : ''} {car.seller.type}
-                        </span>
-                        <LikeButton 
-                          carId={car.id}
-                          initialLikesCount={car.likesCount}
-                          initialIsLiked={car.isLiked}
-                          size="sm"
-                        />
+                      <div>
+                        <h3 className={`font-bold text-gray-900 mb-2 ${
+                          viewMode === 'list' ? 'text-xl md:text-2xl' : 'text-xl'
+                        }`}>
+                          {car.title}
+                        </h3>
+                        
+                        <div className="flex items-center text-gray-600 mb-3">
+                          <MapPin className="w-4 h-4 mr-1" />
+                          <span className="text-sm">{car.location.city}, {car.location.county}</span>
+                        </div>
+
+                        <div className={`grid gap-4 mb-4 text-sm ${
+                          viewMode === 'list' 
+                            ? 'grid-cols-2 md:grid-cols-4' 
+                            : 'grid-cols-2'
+                        }`}>
+                          <div>
+                            <span className="text-gray-500">Year:</span>
+                            <span className="font-medium ml-1">{car.year}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Mileage:</span>
+                            <span className="font-medium ml-1">{car.mileage?.toLocaleString()} km</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Fuel:</span>
+                            <span className="font-medium ml-1 capitalize">{car.fuelType?.toLowerCase()}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Transmission:</span>
+                            <span className="font-medium ml-1 capitalize">{car.transmission?.toLowerCase()}</span>
+                          </div>
+                        </div>
                       </div>
-                      <Link
-                        href={`/cars/${car.id}`}
-                        className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition-colors text-center sm:text-left"
-                      >
-                        View Details
-                      </Link>
+
+                      <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 ${
+                        viewMode === 'list' ? 'md:mt-4' : ''
+                      }`}>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-sm text-gray-600">
+                            {car.seller.verified ? '✓ Verified' : ''} {car.seller.type}
+                          </span>
+                          <LikeButton 
+                            carId={car.id}
+                            initialLikesCount={car.likesCount}
+                            initialIsLiked={car.isLiked}
+                            size="sm"
+                          />
+                        </div>
+                        <div className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors text-center sm:text-left">
+                          View Details
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
@@ -483,7 +593,7 @@ function CarsContent() {
               <p className="text-gray-600 mb-4">Try adjusting your search criteria or browse all cars.</p>
               <Link
                 href="/cars"
-                className="inline-flex items-center rounded bg-primary px-4 py-2 text-white hover:bg-primary/90 transition-colors"
+                className="inline-flex items-center rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700 transition-colors"
               >
                 Browse All Cars
               </Link>
@@ -503,7 +613,7 @@ export default function CarsPage() {
 
       <Suspense fallback={
         <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
         </div>
       }>
         <CarsContent />

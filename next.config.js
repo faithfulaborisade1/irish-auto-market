@@ -26,6 +26,13 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      // ✅ ADD THIS - Cloudinary support
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 
@@ -101,4 +108,3 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
-

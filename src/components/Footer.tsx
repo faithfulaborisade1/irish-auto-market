@@ -1,5 +1,17 @@
 import Link from 'next/link'
-import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Youtube } from 'lucide-react'
+import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Youtube, Linkedin } from 'lucide-react'
+
+// TikTok icon component (since it's not in Lucide React)
+const TikTokIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+  </svg>
+)
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -14,9 +26,9 @@ export default function Footer() {
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
               {/* CSS-based logo matching header */}
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-600 via-green-500 to-orange-500 flex items-center justify-center shadow-lg">
-                <div className="text-white font-bold text-lg tracking-tight">
-                  IA
+               <div className="h-10 w-10 rounded-full bg-gradient-to-r from-green-600 via-white to-orange-500 flex items-center justify-center shadow-lg border-2 border-gray-200">
+                <div className="text-green-700 font-bold text-sm tracking-tight drop-shadow-sm">
+                  IAM
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -31,17 +43,61 @@ export default function Footer() {
             <p className="text-gray-300 text-sm leading-relaxed">
               Ireland's premier marketplace for quality used cars. Find your perfect vehicle from trusted dealers and private sellers across all 32 counties.
             </p>
+            
+            {/* Social Media Links */}
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+              <a 
+                href="https://www.facebook.com/profile.php?id=61567319420913" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Follow us on Facebook"
+              >
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                <Twitter className="w-5 h-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+              <a 
+                href="https://www.instagram.com/irishautomarket/" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Follow us on Instagram"
+              >
                 <Instagram className="w-5 h-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-white transition-colors">
+              <a 
+                href="https://www.linkedin.com/in/irishauto-market-a6573335a/" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Follow us on LinkedIn"
+              >
+                <Linkedin className="w-5 h-5" />
+              </a>
+              <a 
+                href="https://www.tiktok.com/@irishautomarket" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Follow us on TikTok"
+              >
+                <TikTokIcon className="w-5 h-5" />
+              </a>
+              <a 
+                href="https://x.com/IrishAutoMarke" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Follow us on Twitter/X"
+              >
+                <Twitter className="w-5 h-5" />
+              </a>
+              <a 
+                href="https://www.youtube.com/@IrishAutoMarket-r7k" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-white transition-colors"
+                aria-label="Subscribe to our YouTube channel"
+              >
                 <Youtube className="w-5 h-5" />
               </a>
             </div>
@@ -57,7 +113,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/sell" className="text-gray-300 hover:text-white transition-colors text-sm">
+                <Link href="/place-ad" className="text-gray-300 hover:text-white transition-colors text-sm">
                   Sell Your Car
                 </Link>
               </li>

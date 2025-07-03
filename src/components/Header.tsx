@@ -2,12 +2,12 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { User, LogOut, Settings, Heart, FileText, ChevronDown, MessageCircle, Plus, Car } from 'lucide-react'
+import { User, LogOut, Settings, Heart, FileText, ChevronDown, MessageCircle, Plus, Car, UserCircle, Edit3 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import NotificationBell from './NotificationBell'
 
 interface HeaderProps {
-  currentPage?: 'home' | 'cars' | 'sell' | 'dealers' | 'about' | 'messages' | 'place-ad'
+  currentPage?: 'home' | 'cars' | 'sell' | 'dealers' | 'about' | 'messages' | 'place-ad' | 'profile'
 }
 
 export default function Header({ currentPage = 'home' }: HeaderProps) {
@@ -75,6 +75,24 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
     }
   }
 
+  // Get user display name (for dealers, show business name)
+  const getUserDisplayName = () => {
+    if (!user) return ''
+    if (user.dealerProfile?.businessName) {
+      return user.dealerProfile.businessName
+    }
+    return user.firstName
+  }
+
+  // Get user initials
+  const getUserInitials = () => {
+    if (!user) return ''
+    if (user.dealerProfile?.businessName) {
+      return user.dealerProfile.businessName.charAt(0).toUpperCase()
+    }
+    return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase()
+  }
+
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -125,30 +143,30 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
               <Car size={18} />
               <span>BUY</span>
             </Link>
-            <Link 
-              href="/sell" 
+            <button
+              onClick={handlePlaceAd}
               className={`font-medium hover:text-green-600 transition-colors ${
-                currentPage === 'sell' ? 'text-green-600' : 'text-gray-700'
+                currentPage === 'sell' || currentPage === 'place-ad' ? 'text-green-600' : 'text-gray-700'
               }`}
             >
               SELL
-            </Link>
-            <Link 
+            </button>
+            {/* <Link 
               href="/dealers" 
               className={`font-medium hover:text-green-600 transition-colors ${
                 currentPage === 'dealers' ? 'text-green-600' : 'text-gray-700'
               }`}
             >
               DEALERS
-            </Link>
-            <Link 
+            </Link> */}
+            {/* <Link 
               href="/about" 
               className={`font-medium hover:text-green-600 transition-colors ${
                 currentPage === 'about' ? 'text-green-600' : 'text-gray-700'
               }`}
             >
               ABOUT
-            </Link>
+            </Link> */}
           </nav>
 
           {/* Auth Section */}
@@ -199,36 +217,57 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="flex items-center space-x-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                   >
-                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white font-medium text-sm">
-                      {user.firstName?.[0]}{user.lastName?.[0]}
-                    </div>
-                    <span className="hidden md:block">{user.firstName}</span>
+                    {user.avatar ? (
+                      <img 
+                        src={user.avatar} 
+                        alt={getUserDisplayName()}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white font-medium text-sm">
+                        {getUserInitials()}
+                      </div>
+                    )}
+                    <span className="hidden md:block max-w-24 truncate">{getUserDisplayName()}</span>
                     <ChevronDown className={`w-4 h-4 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
                   </button>
 
                   {showUserMenu && (
-                    <div className="absolute right-0 mt-2 w-56 rounded-lg bg-white py-2 shadow-xl border border-gray-200 z-50">
-                      <div className="px-4 py-2 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">
-                          {user.firstName} {user.lastName}
+                    <div className="absolute right-0 mt-2 w-64 rounded-lg bg-white py-2 shadow-xl border border-gray-200 z-50">
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {user.dealerProfile?.businessName || `${user.firstName} ${user.lastName}`}
                         </p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
+                        <p className="text-xs text-gray-500 truncate">{user.email}</p>
                         {user.role !== 'USER' && (
                           <p className="text-xs text-green-600 font-medium capitalize">
-                            {user.role.toLowerCase()}
+                            {user.role.toLowerCase().replace('_', ' ')}
                           </p>
                         )}
                       </div>
                       
+                      {/* Profile Section */}
                       <Link 
                         href="/profile" 
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                         onClick={() => setShowUserMenu(false)}
                       >
-                        <User className="w-4 h-4 mr-3" />
-                        Profile
+                        <UserCircle className="w-4 h-4 mr-3" />
+                        My Profile
                       </Link>
 
+                      <Link 
+                        href="/profile/edit" 
+                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <Edit3 className="w-4 h-4 mr-3" />
+                        Edit Profile
+                      </Link>
+
+                      <div className="border-t border-gray-100 my-2"></div>
+
+                      {/* Activity Section */}
                       <Link 
                         href="/messages" 
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
@@ -263,6 +302,9 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                         Saved Cars
                       </Link>
                       
+                      <div className="border-t border-gray-100 my-2"></div>
+
+                      {/* Settings & Admin */}
                       <Link 
                         href="/settings" 
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
@@ -271,6 +313,18 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                         <Settings className="w-4 h-4 mr-3" />
                         Settings
                       </Link>
+
+                      {/* Admin Dashboard Link for Admins */}
+                      {(user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') && (
+                        <Link 
+                          href="/admin" 
+                          className="flex items-center px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 transition-colors"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <Settings className="w-4 h-4 mr-3" />
+                          Admin Dashboard
+                        </Link>
+                      )}
                       
                       <div className="border-t border-gray-100 mt-2 pt-2">
                         <button

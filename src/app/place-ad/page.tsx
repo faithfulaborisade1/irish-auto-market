@@ -6,45 +6,9 @@ import ImageUpload from '@/components/ImageUpload';
 import Header from '@/components/Header';
 import { Car, MapPin, Euro, Calendar, Gauge, Fuel, Settings, Eye, CheckCircle } from 'lucide-react';
 
-// Irish counties for location dropdown
-const IRISH_COUNTIES = [
-  'Antrim', 'Armagh', 'Carlow', 'Cavan', 'Clare', 'Cork', 'Derry', 'Donegal',
-  'Down', 'Dublin', 'Fermanagh', 'Galway', 'Kerry', 'Kildare', 'Kilkenny',
-  'Laois', 'Leitrim', 'Limerick', 'Longford', 'Louth', 'Mayo', 'Meath',
-  'Monaghan', 'Offaly', 'Roscommon', 'Sligo', 'Tipperary', 'Tyrone',
-  'Waterford', 'Westmeath', 'Wexford', 'Wicklow'
-];
-
-// Car data from your existing system
-const CAR_DATA = {
-  'Audi': ['A1', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'Q2', 'Q3', 'Q5', 'Q7', 'Q8', 'TT', 'R8'],
-  'BMW': ['1 Series', '2 Series', '3 Series', '4 Series', '5 Series', '6 Series', '7 Series', '8 Series', 'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'Z4', 'i3', 'i4', 'iX'],
-  'Mercedes-Benz': ['A-Class', 'B-Class', 'C-Class', 'CLA', 'CLS', 'E-Class', 'S-Class', 'GLA', 'GLB', 'GLC', 'GLE', 'GLS', 'G-Class'],
-  'Volkswagen': ['Polo', 'Golf', 'Jetta', 'Passat', 'Arteon', 'T-Cross', 'T-Roc', 'Tiguan', 'Touareg', 'ID.3', 'ID.4'],
-  'Toyota': ['Yaris', 'Corolla', 'Camry', 'Prius', 'C-HR', 'RAV4', 'Highlander', 'Land Cruiser'],
-  'Ford': ['Fiesta', 'Focus', 'Mondeo', 'Mustang', 'EcoSport', 'Kuga', 'Edge', 'Explorer'],
-  'Nissan': ['Micra', 'Note', 'Sentra', 'Altima', 'Juke', 'Qashqai', 'X-Trail', 'Pathfinder'],
-  'Hyundai': ['i10', 'i20', 'i30', 'Elantra', 'Sonata', 'Kona', 'Tucson', 'Santa Fe'],
-  'Kia': ['Picanto', 'Rio', 'Ceed', 'Forte', 'Optima', 'Stonic', 'Sportage', 'Sorento'],
-  'Honda': ['Jazz', 'Civic', 'Accord', 'HR-V', 'CR-V', 'Pilot'],
-  'Mazda': ['Mazda2', 'Mazda3', 'Mazda6', 'CX-3', 'CX-5', 'CX-9'],
-  'Peugeot': ['108', '208', '308', '508', '2008', '3008', '5008'],
-  'Renault': ['Clio', 'Megane', 'Scenic', 'Captur', 'Kadjar', 'Koleos'],
-  'Opel': ['Corsa', 'Astra', 'Insignia', 'Crossland', 'Grandland'],
-  'Skoda': ['Citigo', 'Fabia', 'Octavia', 'Superb', 'Kamiq', 'Karoq', 'Kodiaq'],
-  'SEAT': ['Ibiza', 'Leon', 'Arona', 'Ateca', 'Tarraco'],
-  'Fiat': ['500', 'Panda', 'Tipo', '500X', '500L'],
-  'Alfa Romeo': ['Giulietta', 'Giulia', 'Stelvio'],
-  'Jeep': ['Renegade', 'Compass', 'Cherokee', 'Grand Cherokee'],
-  'Land Rover': ['Discovery Sport', 'Discovery', 'Range Rover Evoque', 'Range Rover Sport', 'Range Rover'],
-  'Volvo': ['XC40', 'XC60', 'XC90', 'V40', 'V60', 'V90', 'S60', 'S90'],
-  'Tesla': ['Model 3', 'Model S', 'Model X', 'Model Y'],
-  'Porsche': ['911', 'Cayenne', 'Macan', 'Panamera', 'Taycan'],
-  'Jaguar': ['XE', 'XF', 'XJ', 'F-Pace', 'E-Pace', 'I-Pace'],
-  'Mini': ['Hatch', 'Clubman', 'Countryman', 'Convertible'],
-  'Lexus': ['CT', 'IS', 'ES', 'GS', 'LS', 'NX', 'RX', 'GX', 'LX'],
-  'Infiniti': ['Q30', 'Q50', 'Q60', 'Q70', 'QX30', 'QX50', 'QX60', 'QX70']
-};
+// Import comprehensive car and location data
+import { CAR_MAKES_MODELS, getAllCarMakes, getModelsForMake } from '@/data/car-makes-models';
+import { IRISH_LOCATIONS, getAllCounties, getAreasForCounty } from '@/data/irish-locations';
 
 interface UploadedImage {
   id: string;
@@ -96,12 +60,19 @@ export default function PlaceAdPage() {
     description: '',
     features: [] as string[],
     county: '',
+    area: '', // Added area selection
     
     // Contact (auto-filled from user)
     contactName: '',
     contactEmail: '',
     contactPhone: '',
   });
+
+  // Get data for dropdowns
+  const availableMakes = getAllCarMakes();
+  const availableModels = formData.make ? getModelsForMake(formData.make) : [];
+  const availableCounties = getAllCounties();
+  const availableAreas = formData.county ? getAreasForCounty(formData.county) : [];
 
   // Check authentication
   useEffect(() => {
@@ -139,6 +110,20 @@ export default function PlaceAdPage() {
       setFormData(prev => ({ ...prev, title: autoTitle }));
     }
   }, [formData.make, formData.model, formData.year]);
+
+  // Reset model when make changes
+  useEffect(() => {
+    if (formData.make) {
+      setFormData(prev => ({ ...prev, model: '' }));
+    }
+  }, [formData.make]);
+
+  // Reset area when county changes
+  useEffect(() => {
+    if (formData.county) {
+      setFormData(prev => ({ ...prev, area: '' }));
+    }
+  }, [formData.county]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -184,6 +169,8 @@ export default function PlaceAdPage() {
           seats: formData.seats ? parseInt(formData.seats) : null,
           previousOwners: parseInt(formData.previousOwners),
           images: images,
+          // Combine county and area for location display
+          location: formData.area ? `${formData.area}, ${formData.county}` : formData.county,
         }),
       });
 
@@ -215,8 +202,6 @@ export default function PlaceAdPage() {
       </div>
     );
   }
-
-  const availableModels = formData.make ? CAR_DATA[formData.make as keyof typeof CAR_DATA] || [] : [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -272,8 +257,10 @@ export default function PlaceAdPage() {
                   required
                 >
                   <option value="">Select Make</option>
-                  {Object.keys(CAR_DATA).map(make => (
-                    <option key={make} value={make}>{make}</option>
+                  {availableMakes.map(make => (
+                    <option key={make} value={make}>
+                      {make} ({getModelsForMake(make).length} models)
+                    </option>
                   ))}
                 </select>
               </div>
@@ -290,7 +277,9 @@ export default function PlaceAdPage() {
                   disabled={!formData.make}
                   required
                 >
-                  <option value="">Select Model</option>
+                  <option value="">
+                    {formData.make ? 'Select Model' : 'Choose Make First'}
+                  </option>
                   {availableModels.map(model => (
                     <option key={model} value={model}>{model}</option>
                   ))}
@@ -367,6 +356,61 @@ export default function PlaceAdPage() {
                   <option value="PLUGIN_HYBRID">Plug-in Hybrid</option>
                 </select>
               </div>
+
+              {/* Transmission */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Transmission
+                </label>
+                <select
+                  value={formData.transmission}
+                  onChange={(e) => handleInputChange('transmission', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="">Select Transmission</option>
+                  <option value="MANUAL">Manual</option>
+                  <option value="AUTOMATIC">Automatic</option>
+                  <option value="SEMI_AUTOMATIC">Semi-Automatic</option>
+                </select>
+              </div>
+
+              {/* Body Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Body Type
+                </label>
+                <select
+                  value={formData.bodyType}
+                  onChange={(e) => handleInputChange('bodyType', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="">Select Body Type</option>
+                  <option value="HATCHBACK">Hatchback</option>
+                  <option value="SALOON">Saloon/Sedan</option>
+                  <option value="ESTATE">Estate</option>
+                  <option value="SUV">SUV</option>
+                  <option value="COUPE">Coupe</option>
+                  <option value="CONVERTIBLE">Convertible</option>
+                  <option value="MPV">MPV</option>
+                  <option value="VAN">Van</option>
+                  <option value="PICKUP">Pickup</option>
+                  <option value="OTHER">Other</option>
+                </select>
+              </div>
+
+              {/* Color */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Color
+                </label>
+                <input
+                  type="text"
+                  value={formData.color}
+                  onChange={(e) => handleInputChange('color', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="e.g. Black, White, Silver"
+                />
+              </div>
             </div>
           </div>
 
@@ -378,6 +422,7 @@ export default function PlaceAdPage() {
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* County */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   County *
@@ -389,10 +434,173 @@ export default function PlaceAdPage() {
                   required
                 >
                   <option value="">Select County</option>
-                  {IRISH_COUNTIES.map(county => (
-                    <option key={county} value={county}>{county}</option>
+                  {availableCounties.map(county => (
+                    <option key={county} value={county}>
+                      {county} ({getAreasForCounty(county).length} areas)
+                    </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Area/Town */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Area/Town
+                </label>
+                <select
+                  value={formData.area}
+                  onChange={(e) => handleInputChange('area', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  disabled={!formData.county}
+                >
+                  <option value="">
+                    {formData.county ? 'Select Area (Optional)' : 'Choose County First'}
+                  </option>
+                  {availableAreas.map(area => (
+                    <option key={area} value={area}>{area}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {formData.area && formData.county && 
+                    `Location will show as: ${formData.area}, ${formData.county}`
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Details */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Additional Details
+            </h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Engine Size */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Engine Size (L)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={formData.engineSize}
+                  onChange={(e) => handleInputChange('engineSize', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="e.g. 2.0"
+                />
+              </div>
+
+              {/* Doors */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Doors
+                </label>
+                <select
+                  value={formData.doors}
+                  onChange={(e) => handleInputChange('doors', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="">Select Doors</option>
+                  <option value="2">2 Doors</option>
+                  <option value="3">3 Doors</option>
+                  <option value="4">4 Doors</option>
+                  <option value="5">5 Doors</option>
+                </select>
+              </div>
+
+              {/* Seats */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Seats
+                </label>
+                <select
+                  value={formData.seats}
+                  onChange={(e) => handleInputChange('seats', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="">Select Seats</option>
+                  <option value="2">2 Seats</option>
+                  <option value="4">4 Seats</option>
+                  <option value="5">5 Seats</option>
+                  <option value="7">7 Seats</option>
+                  <option value="8">8 Seats</option>
+                </select>
+              </div>
+
+              {/* Previous Owners */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Previous Owners
+                </label>
+                <select
+                  value={formData.previousOwners}
+                  onChange={(e) => handleInputChange('previousOwners', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="1">1 Owner</option>
+                  <option value="2">2 Owners</option>
+                  <option value="3">3 Owners</option>
+                  <option value="4">4+ Owners</option>
+                </select>
+              </div>
+
+              {/* NCT Expiry */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  NCT Expiry
+                </label>
+                <input
+                  type="date"
+                  value={formData.nctExpiry}
+                  onChange={(e) => handleInputChange('nctExpiry', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+
+              {/* Condition */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Condition
+                </label>
+                <select
+                  value={formData.condition}
+                  onChange={(e) => handleInputChange('condition', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="NEW">New</option>
+                  <option value="USED">Used</option>
+                  <option value="DAMAGED">Damaged</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Service History & Accident History */}
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="serviceHistory"
+                  checked={formData.serviceHistory}
+                  onChange={(e) => handleInputChange('serviceHistory', e.target.checked)}
+                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                />
+                <label htmlFor="serviceHistory" className="ml-2 block text-sm text-gray-700">
+                  Full Service History Available
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="accidentHistory"
+                  checked={formData.accidentHistory}
+                  onChange={(e) => handleInputChange('accidentHistory', e.target.checked)}
+                  className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                />
+                <label htmlFor="accidentHistory" className="ml-2 block text-sm text-gray-700">
+                  Has Been in an Accident
+                </label>
               </div>
             </div>
           </div>

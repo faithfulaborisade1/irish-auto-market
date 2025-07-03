@@ -124,3 +124,6 @@ prisma/fix-*.ts
 prisma/fresh-cars.ts
 prisma/replace-cars.ts
 prisma/seed.ts
+
+scripts/
+lib*

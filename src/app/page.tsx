@@ -166,7 +166,7 @@ export default function HomePage() {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search for BMW 3 Series, Golf GTI, Tesla Model 3..."
+                    placeholder=" "
                     value={searchFilters.searchText}
                     onChange={(e) => setSearchFilters({...searchFilters, searchText: e.target.value})}
                     className="w-full rounded-lg border border-gray-300 p-3 pr-10 text-base focus:border-primary focus:ring-2 focus:ring-primary/20"

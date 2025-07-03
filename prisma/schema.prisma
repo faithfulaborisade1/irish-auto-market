@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,48 +8,40 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  firstName String
-  lastName  String
-  phone     String?
-  avatar    String?
-  role      UserRole @default(USER)
-  status    UserStatus @default(ACTIVE)
-  
-  // Authentication
-  password    String?
-  emailVerified DateTime?
-  
-  // Profile
-  bio         String?
-  location    Json?     // {county: string, city: string}
-  preferences Json?     // User preferences
-  
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  lastLoginAt DateTime?
-  
-  // Relations
-  cars        Car[]
-  inquiries   CarInquiry[]
-  favorites   FavoriteCar[]
-  savedSearches SavedSearch[]
-  dealerProfile DealerProfile?
-  sessions    Session[]
-  accounts    Account[]
-  
-  // Like System Relations
-  carLikes      CarLike[]
-  notifications Notification[]
-  
-  // NEW: Messaging Relations
+  id                  String         @id @default(cuid())
+  email               String         @unique
+  name                String?
+  firstName           String
+  lastName            String
+  phone               String?
+  avatar              String?
+  role                UserRole       @default(USER)
+  status              UserStatus     @default(ACTIVE)
+  password            String?
+  emailVerified       DateTime?
+  bio                 String?
+  location            Json?
+  preferences         Json?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  lastLoginAt         DateTime?
+  accounts            Account[]
+  inquiries           CarInquiry[]
+  carLikes            CarLike[]
+  cars                Car[]
   buyerConversations  Conversation[] @relation("BuyerConversations")
   sellerConversations Conversation[] @relation("SellerConversations")
+  dealerProfile       DealerProfile?
+  favorites           FavoriteCar[]
   sentMessages        Message[]
+  notifications       Notification[]
+  savedSearches       SavedSearch[]
+  sessions            Session[]
   
+  // NEW ADMIN RELATIONS
+  adminProfile        AdminProfile?
+  revenueRecords      RevenueRecord[]
+
   @@map("users")
 }
 
@@ -62,15 +51,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -87,106 +75,94 @@ model Session {
 }
 
 model Car {
-  id          String   @id @default(cuid())
-  userId      String
+  id              String            @id @default(cuid())
+  userId          String
+  title           String
+  make            String
+  model           String
+  year            Int
+  price           Decimal           @db.Decimal(10, 2)
+  currency        String            @default("EUR")
+  mileage         Int?
+  fuelType        FuelType?
+  transmission    TransmissionType?
+  engineSize      Decimal?          @db.Decimal(3, 1)
+  bodyType        BodyType?
+  doors           Int?
+  seats           Int?
+  color           String?
+  condition       CarCondition      @default(USED)
+  previousOwners  Int?
+  nctExpiry       DateTime?
+  serviceHistory  Boolean           @default(false)
+  accidentHistory Boolean           @default(false)
+  description     String?
+  features        Json?
+  location        Json?
+  slug            String            @unique
+  status          ListingStatus     @default(ACTIVE)
+  featured        Boolean           @default(false)
+  featuredUntil   DateTime?
+  viewsCount      Int               @default(0)
+  inquiriesCount  Int               @default(0)
+  likesCount      Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
   
-  // Basic Info
-  title       String
-  make        String
-  model       String
-  year        Int
-  price       Decimal  @db.Decimal(10, 2)
-  currency    String   @default("EUR")
+  // NEW ADMIN MODERATION FIELDS
+  moderationStatus ModerationStatus @default(PENDING)
+  moderatedBy     String?
+  moderatedAt     DateTime?
+  rejectionReason String?
+  qualityScore    Int?
+  qualityFlags    Json?
   
-  // Technical Details
-  mileage     Int?
-  fuelType    FuelType?
-  transmission TransmissionType?
-  engineSize  Decimal? @db.Decimal(3, 1)
-  bodyType    BodyType?
-  doors       Int?
-  seats       Int?
-  color       String?
+  images          CarImage[]
+  inquiries       CarInquiry[]
+  likes           CarLike[]
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations   Conversation[]
+  favorites       FavoriteCar[]
+  notifications   Notification[]
+  priceHistory    PriceHistory[]
   
-  // Condition & History
-  condition   CarCondition @default(USED)
-  previousOwners Int?
-  nctExpiry   DateTime?
-  serviceHistory Boolean @default(false)
-  accidentHistory Boolean @default(false)
-  
-  // Listing Details
-  description String?
-  features    Json?    // Array of strings
-  location    Json?    // {county: string, city: string, coordinates?: {lat: number, lng: number}}
-  
-  // SEO & Status
-  slug        String   @unique
-  status      ListingStatus @default(ACTIVE)
-  featured    Boolean  @default(false)
-  featuredUntil DateTime?
-  
-  // Analytics
-  viewsCount     Int @default(0)
-  inquiriesCount Int @default(0)
-  likesCount     Int @default(0)
-  
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Relations
-  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  images      CarImage[]
-  inquiries   CarInquiry[]
-  favorites   FavoriteCar[]
-  likes       CarLike[]
-  notifications Notification[]
-  priceHistory  PriceHistory[]
-  
-  // NEW: Messaging Relations
-  conversations Conversation[]
-  
+  // NEW ADMIN RELATIONS
+  featuredListings FeaturedListing[]
+  revenueRecords   RevenueRecord[]
+
   @@map("cars")
 }
 
 model CarImage {
-  id          String @id @default(cuid())
-  carId       String
-  
-  originalUrl   String
-  thumbnailUrl  String
-  mediumUrl     String
-  largeUrl      String
-  
-  altText     String?
-  orderIndex  Int
-  fileSize    Int?
-  
-  uploadedAt  DateTime @default(now())
-  
-  car         Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  
+  id           String   @id @default(cuid())
+  carId        String
+  originalUrl  String
+  thumbnailUrl String
+  mediumUrl    String
+  largeUrl     String
+  altText      String?
+  orderIndex   Int
+  fileSize     Int?
+  uploadedAt   DateTime @default(now())
+  car          Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+
   @@map("car_images")
 }
 
 model CarInquiry {
-  id          String    @id @default(cuid())
-  carId       String
-  buyerId     String
-  
-  message     String
+  id           String        @id @default(cuid())
+  carId        String
+  buyerId      String
+  message      String
   contactPhone String?
-  inquiryType InquiryType @default(GENERAL)
-  status      InquiryStatus @default(NEW)
-  
-  createdAt   DateTime  @default(now())
-  respondedAt DateTime?
-  response    String?
-  
-  car         Car       @relation(fields: [carId], references: [id], onDelete: Cascade)
-  buyer       User      @relation(fields: [buyerId], references: [id], onDelete: Cascade)
-  
+  inquiryType  InquiryType   @default(GENERAL)
+  status       InquiryStatus @default(NEW)
+  createdAt    DateTime      @default(now())
+  respondedAt  DateTime?
+  response     String?
+  buyer        User          @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  car          Car           @relation(fields: [carId], references: [id], onDelete: Cascade)
+
   @@map("car_inquiries")
 }
 
@@ -195,57 +171,47 @@ model FavoriteCar {
   userId    String
   carId     String
   createdAt DateTime @default(now())
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, carId])
   @@map("favorite_cars")
 }
 
 model SavedSearch {
-  id              String    @id @default(cuid())
-  userId          String
-  name            String
-  searchCriteria  Json      // CarSearchFilters
-  emailAlerts     Boolean   @default(true)
-  alertFrequency  AlertFrequency @default(DAILY)
-  lastNotified    DateTime?
-  isActive        Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id             String         @id @default(cuid())
+  userId         String
+  name           String
+  searchCriteria Json
+  emailAlerts    Boolean        @default(true)
+  alertFrequency AlertFrequency @default(DAILY)
+  lastNotified   DateTime?
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("saved_searches")
 }
 
 model DealerProfile {
-  id                String    @id @default(cuid())
-  userId            String    @unique
-  
-  businessName      String
+  id                   String           @id @default(cuid())
+  userId               String           @unique
+  businessName         String
   businessRegistration String?
-  vatNumber         String?
-  description       String?
-  logo              String?
-  website           String?
-  
-  businessHours     Json?     // Opening hours
-  specialties       Json?     // Array of specializations
-  
-  // Subscription
-  subscriptionType  SubscriptionType @default(BASIC)
-  subscriptionExpires DateTime?
-  
-  // Verification
-  verified          Boolean   @default(false)
-  verifiedAt        DateTime?
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  vatNumber            String?
+  description          String?
+  logo                 String?
+  website              String?
+  businessHours        Json?
+  specialties          Json?
+  subscriptionType     SubscriptionType @default(BASIC)
+  subscriptionExpires  DateTime?
+  verified             Boolean          @default(false)
+  verifiedAt           DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("dealer_profiles")
 }
 
@@ -254,29 +220,27 @@ model CarLike {
   userId    String
   carId     String
   createdAt DateTime @default(now())
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, carId])
   @@map("car_likes")
 }
 
 model Notification {
-  id        String            @id @default(cuid())
+  id        String           @id @default(cuid())
   userId    String
   type      NotificationType
   title     String
   message   String
   carId     String?
-  read      Boolean           @default(false)
+  read      Boolean          @default(false)
   actionUrl String?
-  metadata  Json?             // Extra data like old_price, new_price
-  createdAt DateTime          @default(now())
-  
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  car       Car?              @relation(fields: [carId], references: [id], onDelete: Cascade)
-  
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  car       Car?             @relation(fields: [carId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("notifications")
 }
 
@@ -286,78 +250,282 @@ model PriceHistory {
   oldPrice  Decimal  @db.Decimal(10, 2)
   newPrice  Decimal  @db.Decimal(10, 2)
   changedAt DateTime @default(now())
-  
   car       Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  
+
   @@map("price_history")
 }
 
-// NEW: Messaging Models
 model Conversation {
-  id          String   @id @default(cuid())
-  carId       String
-  buyerId     String
-  sellerId    String
-  
-  // Conversation status
-  status      ConversationStatus @default(ACTIVE)
-  lastMessageAt DateTime?
-  
-  // Quick access to latest message for inbox display
-  lastMessage   String?
-  lastMessageBy String?  // userId who sent last message
-  
-  // Read status for both participants
-  buyerLastRead    DateTime?
-  sellerLastRead   DateTime?
-  
-  // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  car         Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
-  buyer       User     @relation("BuyerConversations", fields: [buyerId], references: [id], onDelete: Cascade)
-  seller      User     @relation("SellerConversations", fields: [sellerId], references: [id], onDelete: Cascade)
-  messages    Message[]
-  
-  // Ensure one conversation per car per buyer
+  id             String             @id @default(cuid())
+  carId          String
+  buyerId        String
+  sellerId       String
+  status         ConversationStatus @default(ACTIVE)
+  lastMessageAt  DateTime?
+  lastMessage    String?
+  lastMessageBy  String?
+  buyerLastRead  DateTime?
+  sellerLastRead DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  buyer          User               @relation("BuyerConversations", fields: [buyerId], references: [id], onDelete: Cascade)
+  car            Car                @relation(fields: [carId], references: [id], onDelete: Cascade)
+  seller         User               @relation("SellerConversations", fields: [sellerId], references: [id], onDelete: Cascade)
+  messages       Message[]
+
   @@unique([carId, buyerId])
   @@map("conversations")
 }
 
 model Message {
-  id             String   @id @default(cuid())
+  id             String       @id @default(cuid())
   conversationId String
   senderId       String
-  
-  // Message content
   content        String
-  messageType    MessageType @default(TEXT)
-  
-  // File attachments (for images)
-  attachments    Json?    // Array of {url: string, type: string, name: string}
-  
-  // Message status
+  messageType    MessageType  @default(TEXT)
+  attachments    Json?
   readAt         DateTime?
   editedAt       DateTime?
-  
-  // Timestamps
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
-  // Relations
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
-  
+
   @@map("messages")
 }
 
-// Enums
+// ============================================================================
+// NEW ADMIN MODELS
+// ============================================================================
+
+model AdminProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  
+  adminRole       AdminRole
+  permissions     Json
+  department      String?
+  
+  twoFactorEnabled Boolean  @default(false)
+  twoFactorSecret  String?
+  backupCodes      Json?
+  ipWhitelist      Json?
+  
+  maxSessions      Int      @default(3)
+  sessionTimeout   Int      @default(1800)
+  
+  title           String?
+  bio             String?
+  avatar          String?
+  
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  failedLoginAttempts Int   @default(0)
+  lockedUntil     DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  auditLogs       AdminAuditLog[]
+  sessions        AdminSession[]
+  featuredListings FeaturedListing[]
+  
+  @@map("admin_profiles")
+}
+
+model AdminAuditLog {
+  id              String   @id @default(cuid())
+  adminId         String
+  
+  action          AdminAction
+  resourceType    ResourceType
+  resourceId      String?
+  
+  oldValues       Json?
+  newValues       Json?
+  description     String?
+  
+  ipAddress       String
+  userAgent       String?
+  endpoint        String?
+  
+  severity        LogSeverity @default(INFO)
+  tags            Json?
+  
+  createdAt       DateTime @default(now())
+  
+  admin           AdminProfile @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  
+  @@index([action, createdAt])
+  @@index([resourceType, resourceId])
+  @@index([adminId, createdAt])
+  @@map("admin_audit_logs")
+}
+
+model AdminSession {
+  id              String   @id @default(cuid())
+  adminId         String
+  
+  sessionToken    String   @unique
+  refreshToken    String?
+  
+  deviceInfo      Json?
+  ipAddress       String
+  location        Json?
+  
+  isActive        Boolean  @default(true)
+  revokedAt       DateTime?
+  revokedReason   String?
+  
+  createdAt       DateTime @default(now())
+  lastAccessedAt  DateTime @default(now())
+  expiresAt       DateTime
+  
+  admin           AdminProfile @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  
+  @@index([adminId, isActive])
+  @@index([expiresAt])
+  @@map("admin_sessions")
+}
+
+model FeaturedListing {
+  id              String   @id @default(cuid())
+  carId           String
+  adminId         String
+  
+  featuredType    FeaturedType @default(HOMEPAGE)
+  position        Int?
+  
+  pricePaid       Decimal  @db.Decimal(10, 2)
+  currency        String   @default("EUR")
+  
+  startDate       DateTime @default(now())
+  endDate         DateTime
+  
+  status          FeaturedStatus @default(ACTIVE)
+  paymentStatus   PaymentStatus @default(PENDING)
+  
+  impressions     Int      @default(0)
+  clicks          Int      @default(0)
+  inquiries       Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  car             Car      @relation(fields: [carId], references: [id], onDelete: Cascade)
+  admin           AdminProfile @relation(fields: [adminId], references: [id])
+  
+  @@map("featured_listings")
+}
+
+model SystemSetting {
+  id              String   @id @default(cuid())
+  
+  key             String   @unique
+  value           Json
+  
+  category        SettingCategory
+  dataType        SettingDataType
+  description     String
+  isPublic        Boolean  @default(false)
+  
+  validationRules Json?
+  defaultValue    Json?
+  
+  lastChangedBy   String?
+  lastChangedAt   DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("system_settings")
+}
+
+model SecurityEvent {
+  id              String   @id @default(cuid())
+  
+  eventType       SecurityEventType
+  severity        SecuritySeverity
+  description     String
+  
+  targetUserId    String?
+  targetIP        String?
+  targetResource  String?
+  
+  userAgent       String?
+  endpoint        String?
+  requestData     Json?
+  
+  blocked         Boolean  @default(false)
+  action          String?
+  
+  detectionMethod String?
+  riskScore       Int?
+  
+  resolved        Boolean  @default(false)
+  resolvedBy      String?
+  resolvedAt      DateTime?
+  resolution      String?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([eventType, createdAt])
+  @@index([severity, resolved])
+  @@index([targetUserId])
+  @@index([targetIP])
+  @@map("security_events")
+}
+
+model RevenueRecord {
+  id              String   @id @default(cuid())
+  
+  source          RevenueSource
+  sourceId        String?
+  carId           String?
+  
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String   @default("EUR")
+  fee             Decimal? @db.Decimal(10, 2)
+  
+  transactionId   String?
+  paymentMethod   PaymentMethod?
+  paymentStatus   PaymentStatus
+  
+  billingPeriodStart DateTime?
+  billingPeriodEnd   DateTime?
+  
+  userId          String
+  userType        UserRole
+  
+  processedAt     DateTime?
+  reconciled      Boolean  @default(false)
+  reconciledAt    DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id])
+  car             Car?     @relation(fields: [carId], references: [id])
+  
+  @@index([source, createdAt])
+  @@index([paymentStatus])
+  @@index([userId, createdAt])
+  @@map("revenue_records")
+}
+
+// ============================================================================
+// EXISTING ENUMS (UPDATED)
+// ============================================================================
+
 enum UserRole {
   USER
   DEALER
   ADMIN
+  SUPER_ADMIN
+  CONTENT_MOD
+  FINANCE_ADMIN
+  SUPPORT_ADMIN
 }
 
 enum UserStatus {
@@ -445,10 +613,9 @@ enum NotificationType {
   CAR_SOLD
   INQUIRY_RECEIVED
   SYSTEM_UPDATE
-  MESSAGE_RECEIVED  // NEW: For messaging notifications
+  MESSAGE_RECEIVED
 }
 
-// NEW: Messaging Enums
 enum ConversationStatus {
   ACTIVE
   ARCHIVED
@@ -458,5 +625,140 @@ enum ConversationStatus {
 enum MessageType {
   TEXT
   IMAGE
-  SYSTEM  // For system messages like "Car price updated"
+  SYSTEM
+}
+
+// ============================================================================
+// NEW ADMIN ENUMS
+// ============================================================================
+
+enum AdminRole {
+  SUPER_ADMIN
+  CONTENT_MOD
+  FINANCE_ADMIN
+  SUPPORT_ADMIN
+}
+
+enum AdminAction {
+  USER_CREATED
+  USER_VERIFIED
+  USER_SUSPENDED
+  USER_DELETED
+  USER_PASSWORD_RESET
+  CAR_APPROVED
+  CAR_REJECTED
+  CAR_FEATURED
+  CAR_DELETED
+  CAR_EDITED
+  PAYMENT_PROCESSED
+  REFUND_ISSUED
+  SUBSCRIPTION_CHANGED
+  SETTING_CHANGED
+  BACKUP_CREATED
+  SYSTEM_MAINTENANCE
+  SECURITY_EVENT
+  USER_BANNED
+  IP_BLOCKED
+}
+
+enum ResourceType {
+  USER
+  CAR
+  DEALER_PROFILE
+  FEATURED_LISTING
+  CONVERSATION
+  MESSAGE
+  SYSTEM_SETTING
+  REVENUE_RECORD
+}
+
+enum LogSeverity {
+  DEBUG
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+enum FeaturedType {
+  HOMEPAGE
+  CATEGORY
+  PREMIUM
+  NEWSLETTER
+}
+
+enum FeaturedStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  PAYPAL
+  STRIPE
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  UNDER_REVIEW
+  FLAGGED
+}
+
+enum SettingCategory {
+  GENERAL
+  SECURITY
+  EMAIL
+  PAYMENT
+  FEATURES
+  LIMITS
+  ANALYTICS
+}
+
+enum SettingDataType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+  ARRAY
+}
+
+enum SecurityEventType {
+  FAILED_LOGIN
+  BRUTE_FORCE_ATTEMPT
+  SUSPICIOUS_ACTIVITY
+  RATE_LIMIT_EXCEEDED
+  UNAUTHORIZED_ACCESS
+  DATA_BREACH_ATTEMPT
+  SPAM_DETECTED
+  BOT_DETECTED
+}
+
+enum SecuritySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum RevenueSource {
+  FEATURED_LISTING
+  DEALER_SUBSCRIPTION
+  PREMIUM_USER
+  ADVERTISING
+  COMMISSION
+  OTHER
 }
