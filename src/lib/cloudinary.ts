@@ -50,7 +50,8 @@ export const getImageUrl = (
   publicId: string,
   transformation?: string
 ): string => {
-  const baseUrl = `https://res.cloudinary.com/dmynffe63/image/upload`;
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const baseUrl = `https://res.cloudinary.com/${cloudName}/image/upload`;
   return transformation 
     ? `${baseUrl}/${transformation}/${publicId}`
     : `${baseUrl}/${publicId}`;
