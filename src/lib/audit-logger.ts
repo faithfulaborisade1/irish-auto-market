@@ -1,52 +1,43 @@
-// src/lib/audit-logger.ts - FIXED TypeScript Issues
+// src/lib/audit-logger.ts - FIXED to match Prisma schema
 import { prisma } from '@/lib/database';
+import { AdminAction, ResourceType, LogSeverity, SecurityEventType, SecuritySeverity } from '@prisma/client';
 
-// Define proper enum types that match Prisma schema
-export type AdminAction = 
-  | 'LOGIN' | 'LOGOUT' | 'LOGIN_FAILED'
-  | 'USER_CREATE' | 'USER_EDIT' | 'USER_DELETE' | 'USER_DISABLE' | 'USER_ENABLE'
-  | 'CAR_CREATE' | 'CAR_EDIT' | 'CAR_DELETE' | 'CAR_APPROVE' | 'CAR_REJECT'
-  | 'ADMIN_CREATE' | 'ADMIN_EDIT' | 'ADMIN_DELETE'
-  | 'SYSTEM_CONFIG' | 'SYSTEM_BACKUP' | 'SYSTEM_SHUTDOWN'
-  | 'FINANCIAL_TRANSFER' | 'FINANCIAL_REFUND' | 'FINANCIAL_ADJUSTMENT'
-  | 'CSRF_TOKEN_GENERATED' | 'PERMISSION_CHANGE' | 'ROLE_CHANGE';
-
-export type SecurityEventType = 
-  | 'LOGIN_SUCCESS' | 'LOGIN_FAILED' | 'LOGIN_RATE_LIMITED'
-  | 'SUSPICIOUS_USER_AGENT' | 'SUSPICIOUS_SCRIPT_INJECTION' | 'SUSPICIOUS_SQL_INJECTION'
-  | 'RATE_LIMIT_EXCEEDED' | 'CSRF_VIOLATION' | 'UNAUTHORIZED_ACCESS'
-  | 'BRUTE_FORCE_ATTEMPT' | 'MULTIPLE_FAILED_LOGINS' | 'INVALID_TOKEN'
-  | 'CSRF_TOKEN_MISSING' | 'CSRF_TOKEN_INVALID' | 'CSRF_TOKEN_EXPIRED'
-  | 'CSRF_TOKEN_ADMIN_MISMATCH' | 'CSRF_TOKEN_IP_MISMATCH' | 'CSRF_TOKEN_UNAUTHORIZED'
-  | 'CSRF_TOKEN_ERROR' | 'CSRF_TOKEN_GENERATION_FAILED'
-  | 'ADMIN_SESSION_INVALID' | 'ADMIN_SESSION_EXPIRED' | 'ADMIN_SESSION_HIJACK'
-  | 'IP_BLOCKED' | 'PERMANENT_IP_BLOCK' | 'SUSPICIOUS_ACTIVITY'
-  | 'AUTHENTICATION_FAILED' | 'AUTHORIZATION_FAILED' | 'TOKEN_VALIDATION_FAILED';
-
-export type SeverityLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+// Use Prisma-generated types directly
+export type { AdminAction, ResourceType, LogSeverity, SecurityEventType, SecuritySeverity };
 
 export interface AuditLogEntry {
   adminId?: string | null;
   action: AdminAction;
-  resource?: string;
+  resourceType?: ResourceType | null;  // ✅ FIXED: Use resourceType not resource
   resourceId?: string;
   ipAddress: string;
   userAgent: string;
-  metadata?: any;
-  severity: SeverityLevel;
-  success: boolean;
-  errorMessage?: string;
+  endpoint?: string;
+  oldValues?: any;
+  newValues?: any;
+  description?: string;
+  severity: LogSeverity;
+  tags?: any;
 }
 
 export interface SecurityEvent {
-  type: SecurityEventType;
-  ip: string;
-  userAgent: string;
-  path: string;
-  metadata?: any;
-  riskLevel: RiskLevel;
-  blocked: boolean;
+  eventType: SecurityEventType;
+  severity: SecuritySeverity;
+  description: string;
+  targetUserId?: string;
+  targetIP?: string;
+  targetResource?: string;
+  userAgent?: string;
+  endpoint?: string;
+  requestData?: any;
+  blocked?: boolean;
+  action?: string;
+  detectionMethod?: string;
+  riskScore?: number;
+  resolved?: boolean;
+  resolvedBy?: string;
+  resolvedAt?: Date;
+  resolution?: string;
 }
 
 class AuditLogger {
@@ -62,127 +53,113 @@ class AuditLogger {
     return AuditLogger.instance;
   }
 
-  // Admin Action Logging with proper typing
-  async logAdminAction(entry: Omit<AuditLogEntry, 'severity'>): Promise<void> {
-    const auditEntry: AuditLogEntry = {
-      ...entry,
-      severity: this.calculateSeverity(entry.action, entry.success)
-    };
-
+  // Admin Action Logging with proper Prisma types
+  async logAdminAction(entry: AuditLogEntry): Promise<void> {
     // Immediate console logging for critical events
-    if (auditEntry.severity === 'CRITICAL' || auditEntry.severity === 'HIGH') {
-      console.error(`🚨 CRITICAL ADMIN ACTION: ${JSON.stringify(auditEntry)}`);
+    if (entry.severity === LogSeverity.CRITICAL || entry.severity === LogSeverity.ERROR) {
+      console.error(`🚨 CRITICAL ADMIN ACTION: ${JSON.stringify(entry)}`);
     }
 
     // Queue for database storage
-    this.logQueue.push(auditEntry);
+    this.logQueue.push(entry);
     this.processQueue();
   }
 
-  // Security Event Logging with proper typing
-  async logSecurityEvent(event: Omit<SecurityEvent, 'riskLevel'>): Promise<void> {
-    const securityEvent: SecurityEvent = {
-      ...event,
-      riskLevel: this.calculateSecurityRisk(event.type, event.blocked)
-    };
-
+  // Security Event Logging with proper Prisma types
+  async logSecurityEvent(event: SecurityEvent): Promise<void> {
     // Immediate alerting for high-risk events
-    if (securityEvent.riskLevel === 'CRITICAL' || securityEvent.riskLevel === 'HIGH') {
-      console.error(`🚨 SECURITY THREAT: ${JSON.stringify(securityEvent)}`);
+    if (event.severity === SecuritySeverity.CRITICAL || event.severity === SecuritySeverity.HIGH) {
+      console.error(`🚨 SECURITY THREAT: ${JSON.stringify(event)}`);
       
       // In production, send to monitoring service
       if (process.env.NODE_ENV === 'production') {
-        await this.sendSecurityAlert(securityEvent);
+        await this.sendSecurityAlert(event);
       }
     }
 
-    this.securityQueue.push(securityEvent);
+    this.securityQueue.push(event);
     this.processQueue();
   }
 
   // Specific logging methods for common admin actions
   async logUserAction(
     adminId: string, 
-    action: 'CREATE' | 'EDIT' | 'DELETE' | 'DISABLE' | 'ENABLE', 
+    action: AdminAction, 
     targetUserId: string, 
     ip: string, 
     userAgent: string, 
-    success: boolean, 
     details?: any
   ): Promise<void> {
     await this.logAdminAction({
       adminId,
-      action: `USER_${action}` as AdminAction,
-      resource: 'user',
+      action,
+      resourceType: ResourceType.USER,
       resourceId: targetUserId,
       ipAddress: ip,
       userAgent,
-      success,
-      metadata: details
+      severity: LogSeverity.INFO,
+      newValues: details
     });
   }
 
   async logCarAction(
     adminId: string, 
-    action: 'CREATE' | 'EDIT' | 'DELETE' | 'APPROVE' | 'REJECT', 
+    action: AdminAction, 
     carId: string, 
     ip: string, 
     userAgent: string, 
-    success: boolean, 
     details?: any
   ): Promise<void> {
     await this.logAdminAction({
       adminId,
-      action: `CAR_${action}` as AdminAction,
-      resource: 'car',
+      action,
+      resourceType: ResourceType.CAR,
       resourceId: carId,
       ipAddress: ip,
       userAgent,
-      success,
-      metadata: details
+      severity: LogSeverity.INFO,
+      newValues: details
     });
   }
 
   async logSystemAction(
     adminId: string, 
-    action: 'CONFIG' | 'BACKUP' | 'SHUTDOWN', 
+    action: AdminAction, 
     ip: string, 
     userAgent: string, 
-    success: boolean, 
     details?: any
   ): Promise<void> {
     await this.logAdminAction({
       adminId,
-      action: `SYSTEM_${action}` as AdminAction,
-      resource: 'system',
+      action,
+      resourceType: ResourceType.SYSTEM_SETTING,
       ipAddress: ip,
       userAgent,
-      success,
-      metadata: details
+      severity: LogSeverity.WARNING,
+      newValues: details
     });
   }
 
   async logFinancialAction(
     adminId: string, 
-    action: 'TRANSFER' | 'REFUND' | 'ADJUSTMENT', 
+    action: AdminAction, 
     amount: number, 
     ip: string, 
     userAgent: string, 
-    success: boolean, 
     details?: any
   ): Promise<void> {
     await this.logAdminAction({
       adminId,
-      action: `FINANCIAL_${action}` as AdminAction,
-      resource: 'financial',
+      action,
+      resourceType: ResourceType.REVENUE_RECORD,
       ipAddress: ip,
       userAgent,
-      success,
-      metadata: { amount, ...details }
+      severity: LogSeverity.WARNING,
+      newValues: { amount, ...details }
     });
   }
 
-  // Security event helpers with proper typing
+  // Security event helpers with proper Prisma types
   async logLoginAttempt(
     ip: string, 
     userAgent: string, 
@@ -191,11 +168,13 @@ class AuditLogger {
     reason?: string
   ): Promise<void> {
     await this.logSecurityEvent({
-      type: success ? 'LOGIN_SUCCESS' : 'LOGIN_FAILED',
-      ip,
+      eventType: success ? SecurityEventType.FAILED_LOGIN : SecurityEventType.FAILED_LOGIN,
+      severity: success ? SecuritySeverity.LOW : SecuritySeverity.MEDIUM,
+      description: success ? 'Successful login' : `Failed login: ${reason || 'Unknown reason'}`,
+      targetIP: ip,
       userAgent,
-      path: '/api/admin/auth/login',
-      metadata: { 
+      endpoint: '/api/admin/auth/login',
+      requestData: { 
         email: this.maskEmail(email), 
         reason,
         timestamp: new Date().toISOString()
@@ -205,18 +184,20 @@ class AuditLogger {
   }
 
   async logSuspiciousActivity(
-    type: 'USER_AGENT' | 'SCRIPT_INJECTION' | 'SQL_INJECTION', 
+    type: SecurityEventType, 
     ip: string, 
     userAgent: string, 
     path: string, 
     details: any
   ): Promise<void> {
     await this.logSecurityEvent({
-      type: `SUSPICIOUS_${type}` as SecurityEventType,
-      ip,
+      eventType: type,
+      severity: SecuritySeverity.HIGH,
+      description: `Suspicious activity detected: ${type}`,
+      targetIP: ip,
       userAgent,
-      path,
-      metadata: details,
+      endpoint: path,
+      requestData: details,
       blocked: true
     });
   }
@@ -228,11 +209,13 @@ class AuditLogger {
     attemptCount: number
   ): Promise<void> {
     await this.logSecurityEvent({
-      type: 'RATE_LIMIT_EXCEEDED',
-      ip,
+      eventType: SecurityEventType.RATE_LIMIT_EXCEEDED,
+      severity: SecuritySeverity.MEDIUM,
+      description: `Rate limit exceeded: ${attemptCount} attempts`,
+      targetIP: ip,
       userAgent,
-      path,
-      metadata: { attemptCount, timestamp: new Date().toISOString() },
+      endpoint: path,
+      requestData: { attemptCount, timestamp: new Date().toISOString() },
       blocked: true
     });
   }
@@ -262,21 +245,24 @@ class AuditLogger {
     }
   }
 
+  // ✅ FIXED: Use correct field names from Prisma schema
   private async storeBatchAuditLogs(logs: AuditLogEntry[]): Promise<void> {
     try {
       await prisma.adminAuditLog.createMany({
         data: logs.map(log => ({
-          adminId: log.adminId || null,
+          adminId: log.adminId || '',  // AdminAuditLog.adminId is required in your schema
           action: log.action,
-          resource: log.resource || null,
-          resourceId: log.resourceId || null,
+          resourceType: log.resourceType || ResourceType.USER,  // ✅ FIXED: Use resourceType
+          resourceId: log.resourceId,
+          oldValues: log.oldValues,
+          newValues: log.newValues,
+          description: log.description,
           ipAddress: log.ipAddress,
-          userAgent: log.userAgent.substring(0, 500),
-          metadata: log.metadata || {},
+          userAgent: log.userAgent?.substring(0, 500),
+          endpoint: log.endpoint,
           severity: log.severity,
-          success: log.success,
-          errorMessage: log.errorMessage || null,
-          timestamp: new Date()
+          tags: log.tags,
+          // createdAt is auto-generated by Prisma
         }))
       });
     } catch (error) {
@@ -286,96 +272,35 @@ class AuditLogger {
     }
   }
 
+  // ✅ FIXED: Use correct field names from SecurityEvent schema
   private async storeBatchSecurityEvents(events: SecurityEvent[]): Promise<void> {
     try {
       await prisma.securityEvent.createMany({
         data: events.map(event => ({
-          type: event.type,
-          ipAddress: event.ip,
-          userAgent: event.userAgent.substring(0, 500),
-          path: event.path,
-          metadata: event.metadata || {},
-          riskLevel: event.riskLevel,
-          blocked: event.blocked,
-          timestamp: new Date()
+          eventType: event.eventType,
+          severity: event.severity,
+          description: event.description,
+          targetUserId: event.targetUserId,
+          targetIP: event.targetIP,
+          targetResource: event.targetResource,
+          userAgent: event.userAgent?.substring(0, 500),
+          endpoint: event.endpoint,
+          requestData: event.requestData,
+          blocked: event.blocked || false,
+          action: event.action,
+          detectionMethod: event.detectionMethod,
+          riskScore: event.riskScore,
+          resolved: event.resolved || false,
+          resolvedBy: event.resolvedBy,
+          resolvedAt: event.resolvedAt,
+          resolution: event.resolution,
+          // createdAt is auto-generated by Prisma
         }))
       });
     } catch (error) {
       console.error('Failed to store security events:', error);
       this.securityQueue.unshift(...events);
     }
-  }
-
-  private calculateSeverity(action: AdminAction, success: boolean): SeverityLevel {
-    if (!success) {
-      // Failed actions are generally more severe
-      const criticalActions: AdminAction[] = ['USER_DELETE', 'SYSTEM_SHUTDOWN', 'FINANCIAL_TRANSFER'];
-      const highActions: AdminAction[] = ['USER_DISABLE', 'CAR_DELETE', 'ADMIN_CREATE', 'SYSTEM_CONFIG'];
-      
-      if (criticalActions.includes(action)) return 'CRITICAL';
-      if (highActions.includes(action)) return 'HIGH';
-      return 'MEDIUM';
-    }
-
-    // Successful actions
-    const criticalActions: AdminAction[] = ['USER_DELETE', 'ADMIN_DELETE', 'SYSTEM_SHUTDOWN'];
-    const highActions: AdminAction[] = ['USER_DISABLE', 'FINANCIAL_TRANSFER', 'SYSTEM_CONFIG'];
-    const mediumActions: AdminAction[] = ['CAR_DELETE', 'USER_EDIT', 'LOGIN'];
-
-    if (criticalActions.includes(action)) return 'CRITICAL';
-    if (highActions.includes(action)) return 'HIGH';
-    if (mediumActions.includes(action)) return 'MEDIUM';
-    
-    return 'LOW';
-  }
-
-  private calculateSecurityRisk(type: SecurityEventType, blocked: boolean): RiskLevel {
-    const criticalEvents: SecurityEventType[] = [
-      'SUSPICIOUS_SQL_INJECTION', 
-      'BRUTE_FORCE_ATTEMPT', 
-      'ADMIN_SESSION_HIJACK',
-      'PERMANENT_IP_BLOCK'
-    ];
-    
-    const highEvents: SecurityEventType[] = [
-      'RATE_LIMIT_EXCEEDED', 
-      'INVALID_TOKEN', 
-      'SUSPICIOUS_USER_AGENT', 
-      'MULTIPLE_FAILED_LOGINS',
-      'CSRF_TOKEN_ADMIN_MISMATCH',
-      'CSRF_TOKEN_IP_MISMATCH',
-      'ADMIN_SESSION_INVALID',
-      'AUTHENTICATION_FAILED',
-      'AUTHORIZATION_FAILED'
-    ];
-    
-    const mediumEvents: SecurityEventType[] = [
-      'LOGIN_FAILED', 
-      'CSRF_VIOLATION',
-      'CSRF_TOKEN_MISSING',
-      'CSRF_TOKEN_INVALID',
-      'CSRF_TOKEN_EXPIRED',
-      'CSRF_TOKEN_UNAUTHORIZED',
-      'CSRF_TOKEN_ERROR',
-      'TOKEN_VALIDATION_FAILED'
-    ];
-
-    let baseRisk: RiskLevel = 'LOW';
-    
-    if (criticalEvents.includes(type)) baseRisk = 'CRITICAL';
-    else if (highEvents.includes(type)) baseRisk = 'HIGH';
-    else if (mediumEvents.includes(type)) baseRisk = 'MEDIUM';
-
-    // Increase risk if the attack was not blocked
-    if (!blocked && baseRisk !== 'LOW') {
-      const riskLevels: RiskLevel[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
-      const currentIndex = riskLevels.indexOf(baseRisk);
-      if (currentIndex < riskLevels.length - 1) {
-        baseRisk = riskLevels[currentIndex + 1];
-      }
-    }
-
-    return baseRisk;
   }
 
   private maskEmail(email: string): string {
@@ -385,7 +310,7 @@ class AuditLogger {
   }
 
   private async sendSecurityAlert(event: SecurityEvent): Promise<void> {
-    console.error(`🚨 SECURITY ALERT: ${event.type} from ${event.ip} - Risk: ${event.riskLevel}`);
+    console.error(`🚨 SECURITY ALERT: ${event.eventType} from ${event.targetIP} - Severity: ${event.severity}`);
   }
 
   // Fixed utility methods for reports and analysis
@@ -397,7 +322,7 @@ class AuditLogger {
         by: ['action', 'severity'],
         where: {
           adminId,
-          timestamp: { gte: since }
+          createdAt: { gte: since }  // ✅ FIXED: Use createdAt not timestamp
         },
         _count: true
       });
@@ -412,14 +337,14 @@ class AuditLogger {
     
     try {
       return await prisma.securityEvent.groupBy({
-        by: ['type', 'riskLevel'],
+        by: ['eventType', 'severity'],  // ✅ FIXED: Use eventType not type
         where: {
-          timestamp: { gte: since }
+          createdAt: { gte: since }  // ✅ FIXED: Use createdAt not timestamp
         },
         _count: true,
         orderBy: {
           _count: {
-            type: 'desc'
+            eventType: 'desc'  // ✅ FIXED: Use eventType
           }
         }
       });
@@ -429,27 +354,27 @@ class AuditLogger {
     }
   }
 
-  // Fixed method - use proper aggregation approach
   async getHighRiskIPs(days: number = 7): Promise<string[]> {
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     
     try {
-      // Get all high-risk events first, then group in application logic
       const highRiskEvents = await prisma.securityEvent.findMany({
         where: {
-          timestamp: { gte: since },
-          riskLevel: { in: ['HIGH', 'CRITICAL'] }
+          createdAt: { gte: since },  // ✅ FIXED: Use createdAt
+          severity: { in: [SecuritySeverity.HIGH, SecuritySeverity.CRITICAL] }
         },
         select: {
-          ipAddress: true
+          targetIP: true  // ✅ FIXED: Use targetIP not ipAddress
         }
       });
 
       // Count occurrences per IP in application logic
       const ipCounts = new Map<string, number>();
       highRiskEvents.forEach(event => {
-        const currentCount = ipCounts.get(event.ipAddress) || 0;
-        ipCounts.set(event.ipAddress, currentCount + 1);
+        if (event.targetIP) {
+          const currentCount = ipCounts.get(event.targetIP) || 0;
+          ipCounts.set(event.targetIP, currentCount + 1);
+        }
       });
 
       // Filter IPs with more than 5 events
@@ -470,27 +395,26 @@ export const auditLogger = AuditLogger.getInstance();
 export async function logAdminAction(
   adminId: string | null | undefined,
   action: AdminAction,
-  resource: string,
+  resourceType: ResourceType,
   resourceId: string,
   ip: string,
   userAgent: string,
-  success: boolean,
   details?: any
 ): Promise<void> {
   await auditLogger.logAdminAction({
-    adminId: adminId || null, // Convert undefined to null
+    adminId: adminId || undefined,
     action,
-    resource,
+    resourceType,
     resourceId,
     ipAddress: ip,
     userAgent,
-    success,
-    metadata: details
+    severity: LogSeverity.INFO,
+    newValues: details
   });
 }
 
 export async function logSecurityThreat(
-  type: SecurityEventType,
+  eventType: SecurityEventType,
   ip: string,
   userAgent: string,
   path: string,
@@ -498,11 +422,13 @@ export async function logSecurityThreat(
   details?: any
 ): Promise<void> {
   await auditLogger.logSecurityEvent({
-    type,
-    ip,
+    eventType,
+    severity: blocked ? SecuritySeverity.HIGH : SecuritySeverity.MEDIUM,
+    description: `Security event: ${eventType}`,
+    targetIP: ip,
     userAgent,
-    path,
+    endpoint: path,
     blocked,
-    metadata: details
+    requestData: details
   });
 }

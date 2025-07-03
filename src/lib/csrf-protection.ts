@@ -1,6 +1,7 @@
 // src/lib/csrf-protection.ts - Complete CSRF Protection System
 import { NextRequest } from 'next/server';
-import { auditLogger, SecurityEventType } from './audit-logger';
+import { auditLogger } from './audit-logger';
+import { SecurityEventType, SecuritySeverity } from '@prisma/client';
 
 // In-memory CSRF token store (use Redis in production)
 const csrfTokens = new Map<string, {
@@ -66,12 +67,14 @@ class CSRFProtection {
     
     if (!token) {
       await auditLogger.logSecurityEvent({
-        type: 'CSRF_TOKEN_MISSING',
-        ip,
+        eventType: SecurityEventType.UNAUTHORIZED_ACCESS,  // ✅ FIXED: Use eventType instead of type
+        severity: SecuritySeverity.MEDIUM,
+        description: 'CSRF token missing from request',
+        targetIP: ip,
         userAgent: request.headers.get('user-agent') || 'unknown',
-        path: request.nextUrl.pathname,
+        endpoint: request.nextUrl.pathname,
         blocked: true,
-        metadata: { adminId }
+        requestData: { adminId }
       });
       
       return { valid: false, reason: 'CSRF token missing' };
@@ -81,12 +84,14 @@ class CSRFProtection {
     const tokenData = csrfTokens.get(token);
     if (!tokenData) {
       await auditLogger.logSecurityEvent({
-        type: 'CSRF_TOKEN_INVALID',
-        ip,
+        eventType: SecurityEventType.UNAUTHORIZED_ACCESS,  // ✅ FIXED: Use eventType
+        severity: SecuritySeverity.HIGH,
+        description: 'Invalid CSRF token provided',
+        targetIP: ip,
         userAgent: request.headers.get('user-agent') || 'unknown',
-        path: request.nextUrl.pathname,
+        endpoint: request.nextUrl.pathname,
         blocked: true,
-        metadata: { adminId, token: token.substring(0, 8) + '...' }
+        requestData: { adminId, token: token.substring(0, 8) + '...' }
       });
       
       return { valid: false, reason: 'Invalid CSRF token' };
@@ -97,12 +102,14 @@ class CSRFProtection {
       csrfTokens.delete(token);
       
       await auditLogger.logSecurityEvent({
-        type: 'CSRF_TOKEN_EXPIRED',
-        ip,
+        eventType: SecurityEventType.UNAUTHORIZED_ACCESS,  // ✅ FIXED: Use eventType
+        severity: SecuritySeverity.MEDIUM,
+        description: 'Expired CSRF token used',
+        targetIP: ip,
         userAgent: request.headers.get('user-agent') || 'unknown',
-        path: request.nextUrl.pathname,
+        endpoint: request.nextUrl.pathname,
         blocked: true,
-        metadata: { adminId }
+        requestData: { adminId }
       });
       
       return { valid: false, reason: 'CSRF token expired' };
@@ -111,12 +118,14 @@ class CSRFProtection {
     // Check admin ID match
     if (tokenData.adminId !== adminId) {
       await auditLogger.logSecurityEvent({
-        type: 'CSRF_TOKEN_ADMIN_MISMATCH',
-        ip,
+        eventType: SecurityEventType.SUSPICIOUS_ACTIVITY,  // ✅ FIXED: Use eventType
+        severity: SecuritySeverity.HIGH,
+        description: 'CSRF token admin ID mismatch detected',
+        targetIP: ip,
         userAgent: request.headers.get('user-agent') || 'unknown',
-        path: request.nextUrl.pathname,
+        endpoint: request.nextUrl.pathname,
         blocked: true,
-        metadata: { 
+        requestData: { 
           expectedAdminId: adminId, 
           tokenAdminId: tokenData.adminId 
         }
@@ -128,12 +137,14 @@ class CSRFProtection {
     // Optional: Check IP match for extra security
     if (process.env.CSRF_IP_BINDING === 'true' && tokenData.ip !== ip) {
       await auditLogger.logSecurityEvent({
-        type: 'CSRF_TOKEN_IP_MISMATCH',
-        ip,
+        eventType: SecurityEventType.SUSPICIOUS_ACTIVITY,  // ✅ FIXED: Use eventType
+        severity: SecuritySeverity.HIGH,
+        description: 'CSRF token IP address mismatch detected',
+        targetIP: ip,
         userAgent: request.headers.get('user-agent') || 'unknown',
-        path: request.nextUrl.pathname,
+        endpoint: request.nextUrl.pathname,
         blocked: true,
-        metadata: { 
+        requestData: { 
           adminId,
           expectedIP: tokenData.ip,
           actualIP: ip

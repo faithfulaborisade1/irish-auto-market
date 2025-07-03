@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { csrfProtection } from '@/lib/csrf-protection';
 import { auditLogger } from '@/lib/audit-logger';
+import { SecurityEventType, SecuritySeverity, AdminAction, ResourceType, LogSeverity } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 
 export async function GET(request: NextRequest) {
@@ -14,12 +15,14 @@ export async function GET(request: NextRequest) {
     
     if (!authResult.success) {
       await auditLogger.logSecurityEvent({
-        type: 'CSRF_TOKEN_UNAUTHORIZED',
-        ip,
+        eventType: SecurityEventType.UNAUTHORIZED_ACCESS,  // ✅ FIXED: Use eventType
+        severity: SecuritySeverity.MEDIUM,                  // ✅ FIXED: Added required field
+        description: `Unauthorized CSRF token request: ${authResult.reason}`,  // ✅ FIXED: Added required field
+        targetIP: ip,                                       // ✅ FIXED: Use targetIP
         userAgent,
-        path: '/api/admin/csrf-token',
+        endpoint: '/api/admin/csrf-token',                  // ✅ FIXED: Use endpoint
         blocked: true,
-        metadata: { reason: authResult.reason }
+        requestData: { reason: authResult.reason }          // ✅ FIXED: Use requestData
       });
       
       return NextResponse.json(
@@ -31,12 +34,14 @@ export async function GET(request: NextRequest) {
     // Ensure adminId is not undefined
     if (!authResult.adminId) {
       await auditLogger.logSecurityEvent({
-        type: 'CSRF_TOKEN_UNAUTHORIZED',
-        ip,
+        eventType: SecurityEventType.UNAUTHORIZED_ACCESS,  // ✅ FIXED: Use eventType
+        severity: SecuritySeverity.MEDIUM,                  // ✅ FIXED: Added required field
+        description: 'CSRF token request missing admin ID', // ✅ FIXED: Added required field
+        targetIP: ip,                                       // ✅ FIXED: Use targetIP
         userAgent,
-        path: '/api/admin/csrf-token',
+        endpoint: '/api/admin/csrf-token',                  // ✅ FIXED: Use endpoint
         blocked: true,
-        metadata: { reason: 'missing_admin_id' }
+        requestData: { reason: 'missing_admin_id' }         // ✅ FIXED: Use requestData
       });
       
       return NextResponse.json(
@@ -49,14 +54,17 @@ export async function GET(request: NextRequest) {
     const token = csrfProtection.generateToken(authResult.adminId, ip);
     const expires = Date.now() + (60 * 60 * 1000); // 1 hour
     
-    // Log token generation
+    // Log token generation - ✅ FIXED: Use correct interface
     await auditLogger.logAdminAction({
       adminId: authResult.adminId,
-      action: 'CSRF_TOKEN_GENERATED',
+      action: AdminAction.SECURITY_EVENT,                   // ✅ FIXED: Use proper enum
+      resourceType: ResourceType.SYSTEM_SETTING,           // ✅ FIXED: Added required field
+      resourceId: undefined,
       ipAddress: ip,
       userAgent,
-      success: true,
-      metadata: {
+      severity: LogSeverity.INFO,                          // ✅ FIXED: Use correct severity enum
+      description: 'CSRF token generated',                 // ✅ FIXED: Added description
+      newValues: {                                         // ✅ FIXED: Use newValues instead of metadata
         tokenPrefix: token.substring(0, 8),
         expires: new Date(expires).toISOString()
       }
@@ -70,12 +78,14 @@ export async function GET(request: NextRequest) {
     
   } catch (error: any) {
     await auditLogger.logSecurityEvent({
-      type: 'CSRF_TOKEN_ERROR',
-      ip,
+      eventType: SecurityEventType.UNAUTHORIZED_ACCESS,    // ✅ FIXED: Use eventType
+      severity: SecuritySeverity.CRITICAL,                 // ✅ FIXED: Added required field
+      description: `CSRF token generation error: ${error.message}`, // ✅ FIXED: Added required field
+      targetIP: ip,                                         // ✅ FIXED: Use targetIP
       userAgent,
-      path: '/api/admin/csrf-token',
+      endpoint: '/api/admin/csrf-token',                    // ✅ FIXED: Use endpoint
       blocked: true,
-      metadata: { error: error.message }
+      requestData: { error: error.message }                // ✅ FIXED: Use requestData
     });
     
     return NextResponse.json(
