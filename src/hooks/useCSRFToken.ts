@@ -116,21 +116,38 @@ export function useCSRFToken(): UseCSRFTokenReturn {
       }
     }
 
-    // Prepare headers
-    const headers: HeadersInit = {
+    // Prepare headers - FIXED TO AVOID TYPESCRIPT ERROR
+    const headerRecord: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
     };
+
+    // Add existing headers from options
+    if (options.headers) {
+      if (options.headers instanceof Headers) {
+        // Convert Headers object to record
+        options.headers.forEach((value, key) => {
+          headerRecord[key] = value;
+        });
+      } else if (Array.isArray(options.headers)) {
+        // Handle array format [key, value][]
+        options.headers.forEach(([key, value]) => {
+          headerRecord[key] = value;
+        });
+      } else {
+        // Handle plain object format
+        Object.assign(headerRecord, options.headers);
+      }
+    }
 
     // Add CSRF token for state-changing operations
     if (needsCSRF && token) {
-      headers['X-CSRF-Token'] = token;
+      headerRecord['X-CSRF-Token'] = token;
     }
 
     // Make the request
     const response = await fetch(url, {
       ...options,
-      headers,
+      headers: headerRecord, // Use our properly typed headers
       credentials: 'include', // Always include cookies for admin requests
     });
 
