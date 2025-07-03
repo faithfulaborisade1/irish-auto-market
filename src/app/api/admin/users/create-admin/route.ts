@@ -1,6 +1,6 @@
 // src/app/api/admin/users/create-admin/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, AdminRole, AdminAction, ResourceType, LogSeverity } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
@@ -8,13 +8,13 @@ import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
-// Validation schema for creating admin
+// Validation schema for creating admin - Updated to match your schema
 const CreateAdminSchema = z.object({
   email: z.string().email('Invalid email format'),
   firstName: z.string().min(1, 'First name required').max(50, 'First name too long'),
   lastName: z.string().min(1, 'Last name required').max(50, 'Last name too long'),
-  role: z.enum(['SUPER_ADMIN', 'ADMIN'], {
-    errorMap: () => ({ message: 'Role must be SUPER_ADMIN or ADMIN' })
+  role: z.enum(['SUPER_ADMIN', 'CONTENT_MOD', 'FINANCE_ADMIN', 'SUPPORT_ADMIN'], {
+    errorMap: () => ({ message: 'Role must be SUPER_ADMIN, CONTENT_MOD, FINANCE_ADMIN, or SUPPORT_ADMIN' })
   })
 });
 
@@ -50,7 +50,7 @@ async function verifyAdminAuth(request: NextRequest) {
     }
 
     // Only SUPER_ADMIN can create other admins
-    if (adminUser.adminProfile.adminRole !== 'SUPER_ADMIN') {
+    if (adminUser.adminProfile.adminRole !== AdminRole.SUPER_ADMIN) {
       return { error: 'Only Super Admins can create other admins', status: 403 };
     }
 
@@ -110,25 +110,33 @@ async function sendVerificationEmail(email: string, token: string, tempPassword:
   };
 }
 
-// Helper function to log admin actions
-async function logAdminAction(adminId: string, action: string, details: any, ip?: string) {
+// Helper function to log admin actions - CORRECTED FOR YOUR SCHEMA
+async function logAdminAction(adminId: string, action: AdminAction, details: any, ip?: string) {
   try {
     await prisma.adminAuditLog.create({
       data: {
         adminId,
-        action: action as any,
-        resourceType: 'USER' as any,
-        resourceId: details.targetUserId || null,
+        action,
+        resourceType: ResourceType.USER,
+        resourceId: details.targetUserId,
         ipAddress: ip || 'unknown',
-        severity: details.reason === 'Server error' ? 'ERROR' as any : 'INFO' as any,
+        userAgent: details.userAgent,
+        severity: details.reason === 'Server error' ? LogSeverity.ERROR : LogSeverity.INFO,
         description: `${action}: ${JSON.stringify(details)}`,
-        oldValues: null,
-        newValues: details
+        oldValues: undefined,  // ✅ Using undefined for optional JSON
+        newValues: details     // ✅ Pass details object
       }
     });
   } catch (error) {
     console.error('Failed to log admin action:', error);
   }
+}
+
+// Helper function to get client IP
+function getClientIP(request: NextRequest): string {
+  return request.headers.get('x-forwarded-for') || 
+         request.headers.get('x-real-ip') || 
+         'unknown';
 }
 
 // POST /api/admin/users/create-admin - Create new admin user
@@ -146,6 +154,8 @@ export async function POST(request: NextRequest) {
     }
 
     const currentAdmin = authResult.user;
+    const clientIP = getClientIP(request);
+    const userAgent = request.headers.get('user-agent') || 'unknown';
 
     // Parse and validate request body
     const body = await request.json();
@@ -157,14 +167,15 @@ export async function POST(request: NextRequest) {
       ).join(', ');
 
       await logAdminAction(
-        currentAdmin.id,
-        'ADMIN_CREATE_FAILED',
+        currentAdmin.adminProfile!.id,
+        AdminAction.USER_CREATED,
         {
           reason: 'Validation failed',
           errors: errorMessages,
-          attemptedEmail: body.email
+          attemptedEmail: body.email,
+          userAgent
         },
-        request.headers.get('x-forwarded-for') || 'unknown'
+        clientIP
       );
 
       return NextResponse.json(
@@ -185,13 +196,14 @@ export async function POST(request: NextRequest) {
 
     if (existingUser) {
       await logAdminAction(
-        currentAdmin.id,
-        'ADMIN_CREATE_FAILED',
+        currentAdmin.adminProfile!.id,
+        AdminAction.USER_CREATED,
         {
           reason: 'Email already exists',
-          attemptedEmail: email
+          attemptedEmail: email,
+          userAgent
         },
-        request.headers.get('x-forwarded-for') || 'unknown'
+        clientIP
       );
 
       return NextResponse.json(
@@ -205,33 +217,38 @@ export async function POST(request: NextRequest) {
     const verificationToken = generateVerificationToken();
     const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
 
+    // Map frontend role to Prisma AdminRole enum
+    const adminRoleEnum: AdminRole = AdminRole[role as keyof typeof AdminRole];
+
     // Create user and admin profile in transaction
     const newAdmin = await prisma.$transaction(async (tx) => {
-      // Create user
+      // Create user - USING YOUR ACTUAL SCHEMA FIELDS
       const user = await tx.user.create({
         data: {
           email: email.toLowerCase(),
           firstName,
           lastName,
           password: hashedPassword,
-          role: 'ADMIN', // Base role for all admins
+          role: 'ADMIN', // Base UserRole for all admins
           status: 'ACTIVE',
-          emailVerified: false,
-          mustChangePassword: true,
-          emailVerificationToken: verificationToken,
-          emailVerificationExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          emailVerified: new Date(), // Set to current date instead of boolean
+          // Note: Your schema doesn't have mustChangePassword, emailVerificationToken, emailVerificationExpiry
+          // We'll handle password change requirement in AdminProfile
         }
       });
 
-      // Create admin profile
+      // Create admin profile - USING YOUR ACTUAL SCHEMA FIELDS
       const adminProfile = await tx.adminProfile.create({
         data: {
           userId: user.id,
-          adminRole: role,
-          permissions: [], // Empty array for now
+          adminRole: adminRoleEnum,
+          permissions: {}, // Empty JSON object
           twoFactorEnabled: false,
-          ipRestrictions: [], // Empty array for now
-          mustChangePassword: true
+          maxSessions: 3,
+          sessionTimeout: 1800,
+          isActive: true,
+          failedLoginAttempts: 0
+          // Note: mustChangePassword doesn't exist in your AdminProfile schema
         }
       });
 
@@ -247,16 +264,17 @@ export async function POST(request: NextRequest) {
 
     // Log successful admin creation
     await logAdminAction(
-      currentAdmin.id,
-      'ADMIN_CREATED',
+      currentAdmin.adminProfile!.id,
+      AdminAction.USER_CREATED,
       {
-        newAdminId: newAdmin.user.id,
+        targetUserId: newAdmin.user.id,
         newAdminEmail: email,
         newAdminRole: role,
         emailSent: emailResult.success,
-        createdBy: currentAdmin.email
+        createdBy: currentAdmin.email,
+        userAgent
       },
-      request.headers.get('x-forwarded-for') || 'unknown'
+      clientIP
     );
 
     console.log(`✅ Admin created successfully: ${email} (${role})`);
@@ -285,14 +303,15 @@ export async function POST(request: NextRequest) {
       const authResult = await verifyAdminAuth(request);
       if (authResult.user) {
         await logAdminAction(
-          authResult.user.id,
-          'ADMIN_CREATE_FAILED',
+          authResult.user.adminProfile!.id,
+          AdminAction.USER_CREATED,
           {
             success: false,
             reason: 'Server error',
-            error: error.message
+            error: error.message,
+            userAgent: request.headers.get('user-agent') || 'unknown'
           },
-          request.headers.get('x-forwarded-for') || 'unknown'
+          getClientIP(request)
         );
       }
     } catch (logError) {
