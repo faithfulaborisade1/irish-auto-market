@@ -107,7 +107,7 @@ function getClientIP(request: NextRequest): string | null {
   return null
 }
 
-// Predefined rate limiters for different endpoints
+// ✅ FIXED: Separate rate limiters for different use cases
 export const rateLimiters = {
   // General API rate limiting
   api: rateLimit({
@@ -115,7 +115,19 @@ export const rateLimiters = {
     uniqueTokenPerInterval: 100, // 100 requests per minute
   }),
 
-  // Car creation rate limiting (more restrictive)
+  // ✅ CRITICAL: Login attempts (strict for security)
+  login: rateLimit({
+    interval: 15 * 60 * 1000, // 15 minutes
+    uniqueTokenPerInterval: 5, // 5 login attempts per 15 minutes
+  }),
+
+  // ✅ NEW: Authentication status checks (lenient for normal usage)
+  authCheck: rateLimit({
+    interval: 60 * 1000, // 1 minute
+    uniqueTokenPerInterval: 30, // 30 auth checks per minute (normal browsing)
+  }),
+
+  // Car creation rate limiting (prevent spam)
   carCreation: rateLimit({
     interval: 60 * 1000, // 1 minute  
     uniqueTokenPerInterval: 5, // 5 car listings per minute
@@ -127,16 +139,28 @@ export const rateLimiters = {
     uniqueTokenPerInterval: 20, // 20 image uploads per minute
   }),
 
-  // Authentication rate limiting
-  auth: rateLimit({
-    interval: 15 * 60 * 1000, // 15 minutes
-    uniqueTokenPerInterval: 5, // 5 login attempts per 15 minutes
-  }),
-
   // Search rate limiting
   search: rateLimit({
     interval: 60 * 1000, // 1 minute
     uniqueTokenPerInterval: 50, // 50 searches per minute
+  }),
+
+  // ✅ NEW: Notification checks (moderate)
+  notifications: rateLimit({
+    interval: 60 * 1000, // 1 minute
+    uniqueTokenPerInterval: 20, // 20 notification checks per minute
+  }),
+
+  // ✅ NEW: Message/conversation checks (moderate)
+  messages: rateLimit({
+    interval: 60 * 1000, // 1 minute
+    uniqueTokenPerInterval: 25, // 25 message checks per minute
+  }),
+
+  // ✅ NEW: Admin operations (more restrictive)
+  admin: rateLimit({
+    interval: 60 * 1000, // 1 minute
+    uniqueTokenPerInterval: 50, // 50 admin operations per minute
   }),
 }
 

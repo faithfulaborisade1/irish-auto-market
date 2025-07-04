@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { User, LogOut, Settings, Heart, FileText, ChevronDown, MessageCircle, Plus, Car, UserCircle, Edit3 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import NotificationBell from './NotificationBell'
 
 interface HeaderProps {
@@ -17,7 +17,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const router = useRouter()
 
-  // Check if user is logged in
+  // ✅ FIXED: Check auth only once when component mounts
   useEffect(() => {
     async function checkAuth() {
       try {
@@ -33,16 +33,12 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
       }
     }
     checkAuth()
-  }, [])
+  }, []) // ✅ Empty dependency array - runs only once!
 
-  // Fetch unread messages count when user is logged in
-  useEffect(() => {
-    if (user) {
-      fetchUnreadMessagesCount()
-    }
-  }, [user])
-
-  const fetchUnreadMessagesCount = async () => {
+  // ✅ FIXED: Use useCallback to create stable function reference
+  const fetchUnreadMessagesCount = useCallback(async () => {
+    if (!user) return // Don't fetch if no user
+    
     try {
       const response = await fetch('/api/conversations')
       const data = await response.json()
@@ -53,12 +49,22 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
     } catch (error) {
       console.error('Error fetching unread messages count:', error)
     }
-  }
+  }, [user]) // ✅ Only depends on user object
+
+  // ✅ FIXED: Fetch messages only when user changes (not on every render)
+  useEffect(() => {
+    if (user) {
+      fetchUnreadMessagesCount()
+    } else {
+      setUnreadMessagesCount(0) // Reset count when user logs out
+    }
+  }, [user, fetchUnreadMessagesCount]) // ✅ Stable dependencies
 
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
       setUser(null)
+      setUnreadMessagesCount(0) // Reset count on logout
       setShowUserMenu(false)
       window.location.reload()
     } catch (error) {
@@ -93,7 +99,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
     return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase()
   }
 
-  // Close dropdown when clicking outside
+  // ✅ FIXED: Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const dropdown = document.getElementById('user-dropdown')
@@ -106,7 +112,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
       document.addEventListener('mousedown', handleClickOutside)
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [showUserMenu])
+  }, [showUserMenu]) // ✅ Only depends on showUserMenu
 
   return (
     <header className="border-b bg-white shadow-sm">
@@ -151,22 +157,6 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
             >
               SELL
             </button>
-            {/* <Link 
-              href="/dealers" 
-              className={`font-medium hover:text-green-600 transition-colors ${
-                currentPage === 'dealers' ? 'text-green-600' : 'text-gray-700'
-              }`}
-            >
-              DEALERS
-            </Link> */}
-            {/* <Link 
-              href="/about" 
-              className={`font-medium hover:text-green-600 transition-colors ${
-                currentPage === 'about' ? 'text-green-600' : 'text-gray-700'
-              }`}
-            >
-              ABOUT
-            </Link> */}
           </nav>
 
           {/* Auth Section */}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Bell, Heart, TrendingDown, Car, X, Check } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -28,14 +28,43 @@ interface NotificationBellProps {
   userId?: string
 }
 
+// ✅ FIXED: Move helper function outside component to prevent re-creation
+function getNotificationIcon(type: string) {
+  switch (type) {
+    case 'CAR_LIKED':
+      return <Heart className="w-5 h-5 text-red-500" />
+    case 'PRICE_DROP':
+      return <TrendingDown className="w-5 h-5 text-green-500" />
+    case 'CAR_SOLD':
+      return <Car className="w-5 h-5 text-blue-500" />
+    case 'INQUIRY_RECEIVED':
+      return <Bell className="w-5 h-5 text-yellow-500" />
+    default:
+      return <Bell className="w-5 h-5 text-gray-500" />
+  }
+}
+
+// ✅ FIXED: Move helper function outside component
+function formatTimeAgo(dateString: string) {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  if (diffInSeconds < 60) return 'Just now'
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
+  return date.toLocaleDateString()
+}
+
 export default function NotificationBell({ userId }: NotificationBellProps) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  // Fetch notifications
-  const fetchNotifications = async () => {
+  // ✅ FIXED: Use useCallback to create stable function reference
+  const fetchNotifications = useCallback(async () => {
     if (!userId) return
     
     try {
@@ -52,10 +81,10 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId]) // ✅ Only depends on userId
 
-  // Mark notification as read
-  const markAsRead = async (notificationId: string) => {
+  // ✅ FIXED: Use useCallback for mark as read
+  const markAsRead = useCallback(async (notificationId: string) => {
     try {
       const response = await fetch('/api/notifications', {
         method: 'PUT',
@@ -80,10 +109,10 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     } catch (error) {
       console.error('Error marking notification as read:', error)
     }
-  }
+  }, [])
 
-  // Mark all as read
-  const markAllAsRead = async () => {
+  // ✅ FIXED: Use useCallback for mark all as read
+  const markAllAsRead = useCallback(async () => {
     try {
       const response = await fetch('/api/notifications', {
         method: 'PUT',
@@ -104,47 +133,18 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     } catch (error) {
       console.error('Error marking all as read:', error)
     }
-  }
+  }, [])
 
-  // Get notification icon
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'CAR_LIKED':
-        return <Heart className="w-5 h-5 text-red-500" />
-      case 'PRICE_DROP':
-        return <TrendingDown className="w-5 h-5 text-green-500" />
-      case 'CAR_SOLD':
-        return <Car className="w-5 h-5 text-blue-500" />
-      case 'INQUIRY_RECEIVED':
-        return <Bell className="w-5 h-5 text-yellow-500" />
-      default:
-        return <Bell className="w-5 h-5 text-gray-500" />
-    }
-  }
-
-  // Format time ago
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-
-    if (diffInSeconds < 60) return 'Just now'
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
-    return date.toLocaleDateString()
-  }
-
-  // Handle notification click
-  const handleNotificationClick = (notification: Notification) => {
+  // ✅ FIXED: Stable function reference for notification click
+  const handleNotificationClick = useCallback((notification: Notification) => {
     if (!notification.read) {
       markAsRead(notification.id)
     }
     setIsOpen(false)
     // Navigation will be handled by the Link component
-  }
+  }, [markAsRead])
 
-  // Close dropdown when clicking outside
+  // ✅ FIXED: Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const dropdown = document.getElementById('notification-dropdown')
@@ -159,18 +159,25 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     }
   }, [isOpen])
 
-  // Fetch notifications when component mounts or userId changes
+  // ✅ FIXED: Fetch notifications when userId changes (using stable function)
   useEffect(() => {
-    fetchNotifications()
-  }, [userId])
+    if (userId) {
+      fetchNotifications()
+    } else {
+      // Clear notifications when no user
+      setNotifications([])
+      setUnreadCount(0)
+    }
+  }, [userId, fetchNotifications])
 
-  // Auto-refresh notifications every 30 seconds
+  // ✅ FIXED: Auto-refresh with proper dependencies and longer interval
   useEffect(() => {
     if (!userId) return
 
-    const interval = setInterval(fetchNotifications, 30000)
+    // Increase interval to 2 minutes to reduce API calls
+    const interval = setInterval(fetchNotifications, 120000) // 2 minutes
     return () => clearInterval(interval)
-  }, [userId])
+  }, [userId, fetchNotifications]) // ✅ Include fetchNotifications in dependencies
 
   // Don't render if no user
   if (!userId) return null
@@ -234,10 +241,11 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                         !notification.read ? 'bg-blue-50' : ''
                       }`}
                     >
-                    <NotificationContent 
-                      notification={notification} 
-                      formatTimeAgo={formatTimeAgo}
-                    />
+                      <NotificationContent 
+                        notification={notification} 
+                        formatTimeAgo={formatTimeAgo}
+                        getNotificationIcon={getNotificationIcon}
+                      />
                     </Link>
                   ) : (
                     <div
@@ -246,10 +254,11 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                         !notification.read ? 'bg-blue-50' : ''
                       }`}
                     >
-                    <NotificationContent 
-                      notification={notification} 
-                      formatTimeAgo={formatTimeAgo}
-                    />
+                      <NotificationContent 
+                        notification={notification} 
+                        formatTimeAgo={formatTimeAgo}
+                        getNotificationIcon={getNotificationIcon}
+                      />
                     </div>
                   )}
                 </div>
@@ -275,13 +284,15 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   )
 }
 
-// Notification content component
+// ✅ FIXED: Notification content component with stable props
 function NotificationContent({ 
   notification, 
-  formatTimeAgo 
+  formatTimeAgo,
+  getNotificationIcon
 }: { 
   notification: Notification
-  formatTimeAgo: (dateString: string) => string 
+  formatTimeAgo: (dateString: string) => string
+  getNotificationIcon: (type: string) => JSX.Element
 }) {
   return (
     <div className="flex items-start space-x-3">
@@ -326,20 +337,4 @@ function NotificationContent({
       </div>
     </div>
   )
-}
-
-// Helper function (moved outside component to avoid re-creation)
-function getNotificationIcon(type: string) {
-  switch (type) {
-    case 'CAR_LIKED':
-      return <Heart className="w-5 h-5 text-red-500" />
-    case 'PRICE_DROP':
-      return <TrendingDown className="w-5 h-5 text-green-500" />
-    case 'CAR_SOLD':
-      return <Car className="w-5 h-5 text-blue-500" />
-    case 'INQUIRY_RECEIVED':
-      return <Bell className="w-5 h-5 text-yellow-500" />
-    default:
-      return <Bell className="w-5 h-5 text-gray-500" />
-  }
 }

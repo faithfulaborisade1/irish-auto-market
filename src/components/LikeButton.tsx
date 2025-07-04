@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Heart } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -26,30 +26,44 @@ export default function LikeButton({
   const [isLiked, setIsLiked] = useState(initialIsLiked)
   const [isLoading, setIsLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [authChecked, setAuthChecked] = useState(false)
 
-  // Check authentication status
+  // ✅ FIXED: Check authentication only once
   useEffect(() => {
+    let mounted = true
+    
     async function checkAuth() {
       try {
         const response = await fetch('/api/auth/me')
         const data = await response.json()
-        if (data.success) {
+        if (mounted && data.success) {
           setUser(data.user)
         }
       } catch (error) {
-        // User not logged in
+        // User not logged in - this is fine
+      } finally {
+        if (mounted) {
+          setAuthChecked(true)
+        }
       }
     }
+    
     checkAuth()
-  }, [])
+    
+    return () => {
+      mounted = false
+    }
+  }, []) // ✅ Empty dependency array - runs once only
 
-  // Fetch current like status
+  // ✅ FIXED: Fetch like status only once when component mounts
   useEffect(() => {
+    let mounted = true
+    
     async function fetchLikeStatus() {
       try {
         const response = await fetch(`/api/cars/${carId}/like`)
         const data = await response.json()
-        if (data.success) {
+        if (mounted && data.success) {
           setLikesCount(data.likesCount)
           setIsLiked(data.liked)
         }
@@ -57,10 +71,16 @@ export default function LikeButton({
         console.error('Error fetching like status:', error)
       }
     }
+    
     fetchLikeStatus()
-  }, [carId])
+    
+    return () => {
+      mounted = false
+    }
+  }, [carId]) // ✅ Only depends on carId
 
-  const handleLike = async () => {
+  // ✅ FIXED: Stable function reference
+  const handleLike = useCallback(async () => {
     // Check if user is logged in
     if (!user) {
       // Redirect to login with return URL
@@ -110,7 +130,7 @@ export default function LikeButton({
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [user, isLoading, isLiked, carId, router])
 
   // Size variants
   const sizeClasses = {
@@ -132,6 +152,22 @@ export default function LikeButton({
   }
 
   const currentSize = sizeClasses[size]
+
+  // Don't render until auth is checked
+  if (!authChecked) {
+    return (
+      <div className={`flex items-center space-x-1 ${className}`}>
+        <div className={`${currentSize.button} rounded-full bg-gray-100 animate-pulse`}>
+          <div className={`${currentSize.icon} bg-gray-200 rounded`} />
+        </div>
+        {showCount && (
+          <span className={`${currentSize.text} text-gray-400`}>
+            {likesCount}
+          </span>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className={`flex items-center space-x-1 ${className}`}>

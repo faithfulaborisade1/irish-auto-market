@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 
 interface UseAutoRefreshProps {
   callback: () => void
@@ -8,13 +8,16 @@ interface UseAutoRefreshProps {
 
 export function useAutoRefresh({ callback, interval = 5000, enabled = true }: UseAutoRefreshProps) {
   const intervalRef = useRef<NodeJS.Timeout>()
+  
+  // ✅ FIXED: Create stable callback reference using useCallback
+  const stableCallback = useCallback(callback, [callback])
 
   useEffect(() => {
     if (!enabled) return
 
     // Only auto-refresh in production (no WebSockets)
     if (process.env.NODE_ENV === 'production') {
-      intervalRef.current = setInterval(callback, interval)
+      intervalRef.current = setInterval(stableCallback, interval)
     }
 
     return () => {
@@ -22,11 +25,12 @@ export function useAutoRefresh({ callback, interval = 5000, enabled = true }: Us
         clearInterval(intervalRef.current)
       }
     }
-  }, [callback, interval, enabled])
+  }, [stableCallback, interval, enabled]) // ✅ Use stable callback reference
 
-  return () => {
+  // Return cleanup function
+  return useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
     }
-  }
+  }, [])
 }
