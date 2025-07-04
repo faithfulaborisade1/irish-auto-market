@@ -1,4 +1,4 @@
-// src/middleware.ts - DEVELOPMENT-SAFE VERSION WITH PRODUCTION SECURITY
+// src/middleware.ts - FIXED VERSION WITH PROPER DEVELOPMENT HANDLING
 import { NextRequest, NextResponse } from 'next/server';
 
 // In-memory stores (move to Redis in production)
@@ -6,14 +6,15 @@ const rateLimitStore = new Map<string, { count: number; resetTime: number; block
 const failedAttempts = new Map<string, { count: number; lastAttempt: number; permanentBlock: boolean }>();
 const csrfTokens = new Map<string, { token: string; expires: number }>();
 
-// Security configuration - DIFFERENT for dev vs production
+// ✅ FIXED: Much more lenient rate limiting for development
 const SECURITY_CONFIG = {
   development: {
     RATE_LIMIT: {
       WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-      MAX_ATTEMPTS: 1000,        // Very high for development
-      BLOCK_DURATION: 60 * 1000, // Only 1 minute blocks
-      PERMANENT_BLOCK_THRESHOLD: 10000 // Practically disabled
+      MAX_ATTEMPTS: 10000,       // ✅ VERY HIGH for development
+      BLOCK_DURATION: 10 * 1000, // Only 10 seconds blocks in dev
+      PERMANENT_BLOCK_THRESHOLD: 100000, // ✅ Practically disabled in dev
+      SKIP_AUTH_ENDPOINTS: true  // ✅ Skip rate limiting for auth checks entirely
     }
   },
   production: {
@@ -21,7 +22,8 @@ const SECURITY_CONFIG = {
       WINDOW_MS: 15 * 60 * 1000, // 15 minutes
       MAX_ATTEMPTS: 5,            // Strict for production
       BLOCK_DURATION: 60 * 60 * 1000, // 1 hour
-      PERMANENT_BLOCK_THRESHOLD: 20 // permanent block after 20 failed attempts
+      PERMANENT_BLOCK_THRESHOLD: 20, // permanent block after 20 failed attempts
+      SKIP_AUTH_ENDPOINTS: false
     }
   },
   SESSION: {
@@ -39,9 +41,19 @@ export async function middleware(request: NextRequest) {
   const userAgent = request.headers.get('user-agent') || 'unknown';
   const isDevelopment = process.env.NODE_ENV === 'development';
   
-  // 🚧 DEVELOPMENT MODE - Much more lenient security
+  // ✅ DEVELOPMENT MODE - Much more lenient security
   if (isDevelopment) {
     console.log(`🚧 DEV MODE: ${pathname} from ${ip}`);
+    
+    // ✅ SKIP RATE LIMITING for auth endpoints in development
+    if (pathname.includes('/api/auth/me') || 
+        pathname.includes('/api/auth/') ||
+        pathname.includes('/api/cars/') ||
+        pathname.includes('/like')) {
+      console.log(`🔓 DEV: Skipping rate limit for ${pathname}`);
+      // Just do basic auth check without rate limiting
+      return handleDevelopmentAuth(request, pathname);
+    }
     
     // Basic admin auth for development (no rate limiting)
     if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
@@ -116,6 +128,29 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  return response;
+}
+
+// ✅ NEW: Handle development mode authentication without rate limiting
+async function handleDevelopmentAuth(request: NextRequest, pathname: string): Promise<NextResponse> {
+  // For development, just pass through most requests
+  // Only block obviously admin requests without proper auth
+  
+  if (pathname.startsWith('/api/admin') && pathname !== '/api/admin/auth/login') {
+    const authResult = await verifyAdminAuth(request, 'dev', 'dev');
+    if (!authResult.authenticated) {
+      return new NextResponse(
+        JSON.stringify({ error: 'Unauthorized' }), 
+        { 
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+  }
+  
+  const response = NextResponse.next();
+  addBasicSecurityHeaders(response);
   return response;
 }
 
@@ -305,6 +340,15 @@ function checkRateLimit(ip: string, endpoint: string): { allowed: boolean; remai
   const isDevelopment = process.env.NODE_ENV === 'development';
   const config = isDevelopment ? SECURITY_CONFIG.development : SECURITY_CONFIG.production;
   
+  // ✅ CRITICAL FIX: Skip rate limiting for auth endpoints in development
+  if (isDevelopment && config.RATE_LIMIT.SKIP_AUTH_ENDPOINTS) {
+    if (endpoint.includes('/api/auth/') || 
+        endpoint.includes('/api/cars/') ||
+        endpoint.includes('/like')) {
+      return { allowed: true, remaining: 999 };
+    }
+  }
+  
   const key = `${ip}:${endpoint}`;
   const now = Date.now();
   
@@ -368,6 +412,15 @@ function isIPBlocked(ip: string): boolean {
 }
 
 function isSensitiveEndpoint(pathname: string): boolean {
+  // ✅ FIXED: Don't apply rate limiting to auth check endpoints in development
+  if (process.env.NODE_ENV === 'development') {
+    const devSensitivePatterns = [
+      '/api/admin/auth/login', // Only login attempts are rate limited in dev
+    ];
+    return devSensitivePatterns.some(pattern => pathname.startsWith(pattern));
+  }
+  
+  // Production - all sensitive endpoints
   const sensitivePatterns = [
     '/api/admin/',
     '/api/auth/',
