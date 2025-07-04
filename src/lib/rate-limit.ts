@@ -1,4 +1,4 @@
-// src/lib/rate-limit.ts - FIXED VERSION WITH DEVELOPMENT MODE
+// src/lib/rate-limit.ts - PRODUCTION FIX FOR AUTH ENDPOINTS
 import { NextRequest } from 'next/server'
 
 interface RateLimitOptions {
@@ -117,66 +117,66 @@ function getClientIP(request: NextRequest): string | null {
   return null
 }
 
-// ✅ FIXED: Development-aware rate limiters
+// ✅ PRODUCTION FIX: Much more reasonable limits for auth endpoints
 export const rateLimiters = {
   // General API rate limiting
   api: rateLimit({
     interval: 60 * 1000, // 1 minute
-    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 10000 : 100, // Much higher for dev
+    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 10000 : 200, // 200 requests per minute in production
   }),
 
   // ✅ CRITICAL: Login attempts (strict for security, but lenient in dev)
   login: rateLimit({
     interval: 15 * 60 * 1000, // 15 minutes
-    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 1000 : 5, // Very high for dev
+    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 1000 : 10, // 10 login attempts per 15 minutes
   }),
 
-  // ✅ FIXED: Authentication status checks (VERY lenient)
+  // ✅ PRODUCTION FIX: Auth checks - MUCH higher limit for normal browsing
   auth: rateLimit({
     interval: 60 * 1000, // 1 minute
-    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 50000 : 30, // Extremely high for dev
+    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 50000 : 500, // 500 auth checks per minute
   }),
 
-  // ✅ ADDED: Separate authCheck for backward compatibility
+  // ✅ PRODUCTION FIX: Auth checks - MUCH higher limit for normal browsing
   authCheck: rateLimit({
     interval: 60 * 1000, // 1 minute
-    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 50000 : 30, // Extremely high for dev
+    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 50000 : 500, // 500 auth checks per minute
   }),
 
   // Car creation rate limiting (prevent spam)
   carCreation: rateLimit({
     interval: 60 * 1000, // 1 minute  
-    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 1000 : 5,
+    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 1000 : 10,
   }),
 
   // Image upload rate limiting
   imageUpload: rateLimit({
     interval: 60 * 1000, // 1 minute
-    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 1000 : 20,
+    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 1000 : 50,
   }),
 
   // Search rate limiting
   search: rateLimit({
     interval: 60 * 1000, // 1 minute
-    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 10000 : 50,
+    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 10000 : 100,
   }),
 
-  // ✅ FIXED: Notification checks (very lenient in dev)
+  // ✅ PRODUCTION FIX: Notification checks - higher limit
   notifications: rateLimit({
     interval: 60 * 1000, // 1 minute
-    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 10000 : 20,
+    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 10000 : 100,
   }),
 
-  // ✅ FIXED: Message/conversation checks (very lenient in dev)
+  // ✅ PRODUCTION FIX: Message/conversation checks - higher limit
   messages: rateLimit({
     interval: 60 * 1000, // 1 minute
-    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 10000 : 25,
+    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 10000 : 100,
   }),
 
-  // ✅ FIXED: Admin operations (lenient in dev)
+  // ✅ PRODUCTION FIX: Admin operations - reasonable limit
   admin: rateLimit({
     interval: 60 * 1000, // 1 minute
-    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 5000 : 50,
+    uniqueTokenPerInterval: process.env.NODE_ENV === 'development' ? 5000 : 100,
   }),
 }
 
@@ -207,7 +207,7 @@ export async function withRateLimit(
   return result
 }
 
-// ✅ NEW: Quick check function for common use cases
+// ✅ PRODUCTION FIX: Quick check function for common use cases
 export async function checkRateLimit(
   request: NextRequest,
   type: 'api' | 'auth' | 'login' | 'search' | 'admin' = 'api'
@@ -223,6 +223,6 @@ export async function checkRateLimit(
     return result.success
   } catch (error) {
     console.error('Rate limit check failed:', error)
-    return false // Fail closed in production
+    return true // ✅ PRODUCTION FIX: Fail open for auth checks to prevent user lockout
   }
 }

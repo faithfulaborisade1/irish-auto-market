@@ -1,4 +1,4 @@
-// src/app/api/auth/me/route.ts - UPDATED VERSION WITH FIXED RATE LIMITING
+// src/app/api/auth/me/route.ts - PRODUCTION FIX
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/database';
 import jwt from 'jsonwebtoken';
@@ -30,33 +30,41 @@ function getClientIP(request: NextRequest): string {
 
 export async function GET(request: NextRequest) {
   try {
-    // ✅ CRITICAL FIX: Skip rate limiting entirely in development
+    // ✅ PRODUCTION FIX: Only apply very lenient rate limiting
+    let rateLimitResult;
+    
     if (process.env.NODE_ENV === 'development') {
       console.log('🚧 DEV MODE: Skipping rate limit for /api/auth/me');
     } else {
-      // Only apply rate limiting in production
-      const rateLimitResult = await rateLimiters.authCheck.check(request);
-      
-      if (!rateLimitResult.success) {
-        const clientIP = getClientIP(request);
-        console.log(`🚨 Auth check rate limit exceeded for IP: ${clientIP}`);
+      // ✅ PRODUCTION: Apply lenient rate limiting (500 requests per minute)
+      try {
+        rateLimitResult = await rateLimiters.authCheck.check(request);
         
-        return NextResponse.json(
-          { 
-            success: false, 
-            message: 'Too many authentication requests. Please wait a moment.',
-            retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000)
-          },
-          { 
-            status: 429,
-            headers: {
-              'X-RateLimit-Limit': rateLimitResult.limit.toString(),
-              'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
-              'X-RateLimit-Reset': rateLimitResult.reset.toString(),
-              'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString()
+        if (!rateLimitResult.success) {
+          const clientIP = getClientIP(request);
+          console.log(`🚨 Auth check rate limit exceeded for IP: ${clientIP} - Limit: ${rateLimitResult.limit}`);
+          
+          return NextResponse.json(
+            { 
+              success: false, 
+              message: 'Too many authentication requests. Please wait a moment.',
+              retryAfter: Math.ceil((rateLimitResult.reset - Date.now()) / 1000)
+            },
+            { 
+              status: 429,
+              headers: {
+                'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+                'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+                'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+                'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString()
+              }
             }
-          }
-        );
+          );
+        }
+      } catch (rateLimitError) {
+        // ✅ PRODUCTION FIX: If rate limiting fails, continue without it
+        console.error('Rate limiting error:', rateLimitError);
+        console.log('🔓 PROD: Rate limiting failed, allowing request through');
       }
     }
 
@@ -165,9 +173,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // ✅ SECURITY: Check if token is too old (optional security measure)
+    // ✅ PRODUCTION FIX: More lenient token age check (90 days instead of 30)
     const tokenAge = Date.now() / 1000 - (decoded.iat || 0);
-    const maxTokenAge = 30 * 24 * 60 * 60; // 30 days
+    const maxTokenAge = 90 * 24 * 60 * 60; // 90 days for better UX
     
     if (tokenAge > maxTokenAge) {
       return NextResponse.json(
@@ -193,18 +201,17 @@ export async function GET(request: NextRequest) {
       dealerProfile: user.dealerProfile
     };
 
-    // ✅ SECURITY: Add rate limit headers to response (only in production)
+    // ✅ PRODUCTION: Return successful response
     const response = NextResponse.json({
       success: true,
       user: userData
     });
 
-    // Only add rate limit headers in production
-    if (process.env.NODE_ENV === 'production') {
-      const dummyRateLimit = { limit: 1000, remaining: 999, reset: Date.now() + 60000 };
-      response.headers.set('X-RateLimit-Limit', dummyRateLimit.limit.toString());
-      response.headers.set('X-RateLimit-Remaining', dummyRateLimit.remaining.toString());
-      response.headers.set('X-RateLimit-Reset', dummyRateLimit.reset.toString());
+    // Add rate limit headers if available
+    if (rateLimitResult) {
+      response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
+      response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
+      response.headers.set('X-RateLimit-Reset', rateLimitResult.reset.toString());
     }
 
     return response;
@@ -212,7 +219,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Auth me error:', error);
     
-    // ✅ SECURITY: Don't expose internal error details
+    // ✅ PRODUCTION: Don't expose internal error details but log for debugging
     return NextResponse.json(
       { 
         success: false, 
