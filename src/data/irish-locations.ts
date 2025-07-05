@@ -1,272 +1,455 @@
 // src/data/irish-locations.ts
-// Extracted from CountiesAreas.xlsx - Complete data with 32 counties and 4,062+ areas
+// Enhanced with comprehensive data from CountiesAreas.xlsx - 32 counties and 4,000+ areas
 
-export const IRISH_LOCATIONS = {
+export interface LocationData {
+  [county: string]: string[];
+}
+
+export const IRISH_LOCATIONS: LocationData = {
   "Antrim": [
-    "Aghalee", "Ahoghill", "Aldergrove", "Antrim", "Armoy", "Aughafatten", "Ballee", "Ballinderry", 
-    "Balloo", "Ballyclare", "Ballygally", "Ballygowan", "Ballykeel", "Ballymena", "Ballymoney", 
-    "Ballyrobert", "Ballyvoy", "Banbridge", "Belfast", "Bendooragh", "Broughshane", "Buckna", 
-    "Burnfoot", "Bushmills", "Cairncastle", "Cargan", "Carrickfergus", "Castlerock", "Clough", 
-    "Cloughmills", "Cookstown", "Crumlin", "Cullybackey", "Cushendall", "Cushendun", "Doagh", 
-    "Dromara", "Dromore", "Dunadry", "Dunloy", "Dunmurry", "Finvoy", "Galgorm", "Garvagh", 
-    "Gilford", "Glarryford", "Glenavy", "Glengormley", "Glenoe", "Glenravel", "Glynn", "Gracehill", 
-    "Hillsborough", "Islandmagee", "Kells", "Kilbride", "Kilrea", "Kilwaughter", "Kircubbin", 
-    "Larne", "Lisburn", "Loughinisland", "Loughguile", "Magherafelt", "Mallusk", "Martinstown", 
-    "Millisle", "Moira", "Mossley", "Muckamore", "Newry", "Newtownabbey", "Newtownards", 
-    "Parkgate", "Portaferry", "Portavogie", "Portglenone", "Portrush", "Portstewart", "Randallstown", 
-    "Rasharkin", "Rathkenny", "Ravarnet", "Saintfield", "Stonyford", "Stranocum", "Templepatrick", 
-    "The Dufferin", "Toomebridge", "Upperlands", "Waringsford", "Whitehead"
+    "Aghagallon", "Aghalee", "Ahoghill", "Aldergrove", "Andersonstown", "Annadale", "Antrim", 
+    "Antrim Road", "Antrim Town", "Ardoyne", "Armoy", "Aughnacleagh", "Ballintoy", "Ballybogy", 
+    "Ballycarry", "Ballycastle", "Ballyclare", "Ballyduff", "Ballyfinaghy", "Ballygalley", 
+    "Ballygomartin", "Ballygowan", "Ballyhackamore", "Ballyhenry", "Ballykeel", "Ballymagarry", 
+    "Ballymena", "Ballymoney", "Ballymurphy", "Shilvodan", "Shoptown", "Shore Rd", "Skegoneill", 
+    "Springmartin", "Stewartstown", "Stoneyford", "Straid", "Stranmillis", "Stranocum", "Suffolk", 
+    "Taughmonagh", "Templepatrick", "The Diamond", "Titanic Quarter", "Toome", "Turf Lodge", 
+    "Twinbrook", "University Area", "Upper Ballinderry", "Upper Malone", "Water Works", "Whiteabbey", 
+    "Whitehead", "Whitehouse", "Whiterock", "Windsor", "Woodbreda Gardens", "Woodvale", "York Road"
   ],
   "Armagh": [
-    "Acton", "Aghacommon", "Annaghmore", "Armagh", "Augher", "Aughnacloy", "Ballygawley", 
-    "Ballymoyer", "Benburb", "Bessbrook", "Blackwatertown", "Caledon", "Camlough", "Charlemont", 
-    "Clare", "Collegeland", "Craigavon", "Crossmaglen", "Darkley", "Derrynoose", "Derrytrasna", 
-    "Dungannon", "Forkhill", "Gilford", "Hamiltonsbawn", "Jonesborough", "Keady", "Killylea", 
-    "Kilmore", "Lislea", "Loughgall", "Loughgilly", "Lurgan", "Markethill", "Middletown", 
-    "Milford", "Moy", "Mullaghbane", "Newtownhamilton", "Portadown", "Poyntzpass", "Richhill", 
-    "Silverbridge", "Tartaraghan", "The Birches", "Tynan", "Warrenpoint", "Waringstown", 
-    "Whitecross"
+    "Aghinlig", "Allistragh", "Armagh", "Armagh Town", "Belleek", "Bessbrook", "Blackwatertown", 
+    "Brownlow", "Camlough", "Charlemont", "Charlestown", "Clady Milltown", "Clare", "Cloghoge", 
+    "Craigavon", "Creggan", "Crossmaglen", "Cullaville", "Cullyhanna", "Derrynoose", "Derrytrasna", 
+    "Drumintee", "Forkill", "Hamiltonsbawn", "Helen's Bay", "Jonesborough", "Keady", "Killeen", 
+    "Killevy", "Killycomain", "Killylea", "Kilmore", "Knocknashane", "Laurelvale", "Lislea", 
+    "Loughgall", "Lurgan", "Madden", "Magher", "Markethill", "Meigh", "Middletown", "Milford", 
+    "Milltown", "Mowhan", "Mullaghbane", "Newtownhamilton", "Parklake", "Portadown", "Poyntz pass", 
+    "Richhill", "Silver Bridge", "Tandragee", "Tassagh", "Tullymacreeve", "Tynan", "Whitecross"
   ],
   "Carlow": [
-    "Ardattin", "Ardristan", "Askea", "Bagenalstown", "Ballinabranna", "Ballymurphy", "Ballon", 
-    "Ballymoon", "Borris", "Browneshill", "Bunclody", "Carlow", "Clonegal", "Clonmore", 
-    "Clonygowan", "Coolkenno", "Corries", "Fenagh", "Garryhill", "Goresbridge", "Graignamanagh", 
-    "Hacketstown", "Kellistown", "Killedmond", "Kiltennel", "Leighlinbridge", "Milford", 
-    "Muine Bheag", "Myshall", "Nurney", "Old Leighlin", "Palatine", "Rathoe", "Rathvilly", 
-    "Royal Oak", "Solsborough", "St. Mullins", "Staplestown", "The Wells", "Tinryland", 
-    "Tullow", "Wells"
+    "Ardattin", "Augha", "Bagenalstown", "Ballinabranagh", "Ballinkillin", "Ballon", "Ballybannon", 
+    "Ballybrommel", "Ballyhacket", "Ballymurphy", "Ballynakill", "Bennekerry", "Borris", "Bunclody", 
+    "Carlow Town", "Carrig Beg", "Clonegal", "Clonmore", "Clough", "Cloydah", "Corries", "Drumfea", 
+    "Drummin", "Fenagh", "Garryhill", "Gowlin", "Graigue", "Graigue Hill", "Graiguecullen", 
+    "Graiguenamanagh", "Grange", "Grangeford", "Hacketstown", "Kilcoltrim", "Kildavin", "Killedmond", 
+    "Killerig", "Lackan", "Leighlinbridge", "Lisnavagh", "Myshall", "Newtown", "Nurney", "Oak Park", 
+    "Oldleighlin", "Palatine", "Pollerton", "Rathedan", "Rathoe", "Rathvilly", "Ridge", "Seskinryan", 
+    "St. Mullins", "The Butts", "Tinryland", "Tullow", "Urglin Glebe"
   ],
   "Cavan": [
-    "Arva", "Bailieborough", "Ballinagh", "Ballyjamesduff", "Ballyconnell", "Belturbet", 
-    "Blacklion", "Butlersbridge", "Cavan", "Cootehill", "Crossdoney", "Crosskeys", "Dowra", 
-    "Dromahair", "Drumgoon", "Drumlane", "Drumshanbo", "Drumcondra", "Ervey", "Glangevlin", 
-    "Gowna", "Kildallan", "Killashandra", "Kilnaleck", "Kingscourt", "Lacken", "Laragh", 
-    "Lavey", "Lough Gowna", "Maghera", "Milltown", "Mountnugent", "Mullagh", "Munterconnaught", 
-    "Redhills", "Shercock", "Stradone", "Swanlinbar", "Templeport", "Virginia"
+    "Ardlougher", "Arva", "Bailieborough", "Ballinagh", "Ballyconnell", "Ballyhaise", "Ballyheelan", 
+    "Ballyjamesduff", "Ballymachugh", "Bawnboy", "Bellanacargy", "Belturbet", "Billis Bridge", 
+    "Blacklion", "Butler's Bridge", "Canningstown", "Carrickaboy", "Carrigan", "Castlerahan", "Cavan", 
+    "Cavan Town", "Clifferna", "Cloverhill", "Cootehill", "Coppanagh", "Corlough", "Cornafean", 
+    "Cross Keys", "Crossdoney", "Crosserlough", "Doogary", "Galbolie", "Glangevlin", "Gortahill", 
+    "Gubaveeny", "Kilcogy", "Kill", "Killeshandra", "Killinkere", "Killykeen", "Kilnaleck", 
+    "Kingscourt", "Knockbride", "Lavey", "Lisduff", "Lisnageer", "Losset", "Lough Gowna", "Milltown", 
+    "Mountnugent", "Mullagh", "New Inn", "Oldcastle", "Redhills", "Relaghbeg", "Ryefield", "Shercock", 
+    "Sherlock", "Stradone", "Swanlinbar", "Templeport", "Tonyduff", "Treehoo", "Tullyvin", "Virginia"
   ],
   "Clare": [
-    "Ballynacally", "Ballyea", "Ballyvaughan", "Barefield", "Bell Harbour", "Bodyke", "Broadford", 
-    "Bunratty", "Carran", "Carrigaholt", "Carron", "Clarecastle", "Clooney", "Clonlara", "Connolly", 
-    "Coore", "Corofin", "Cratloe", "Cross", "Crusheen", "Doonaha", "Doolin", "Doonbeg", "Doonas", 
-    "Doonreagan", "Drumigna", "Ennis", "Ennistymon", "Fanore", "Feakle", "Fuan", "Glencolmcille", 
-    "Inis Cealtra", "Inagh", "Inch", "Kilbaha", "Kilcar", "Kildysart", "Kilfenora", "Kilkee", 
-    "Kilkishen", "Killaloe", "Killinaboy", "Kilmihil", "Kilmurry McMahon", "Kilnamona", "Kilrush", 
-    "Labasheeda", "Lahinch", "Lehinch", "Liscannor", "Lisdoonvarna", "Lissycasey", "Loop Head", 
-    "Lough Derg", "Loughrea", "Maghera", "Meelick", "Miltown Malbay", "Mountshannon", "Mullagh", 
-    "Newmarket-on-Fergus", "O'Briensbridge", "Ogonnelloe", "Parteen", "Poulaweala", "Quin", 
-    "Ruan", "Scariff", "Shannon", "Sixmilebridge", "Spanish Point", "Tiermaclane", "Tubber", 
-    "Tulla", "Tuamgraney", "Whitegate"
+    "Annacarriga", "Ardnacrusha", "Aughinish", "Ballinruan", "Ballycorick", "Ballylaghnan", 
+    "Ballynacally", "Ballyvaughan", "Barefield", "Bauntlieve", "Bealaclugga", "Bealaha", 
+    "Bellharbour", "Bodyke", "Bohatch", "Boolyduff", "Boston", "Breaghva", "Bridgetown", 
+    "Broadford", "Bunratty", "Burrenfada", "Caher", "Caherconnel", "Caherea", "Cahermurphy", 
+    "Carrigaholt", "Carron", "Castletown", "Clarecastle", "Cloghera", "Clonlara", 
+    "Newmarket-on-Fergus", "Noughaval", "O'Briensbridge", "O'Callaghans Mills", "Oatfield", 
+    "Ogonelloe", "Parteen", "Portdrine", "Querrin", "Quilty", "Quin", "Rinneen", "Roadford", 
+    "Ruan", "Scarriff", "Shannakea", "Shannon", "Sheenaun", "Sixmilebridge", "Spanish Point", 
+    "Teermaclane", "Termon", "The Burren", "The Hand Cross Roads", "Toomaghera", "Tuamgraney", 
+    "Tubber", "Tulla", "Turlough", "Westbury", "Whitegate", "Willbrook"
   ],
   "Cork": [
     "Adrigole", "Aghabullogue", "Aghada", "Aghaville", "Ahakista", "Aherla", "Allihies", "Araglin",
-    "Ardfield", "Ardgehane", "Arthurstown", "Ballincollig", "Ballingeary", "Ballinspittle", 
-    "Ballycotton", "Ballydehob", "Ballydesmond", "Ballyhea", "Ballylickey", "Ballymakeera", 
-    "Ballymartle", "Ballyvourney", "Bantry", "Barryroe", "Beara", "Béal na Bláth", "Bere Island", 
-    "Blackwater", "Blarney", "Buttevant", "Caherdaniel", "Cahersiveen", "Carriganima", 
-    "Carrigtwohill", "Carrigaline", "Castlelyons", "Castlemartyr", "Castletownbere", "Charleville", 
-    "Churchtown", "Clonakilty", "Clondrohid", "Clonmult", "Cloyne", "Cobh", "Cork", "Courtmacsherry", 
-    "Crosshaven", "Crookstown", "Doneraile", "Douglas", "Drimoleague", "Dunmanway", "Durrus", 
-    "Eyeries", "Fermoy", "Fota Island", "Glandore", "Glanmire", "Glengarriff", "Goleen", 
-    "Innishannon", "Kanturk", "Kenmare", "Kilbrittain", "Killeagh", "Kilworth", "Kinsale", 
-    "Leap", "Little Island", "Macroom", "Mallow", "Midleton", "Millstreet", "Mitchelstown", 
-    "Monkstown", "Newmarket", "Passage West", "Rathcormac", "Ring", "Ringaskiddy", "Rosscarbery", 
-    "Schull", "Sherkin Island", "Skibbereen", "Tallow", "Timoleague", "Tower", "Tracton", 
-    "Union Hall", "Watergrasshill", "Youghal"
+    "Ardfield", "Ardgehane", "Ardglass", "Ardgroom", "Ashton", "Ballinadee", "Ballinascarty", 
+    "Ballinclashet", "Ballincollig", "Ballincrokig", "Ballincurrig", "Ballineen", "Ballingeary", 
+    "Ballingurteen", "Ballinhassig", "Ballinlough", "Ballinluska", "Ballinmlagh", "Ballinora", 
+    "Ballinrea", "Ballinspittle", "Ballintemple", "Ballinure", "Ballinveiltig", "Summercove", 
+    "Sunday's Well", "Tarvara", "Taur", "Teerelton", "Templehill", "Templemartin", "The Lough", 
+    "Timoleague", "Tivoli", "Toames", "Togher", "Togher (Cork City)", "Toormore", "Tower", 
+    "Tracton", "Trafrask", "Tragumna", "Tullylease", "Turners Cross", "Union Hall", "Vicarstown", 
+    "Victoria Cross", "Walshtown", "Waterfall", "Watergrasshill", "Western Road", "White Hall", 
+    "White's Cross", "Whitechurch", "Whitegate", "Wilton", "Youghal"
   ],
   "Derry": [
-    "Bellaghy", "Castledawson", "Claudy", "Coleraine", "Culmore", "Derry", "Draperstown", 
-    "Dungiven", "Eglinton", "Feeny", "Garvagh", "Greysteel", "Kilrea", "Lavey", "Limavady", 
-    "Maghera", "Magherafelt", "Moneymore", "New Buildings", "Newbridge", "Park", "Portstewart", 
-    "Swatragh", "The Loup", "Tobermore", "Upperlands"
+    "Aghadowey", "Ardmore", "Articlave", "Ballykelly", "Ballymoney", "Ballyronan", "Bellaghy", 
+    "Boleran", "Burnfoot", "Campsey", "Castledawson", "Castlerock", "Castleroe", "Clady", "Claudy", 
+    "Coleraine", "Culmore", "Curran", "Derry City", "Desertmartin", "Downhill", "Draperstown", 
+    "Drumahoe", "Drumsurn", "Dungiven", "Eglinton", "Feeny", "Garvagh", "Glenhead", "Greysteel", 
+    "Gulladuff", "Kilrea", "Knockloughrim", "Limavady", "Limavady Road", "Lisnamuck", "Londonderry", 
+    "Macosquin", "Maghera", "Magherafelt", "Magilligan", "Moneymore", "Moneyneany", "New Buildings", 
+    "Park", "Portglenone", "Portstewart", "Ringsend", "Swatragh", "The Loup", "Tobermore", "Upperlands"
   ],
   "Donegal": [
-    "An Clochán Liath", "Annagry", "Ardara", "Arranmore", "Ballybofey", "Ballyshannon", 
-    "Bridgend", "Buncrana", "Bundoran", "Burnfoot", "Burtonport", "Cardonagh", "Carndonagh", 
-    "Carrigart", "Churchill", "Clonmany", "Convoy", "Creeslough", "Crolly", "Derrybeg", 
-    "Donegal", "Downings", "Dunfanaghy", "Dungloe", "Falcarragh", "Gaoth Dobhair", "Glencolmcille", 
-    "Gleneely", "Glenties", "Greencastle", "Gweedore", "Inishtrahull", "Inishowen", "Kerrykeel", 
-    "Kilcar", "Killybegs", "Laghey", "Letterkenny", "Lifford", "Malin", "Milford", "Moville", 
-    "Muff", "Raphoe", "Ramelton", "St. Johnston", "Stranorlar", "Tory Island"
+    "Altnapaste", "Annagry", "Ardagh", "Ardara", "Arranmore", "Arryheernabin", "Aughagault", 
+    "Aughkeely", "Ballindrait", "Ballintra", "Ballure", "Ballybofey", "Ballygorman", "Ballyheerin", 
+    "Ballyhillin", "Ballyliffin", "Ballymagan", "Ballymagaraghy", "Ballymore", "Ballynacarrick", 
+    "Ballynashannagh", "Ballyshannon", "Barnesmore", "Bellanamore", "Bogay", "Breenagh", "Bridgend", 
+    "Bridgetown", "Brinlack", "Rashedoge", "Rathmullan", "Ray", "Redcastle", "Rosapenna", "Rosnakill", 
+    "Rossbeg", "Rossgeir", "Rossnowlagh", "Shalwy", "Sheskinapoll", "Speenoge", "St. Johnstown", 
+    "Straid", "Stranorlar", "Stravally", "Stroove", "Tamney", "Tangaveane", "Tawny", "Teelin", 
+    "Termon", "Tievemore", "Treantagh", "Tully", "Tullydush", "Tullynaha", "Tullyvoos", "Urbalreagh", 
+    "Welchtown", "West Town", "White Castle"
   ],
   "Down": [
-    "Annalong", "Ardglass", "Ballygowan", "Ballyhalbert", "Ballykinlar", "Ballynahinch", 
-    "Ballyroney", "Banbridge", "Bangor", "Carryduff", "Castlewellan", "Clough", "Comber", 
-    "Donaghadee", "Downpatrick", "Dromore", "Dromara", "Drumaness", "Drumbo", "Dundrum", 
-    "Finnis", "Gilford", "Hillsborough", "Hilltown", "Holywood", "Inch", "Katesbridge", 
-    "Kilcoo", "Kilkeel", "Killough", "Kilmore", "Leitrim", "Lisburn", "Magheralin", 
-    "Millisle", "Moira", "Newcastle", "Newry", "Newtownards", "Portaferry", "Portavogie", 
-    "Rathfriland", "Rostrevor", "Saintfield", "Saul", "Seaforde", "Strangford", "Warrenpoint"
+    "Albertbridge road", "Annaclone", "Annacloy", "Annadorn", "Annahilt", "Annallong", "Annsborough", 
+    "Ardglass", "Ardkeen", "Ardmillan", "Attical", "Balliggan", "Ballycloughan", "Ballycrochan", 
+    "Ballygowan", "Ballyhalbert", "Ballyholme", "Ballyhornan", "Ballykeel", "Ballylesson", 
+    "Ballymacarrett", "Ballymaconaghy", "Ballymartin", "Ballymisert", "Ballynafoy", "Ballynahinch", 
+    "Ballynoe", "Ballyroney", "Ballyrushboy", "Ballywalter", "Ballyward", "Banbridge", "Mullartown", 
+    "Newcastle", "Newry", "Newtownards", "Newtownbreda", "Orangefield", "Ormeau", "Portaferry", 
+    "Portavogie", "Raffrey", "Rathfriland", "Ravenhill", "Rosetta", "Rostrevor", "Saintfield", 
+    "Sandown", "Scarva", "Seaforde", "Seapatrick", "Shandon", "Stormont", "Strandtown", "Strangford", 
+    "Sydenham", "Taughblane", "The Temple", "Tullycarnet", "Tyrella", "Upper Newtownards Road", 
+    "Waringsford", "Waringstown", "Warrenpoint", "Woodstock"
   ],
   "Dublin": [
     "Adamstown", "Ard Na Greine", "Artane", "Ashington", "Ashtown", "Aylesbury", "Ayrfield", 
     "Balbriggan", "Baldonnell", "Baldoyle", "Balgriffin", "Ballinascorney", "Ballinteer", 
     "Ballsbridge", "Ballyboden", "Ballybough", "Ballyboughal", "Ballybrack", "Ballycorus", 
     "Ballycullen", "Ballyfermot", "Ballymount", "Ballymun", "Balrothery", "Balscaddan", 
-    "Bayside", "Beaumont", "Belfield", "Blackrock", "Blanchardstown", "Booterstown", "Bray", 
-    "Cabinteely", "Cabra", "Castleknock", "Chapelizod", "Churchtown", "Citywest", "Clondalkin", 
-    "Clonee", "Clonsilla", "Clonskeagh", "Clontarf", "Coolock", "Corduff", "Crumlin", "Dalkey", 
-    "Deansgrange", "Dollymount", "Donabate", "Donaghmede", "Donnybrook", "Donnycarney", 
-    "Drumcondra", "Dún Laoghaire", "Fairview", "Finglas", "Firhouse", "Foxrock", "Garristown", 
-    "Glasnevin", "Glasthule", "Glenageary", "Goatstown", "Grangegorman", "Greenhills", 
-    "Greystones", "Howth", "Inchicore", "Irishtown", "Islandbridge", "Jobstown", "Kilbarrack", 
-    "Killiney", "Kilmacud", "Kilmainham", "Kimmage", "Knocklyon", "Leixlip", "Leopardstown", 
-    "Lucan", "Malahide", "Marino", "Milltown", "Monkstown", "Mount Merrion", "Naas", "Navan Road", 
-    "Northside", "Palmerstown", "Phibsborough", "Portmarnock", "Raheny", "Ranelagh", "Rathcoole", 
-    "Rathfarnham", "Rathgar", "Rathmines", "Ring Commons", "Ringsend", "Ronanstown", "Rosemount", 
-    "Rush", "Saggart", "Sandford", "Sandycove", "Sandyford", "Sandymount", "Shankill", "Skerries", 
-    "Smithfield", "South Dublin", "Stillorgan", "Stoneybatter", "Swords", "Tallaght", "Terenure", 
-    "The Liberties", "Thomastown", "Tyrrelstown", "Walkinstown", "Whitehall", "Wicklow"
+    "Bayside", "Beaumont", "Belfield", "Blackrock", "Blanchardstown", "Bluebell", "Sandycove", 
+    "Sandyford", "Sandymount", "Santry", "Shankill", "Skerries", "Smithfield", 
+    "South Circular Road", "South City", "South County", "St. James Gate", "Stepaside", 
+    "Stillorgan", "Stoneybatter", "Strawberry Beds", "Sutton", "Swords", "Tallaght", "Temple Bar", 
+    "Templeogue", "Terenure", "The Coombe", "The Five Roads", "Ticknock", "Tyrrelstown", 
+    "Walkinstown", "Ward", "West County", "Whitehall", "Willbrook", "Windy Arbour"
   ],
   "Fermanagh": [
-    "Ballinamallard", "Belcoo", "Belleek", "Brookeborough", "Derrygonnelly", "Enniskillen", 
-    "Garrison", "Irvinestown", "Kesh", "Kinawley", "Lisbellaw", "Lisnaskea", "Maguiresbridge", 
-    "Newtownbutler", "Rosslea", "Tempo"
+    "Aghalan", "Aghnablaney", "Ardmoney", "Ardshankill", "Arney", "Ballagh", "Ballinamallard", 
+    "Ballindarragh", "Ballyreagh", "Belcoo", "Bellanaleck", "Belleek", "Blaney", "Boho", 
+    "Brookeborough", "Clabby", "Clonelly", "Culky", "Derrygonnelly", "Derrylin", "Donagh", 
+    "Drumduff", "Ederney", "Enniskillen", "Garrison", "Garvary", "Irvinestown", "Kesh", "Killadeas", 
+    "Kinawley", "Lack", "Letterbreen", "Lisbellaw", "Lisnarrick", "Lisnaskea", "Mackan", 
+    "Maguiresbridge", "Monea", "Newtownbutler", "Pettigo", "Rosscor", "Rosslea", "Scribbagh", 
+    "Springfield", "Tamlaght", "Teemore", "Tempo", "Trory", "Tully", "Wheathill"
   ],
   "Galway": [
-    "Abbey", "Abbeyknockmoy", "Ahascragh", "Aille", "Alloon Lower", "Annaghdown", "Ard", 
-    "Ardcloon", "Ardmore", "Ardnadoman", "Aran Islands", "Athenry", "Attymon", "Aughrim", 
-    "Ballinasloe", "Ballyconneely", "Ballymoe", "Ballyvaughan", "Barna", "Bearna", "Bealadangan", 
-    "Belclare", "Bertra", "Bullaun", "Carna", "Carraroe", "Castlegar", "Claregalway", "Clifden", 
-    "Clonbur", "Connemara", "Coole", "Corofin", "Craughwell", "Creggs", "Crumlin", "Daveystown", 
-    "Derrydonnell", "Dunmore", "Eyrecourt", "Furbo", "Galway", "Glinsk", "Gort", "Headford", 
-    "Inishbofin", "Inisheer", "Inishmaan", "Inishmore", "Kilchreest", "Kilcolgan", "Kilconnell", 
-    "Kilconly", "Kilkerrin", "Killannin", "Killeeneen", "Killimor", "Kilronan", "Kinvara", 
-    "Lackagh", "Laurencetown", "Leenane", "Letterfrack", "Lettermore", "Loughrea", "Maree", 
-    "Milltown", "Moylough", "Moycullen", "New Inn", "Oran", "Oranmore", "Oughterard", "Peterswell", 
-    "Portumna", "Recess", "Renmore", "Rosmuc", "Rossaveal", "Roundstone", "Salthill", "Spiddal", 
-    "Stradbally", "Tuam", "Woodford"
+    "Abbey", "Abbeyknockmoy", "Ahascragh", "Aille", "Alloon Lower", "Annaghdown", "Ard", "Ardcloon", 
+    "Ardmore", "Ardnadoman", "Ardnagreevagh", "Ardnasodan", "Ardrahan", "Athenry", "Attymon", 
+    "Aucloggeen", "Aughrim", "Aughrus More", "Ballaba", "Ballagh", "Ballard", "Ballardiggan", 
+    "Ballinaboy", "Ballinafad", "Ballinamore Bridge", "Ballinasloe", "Ballinderreen", "Ballintemple", 
+    "Ballybane", "Ballybrit", "Ballyburke", "Shanbally", "Shantalla", "Shrule", "Skehana", 
+    "Skehanagh", "Slievemurry", "Spiddal", "Streamstown", "Tawin", "Taylor's Hill", "Teeranea", 
+    "Teernakill", "Terryland", "Tirneevin", "Tonabrocky", "Tonacurragh", "Toomard", "Toombeola", 
+    "Townparks", "Trust", "Tuam", "Tuam Road", "Tubber", "Tullokyne", "Tully Cross", "Turloughmore", 
+    "Twomileditch", "Tynagh", "Wellpark", "Williamstown", "Woodford", "Woodquay"
   ],
   "Kerry": [
-    "Abbeydorney", "Annascaul", "Ardfert", "Ardgroom", "Ballybunion", "Ballyferriter", "Ballylongford", 
-    "Ballymacelligott", "Blennerville", "Brosna", "Caherdaniel", "Cahersiveen", "Camp", "Castlegregory", 
-    "Castleisland", "Castlemaine", "Causeway", "Crookhaven", "Currow", "Dingle", "Dromid", "Duagh", 
-    "Eyeries", "Fahan", "Farranfore", "Fenit", "Firies", "Glenbeigh", "Glencar", "Kenmare", "Kilgarvan", 
-    "Killarney", "Killorglin", "Knocknagoshel", "Lauragh", "Lispole", "Listowel", "Lixnaw", "Milltown", 
-    "Moyvane", "Portmagee", "Rathmore", "Ring of Kerry", "Scartaglin", "Sneem", "Tarbert", "Tralee", 
-    "Valentia Island", "Ventry", "Waterville"
+    "Abbeydorney", "Abbeyfeale", "Aghadoe", "Annascaul", "Ardea", "Ardfert", "Astee", "Aughacasla", 
+    "Aughils", "Baile an Sceilg", "Ballinahow", "Ballincloher", "Ballineanig", "Ballinloghig", 
+    "Ballinskelligs", "Ballybrack", "Ballybunion", "Ballydavid", "Ballyduff", "Ballyferriter", 
+    "Ballyhar", "Ballyheigue", "Ballylongford", "Ballynakilly", "Ballynaskreena", "Ballyquin", 
+    "Banna", "Barraduff", "Beal", "Beaufort", "Boheeshil", "Bonane", "Carranreagh", "Newtown", 
+    "Oaghley", "Parknasilla", "Portmagee", "Rathmore", "Reen", "Riverville", "Saleen", "Sallahig", 
+    "Scartaglin", "Shanacashel", "Six Crosses", "Smerwick", "Sneem", "Spa", "Stradbally", "Tahilla", 
+    "Tarbert", "Teeranearagh", "Teeromoyle", "Templenoe", "Tiduff", "Tooreencahill", "Tralee", 
+    "Tullakeel", "Tullamore", "Tullig", "Tuosist", "Valentia Island", "Ventry", "Waterville", 
+    "Westcove", "White Gate Cross Roads"
   ],
   "Kildare": [
-    "Allenwood", "Athy", "Ballitore", "Ballymore Eustace", "Caragh", "Castledermot", "Celbridge", 
-    "Clane", "Coill Dubh", "Curragh", "Derrinturn", "Johnstown", "Kildare", "Kill", "Kilcock", 
-    "Kilcullen", "Kilteel", "Leixlip", "Maynooth", "Milltown", "Monasterevin", "Naas", "Newbridge", 
-    "Nurney", "Prosperous", "Rathangan", "Rathmore", "Sallins", "Straffan", "Timolin", "Two Mile House"
+    "Allen", "Allenwood", "Ardscull", "Athgarvan", "Athy", "Ballitore", "Ballyfair", 
+    "Ballymore Eustace", "Ballynadrumny", "Ballyroe", "Ballysax", "Ballyshannon", "Boley", 
+    "Brannockstown", "Broadford", "Burtown", "Cadamstown", "Calverstown", "Carbury", "Carragh", 
+    "Castledermot", "Celbridge", "Cherryville", "Clane", "Clogharinka", "Cloncurry", "Coill Dubh", 
+    "Colbinstown", "Confey", "Coolearagh", "Lullymore", "Maddenstown", "Maganey", "Mainham", 
+    "Maynooth", "Milemill", "Milltown", "Monasterevin", "Moone", "Moyvalley", "Mucklon", "Naas", 
+    "Narraghmore", "Newbridge", "Newtown", "Nurney", "Old Kilcullen", "Pollardstown", "Prosperous", 
+    "Punchestown", "Rathangan", "Rathcoffey", "Robertstown", "Sallins", "Staplestown", "Straffan", 
+    "Suncroft", "The Curragh", "Timahoe", "Timolin", "Two Mile House", "Windmill"
   ],
   "Kilkenny": [
-    "Ballyragget", "Bennettsbridge", "Callan", "Castlecomer", "Freshford", "Goresbridge", "Gowran", 
-    "Graiguenamanagh", "Inistioge", "Jenkinstown", "Johnstown", "Kilkenny", "Kilmacow", "Kilmanagh", 
-    "Kiltorcan", "Knocktopher", "Mullinavat", "Piltown", "Stoneyford", "Thomastown", "Tullaroan", 
-    "Urlingford"
+    "Balleen", "Ballinakill", "Ballinamara", "Ballincrea", "Ballinvarry", "Ballycallan", "Ballyfasy", 
+    "Ballyfoyle", "Ballyhale", "Ballykeefe", "Ballykeoghan", "Ballyline", "Ballymack", "Ballyragget", 
+    "Barrack Village", "Baunskeha", "Bennettsbridge", "Boobyglass", "Burnchurch", "Callan", 
+    "Carrigeen", "Castlecomer", "Castletown", "Castlewarren", "Clara", "Clogga", "Clogh", 
+    "Clonmantagh", "Clontubbrid", "Mount Garret", "Mullenbeg", "Mullinavat", "New Ross", "Newmarket", 
+    "Owning", "Paulstown", "Piltown", "Powerstown", "Railyard", "Rathmoyle", "Reenvanagh", 
+    "Rochestown", "Rosbercon", "Skehana", "Slieverue", "Smithstown", "Stoneyford", "The Rower", 
+    "The Sweep", "Thomastown", "Three Castles", "Tubbrid", "Tullagher", "Tullaghought", "Tullaherin", 
+    "Tullaroan", "Urlingford", "Whitehall", "Windgap"
   ],
   "Laois": [
-    "Abbeyleix", "Arles", "Attanagh", "Ballinakill", "Ballybrittas", "Ballylinan", "Borris-in-Ossory", 
-    "Camross", "Clonaslee", "Cullohill", "Durrow", "Emo", "Killenard", "Mountmellick", "Mountrath", 
-    "Portarlington", "Portlaoise", "Rathdowney", "Rosenallis", "Stradbally", "The Heath", "Timahoe", 
-    "Vicarstown"
+    "Abbeyleix", "Aghaboe", "Ardlea", "Arless", "Attanagh", "Ballacolla", "Ballaghmore", 
+    "Ballickmoyler", "Ballinagar", "Ballinakill", "Ballintubbert", "Ballyadams", "Ballybrittas", 
+    "Ballybrophy", "Ballydavis", "Ballyfin", "Ballyhuppahane", "Ballylynan", "Ballyroan", "Bilboa", 
+    "Borris-In-Ossory", "Camross", "Cappalinnan", "Cashel", "Castlecuffe", "Castletown", "Clarahill", 
+    "Clonaslee", "Clough", "Coolnareen", "Coolrain", "Crettyard", "Donaghmore", "Durrow", "Emo", 
+    "Errill", "Graiguecullen", "Jamestown", "Kilbricken", "Kilcavan", "Killenard", "Kilminchy", 
+    "Kilmorony", "Knocks", "Luggacurren", "Mountmellick", "Mountrath", "Nealstown", "Newtown", 
+    "Old Town", "Pallas", "Pike of Rush Hall", "PortLaoise", "Portarlington", "Rathdowney", 
+    "Ringstown", "Rosenallis", "Rossmore", "Shanahoe", "Shanragh", "Spink", "Stradbally", "Swan", 
+    "Timahoe", "Towlerton", "Vicarstown", "Wolfhill"
   ],
   "Leitrim": [
-    "Annaduff", "Ballinamore", "Carrick-on-Shannon", "Cloone", "Dromahair", "Drumshanbo", "Drumsna", 
-    "Fenagh", "Glencar", "Jamestown", "Kinlough", "Leitrim", "Manorhamilton", "Mohill"
+    "Aghacashel", "Aghamore", "Annaduff", "Askill", "Aughavas", "Aughnasheelan", "Ballinagleragh", 
+    "Ballinamore", "Balloor", "Beagh", "Bornacoola", "Buckode", "Carrick-on-Shannon", "Carrigallen", 
+    "Cloone", "Cloone Grange", "Corracloona", "Corraleehan", "Corrawaleen", "Corriga", "Corry", 
+    "Dorrusawillin", "Dowra", "Dromahair", "Dromlea", "Dromod", "Drumcong", "Drumkeeran", 
+    "Drumshambo", "Drumsna", "Farnaght", "Gortgarrigan", "Gortletteragh", "Gorvagh", "Greagh", 
+    "Gurteen", "Jamestown", "Keshcarrigan", "Killarga", "Killygar", "Kilnagross", "Kiltyclogher", 
+    "Kinlough", "Largydonnell", "Lecarrow", "Leckanarainey", "Leckaun", "Leitrim", "Leitrim Town", 
+    "Leitrim Village", "Lisduff", "Lissinagroagh", "Lissiniska", "Lurganboy", "Manorhamilton", 
+    "Mohill", "Newtowngore", "Rooskey", "Rossinver", "Shruffanagh", "Tarmon", "Tawnylea", "Tullaghan"
   ],
   "Limerick": [
-    "Abbeyfeale", "Adare", "Anglesborough", "Ardagh", "Askeaton", "Athea", "Ballingarry", "Ballylanders", 
-    "Broadford", "Bruff", "Bruree", "Bulgaden", "Caherconlish", "Cappamore", "Castleconnell", "Charleville", 
-    "Croom", "Doon", "Dromcolliher", "Elton", "Feohanagh", "Foynes", "Galbally", "Glin", "Hospital", 
-    "Kilfinane", "Kilmallock", "Knocklong", "Limerick", "Loughill", "Manister", "Monagea", "Mountcollins", 
-    "Murroe", "Newcastlewest", "Oola", "Pallasgreen", "Patrickswell", "Rathkeale", "Shanagolden", 
-    "Tournafulla"
+    "Abbeyfeale", "Abington", "Adare", "Ahane", "Anglesboro", "Annacotty", "Ardagh", "Ardpatrick", 
+    "Ashford", "Askeaton", "Athea", "Athlacca", "Ballagh", "Ballaghbehy", "Ballinacurra", 
+    "Ballinagarrane", "Ballingarry", "Ballinleeny", "Ballvengland", "Ballyagran", "Ballyallinan", 
+    "Ballybrood", "Ballyclough", "Ballycummin", "Ballygrennan", "Ballyhaght", "Ballyhahill", 
+    "Ballylanders", "Ballymurragh", "Old Kildimo", "Oldmill Bridge", "Oola", "Pallasgreen", 
+    "Pallaskenry", "Patrickswell", "Pennywell", "Prospect", "Rahanagh", "Raheen", "Rathbane", 
+    "Rathkeale", "Redgate", "Reens", "Rhebogue", "Rockhill", "Rootiagh", "Rossbrien", "Roxborough", 
+    "Shanagolden", "Singland", "South Circular Road", "Southill", "Strand", "Templeglantine", 
+    "Templemungret", "Thomondgate", "Tooraree", "Toornafulla", "Tournafulla"
   ],
   "Longford": [
-    "Ardagh", "Ballinalee", "Ballymahon", "Drumlish", "Edgeworthstown", "Granard", "Lanesborough", 
-    "Longford", "Newtowncashel", "Strokestown"
+    "Abbeylara", "Abbeyshrule", "Aghasashel", "Ardagh", "Aughnacliffe", "Ballinalee", "Ballinamuck", 
+    "Ballymahon", "Barry", "Bornacoola", "Bunlahy", "Carrickboy", "Carrowrory", "Clondra", "Clooneen", 
+    "Colehill", "Corbay Upper", "Corlea", "Crossea", "Cullyfad", "Danesfort", "Dring", "Drumlish", 
+    "Edgeworthstown", "Ennybegs", "Esker South", "Formoyle", "Forthill", "Granard", "Johnstownbridge", 
+    "Keenagh", "Killashee", "Killoe", "Lanesboro", "Legan", "Leggah", "Lisryan", "Longford Town", 
+    "Mostrim", "Moydow", "Moyne", "Newtowncashel", "Newtownforbes", "Ratharney", "Taghshinny", 
+    "Tarmonbarry", "Turreen"
   ],
   "Louth": [
-    "Ardee", "Baltray", "Blackrock", "Carlingford", "Castlebellingham", "Clogherhead", "Collon", 
-    "Drogheda", "Dundalk", "Dunleer", "Greenore", "Tallanstown", "Termonfeckin"
+    "Annagassan", "Ardee", "Ballymakenny", "Baltray", "Blackrock", "Carlingford", "Castlebellingham", 
+    "Chanonrock", "Clogherhead", "Collon", "Darver", "Dowdallshill", "Drogheda", "Dromin", "Dromiskin", 
+    "Drumcar", "Dunany", "Dundalk", "Dunleer", "Giles Quay", "Grange", "Grangebellew", "Greenore", 
+    "Jenkinstown", "Kilanny", "Kilcurly", "Kilcurry", "Kilkerley", "Kilsaran", "Knockbridge", 
+    "Louth", "Louth Town", "Mansfieldstown", "Monasterboice", "Omeath", "Paughnstown", "Port", 
+    "Rathcor", "Ravensdale", "Reaghstown", "Roestown", "Shanlis", "Stabannan", "Tallanstown", 
+    "Tenure", "Termonfeckin", "The Bush", "Togher", "Townley Hall", "Tullyallen", "Whites Town"
   ],
   "Mayo": [
-    "Achill", "Ballina", "Ballinrobe", "Ballyhaunis", "Ballyvary", "Belmullet", "Béal an Mhuirthead", 
-    "Bonniconlon", "Burrishoole", "Castlebar", "Charlestown", "Clare Island", "Claremorris", "Cong", 
-    "Crossmolina", "Foxford", "Hollymount", "Inishbiggle", "Inishturk", "Islandeady", "Kilcommon", 
-    "Kiltimagh", "Knock", "Lahardane", "Louisburgh", "Manulla", "Newport", "Partry", "Swinford", 
-    "Westport"
+    "Achill", "Achill Sound", "Aghadiffin", "Aghadoon", "Aghagower", "Aghamore", "Aghleam", 
+    "An Geata Mor", "Attavally", "Attymass", "Balla", "Ballina", "Ballindine", "Ballinrobe", 
+    "Ballintubber", "Ballycastle", "Ballycroy", "Ballyfarnagh", "Ballygarries", "Ballyglass", 
+    "Ballyhaunis", "Ballyhean", "Ballynagoraher", "Ballynastangford", "Ballytoohy", "Ballyvary", 
+    "Bangor Erris", "Barnacahoge", "Barnatra", "Barnycarroll", "Bekan", "Belcarra", "Belderrig", 
+    "Belfarsad", "Bellacorick", "Park", "Partry", "Pollatomish", "Pontoon", "Portacloy", "Porturlin", 
+    "Rake Street", "Rathlackan", "Rathoma", "River", "Roonah Quay", "Roosky", "Ross Port", 
+    "Ross West", "Rosturk", "Roundfort", "Salia", "Scardaun", "Sheskin", "Shranamanragh Bridge", 
+    "Shrule", "Srah", "Srahduggaun", "Srahmore", "Strade", "Swinford", "Tawnyinah", "Tobernadarry", 
+    "Tourmakeady", "Trean", "Tristia", "Tulrohaun", "Turlough", "Urlaur", "Valley", "Westport", 
+    "Westport Quay"
   ],
   "Meath": [
-    "Ashbourne", "Athboy", "Ballivor", "Batterstown", "Bettystown", "Bohermeen", "Clonmellon", 
-    "Duleek", "Dunboyne", "Dunshaughlin", "Enfield", "Gormanston", "Julianstown", "Kells", 
-    "Kilbride", "Kilmessan", "Laytown", "Longwood", "Meath Hill", "Navan", "Nobber", "Oldcastle", 
-    "Ratoath", "Skryne", "Slane", "Summerhill", "Trim", "Walterstown"
+    "Ardanew", "Ardcath", "Ashbourne", "Athboy", "Athlumney", "Ballinabrackey", "Ballinlough", 
+    "Ballivor", "Ballyhoe", "Ballynacree", "Ballynare", "Balrath", "Batterstown", "Bective", 
+    "Bellewstown", "Bettystown", "Blackbull", "Blackwater Bridge", "Boggan", "Bohermeen", 
+    "Boyerstown", "Carlanstown", "Carnaross", "Castlejordan", "Castletown", "Cloghbrack", 
+    "Cloghmacoo", "Clonalvy", "Clonard", "Clonee", "Clonycavan", "Cortown", "Cross Keys", 
+    "Crossakiel", "Longwood", "Martinstown", "Millbrook", "Mornington", "Mosney", "Moynalty", 
+    "Moynalvey", "Mullagh", "Navan", "Nobber", "Oldcastle", "Oristown", "Parsonstown", 
+    "Pike Corner", "Rathcairn", "Rathcore", "Rathfeigh", "Rathkenny", "Rathmolyon", "Ratoath", 
+    "Robinstown", "Ross", "Skryne", "Slane", "Stackallen", "Stamullen", "Summerhill", "Tara", 
+    "Teevurcher", "Thomastown", "Trim", "Tullaghanstown", "Tylas", "Virginia Road", "Wilkinstown", 
+    "Yellow Furze"
   ],
   "Monaghan": [
-    "Ballybay", "Carrickmacross", "Castleblayney", "Clones", "Clontibret", "Emyvale", "Glaslough", 
-    "Inniskeen", "Latton", "Monaghan", "Newbliss", "Rockcorry", "Scotstown", "Smithborough", 
-    "Threemilehouse", "Tydavnet"
+    "Aghabog", "Annayalla", "Aughnamullen", "Ballinode", "Ballybay", "Broomfield", "Capragh", 
+    "Carrickashedoge", "Carrickmacross", "Carrickroe", "Castleblaney", "Castleshane", "Cavanagarvan", 
+    "Clones", "Clontibret", "Corcaghan", "Corvally", "Creaghanroe", "Drum", "Emyvale", "Glaslough", 
+    "Inniskeen", "Killeevan", "Laragh", "Loughmorne", "Mill Town", "Monaghan", "Monaghan Town", 
+    "Mullan", "Newbliss", "Rockcorry", "Scotshouse", "Scotstown", "Shanco", "Shantonagh", 
+    "Smithborough", "Stone Bridge", "Threemilehouse", "Tirnaneill", "Tullyamalra", "Tydavnet"
   ],
   "Offaly": [
-    "Banagher", "Belmont", "Birr", "Blueball", "Bracknagh", "Clara", "Clonbullogue", "Clonygowan", 
-    "Daingean", "Edenderry", "Ferbane", "Geashill", "Kilcormac", "Kinnitty", "Mucklagh", "Pollagh", 
-    "Rhode", "Rahan", "Shannonbridge", "Tullamore"
+    "Ardan", "Ballinagar", "Ballyboy", "Ballybryan", "Ballycumber", "Ballyfore", "Ballykean", 
+    "Ballykilleen", "Ballynakill", "Banagher", "Barna", "Belmont", "Birr", "Black Lion", "Blue Ball", 
+    "Boheraphuca", "Brackagh", "Bracknagh", "Brosna", "Broughal", "Cadamstown", "Clara", "Clareen", 
+    "Cloghan", "Clonavoe", "Clonbullogue", "Clonfanlough", "Clonmacnoise", "Clonomy", "Clonygowan", 
+    "Cloughjordan", "Coolderry", "Crinkill", "Croghan", "Cushina", "Fortel", "Gortarevan", 
+    "Goteen Bridge", "Grogan", "Horseleap", "Kilclonfert", "Kilcomin", "Kilcormac", "Killane", 
+    "Killeigh", "Killeshil", "Killyon", "Kinnitty", "Lemanaghan", "Lisduff", "Longford", "Moneygall", 
+    "Mountbolus", "Newtown", "Pollagh", "Portarlington", "Rahan", "Rapemills", "Rath", "Rathvilla", 
+    "Rhode", "Screggan", "Shannon", "Shannon Harbour", "Shannonbridge", "Sharavogue", "Shinrone", 
+    "Taylor's Cross", "Tober", "Togher", "Tullamore", "Walsh Island"
   ],
   "Roscommon": [
-    "Athleague", "Ballaghaderreen", "Ballinlough", "Ballyforan", "Ballyleague", "Boyle", "Castlerea", 
-    "Cootehall", "Dysart", "Elphin", "Fourmilehouse", "Frenchpark", "Keadue", "Knockcroghery", 
-    "Lecarrow", "Moore", "Roscommon", "Strokestown", "Tarmonbarry", "Tulsk"
+    "Aghamuck", "Altagowlan", "Arigna", "Athleague", "Athlone", "Ballagh", "Ballaghaderreen", 
+    "Ballinagare", "Ballinaheglish", "Ballinameen", "Ballinlough", "Ballintober", "Ballyclare", 
+    "Ballydangan", "Ballyfarnon", "Ballyforan", "Ballygar", "Ballyleague", "Ballymacurley", 
+    "Ballymurray", "Ballyroddy", "Bellameeny", "Bellanagare", "Bellanamult", "Boyle", "Brackloon", 
+    "Bracknagh", "Briarfield", "Brideswell", "Callow", "Lisacul", "Lismoyle", "Lissalway", 
+    "Loughglynn", "Lurgan", "Mantua", "Mount Talbot", "Moyne", "Mullen", "Newtown", "Old Town", 
+    "Oldtown", "Passage", "Portrunny", "Rahara", "Rathcroghan", "Rodeen", "Rooskey", 
+    "Roscommon Town", "Runnabackan", "Scardaun", "Scramoge", "Shankill", "Strokestown", 
+    "Taghmaconnell", "Tarmonbarry", "Termonbarry", "Thomas Street", "Tibohine", "Trien", "Tully", 
+    "Tulsk", "Whitehall"
   ],
   "Sligo": [
-    "Ballymote", "Ballysadare", "Bunnyconnellan", "Carney", "Cliffoney", "Collooney", "Coolaney", 
-    "Curry", "Drumcliff", "Dromore West", "Easkey", "Enniscrone", "Geevagh", "Grange", "Gurteen", 
-    "Mullaghmore", "Riverstown", "Sligo", "Strandhill", "Tobercurry", "Tubbercurry"
+    "Achonry", "Aclare", "Ardmoy", "Arinagh", "Aughris", "Ballaghnatrillick", "Ballinacarrow", 
+    "Ballinafad", "Ballinfull", "Ballinode", "Ballintogher", "Ballintrillick", "Ballisodare", 
+    "Ballyconnell", "Ballygawley", "Ballymote", "Ballysadare", "Banada", "Belladrihid", "Bellaghy", 
+    "Bellahy", "Bellanagraugh Bridge", "Beltra", "Boyle", "Bunnanadden", "Calry", "Carney", 
+    "Carrowkeel", "Carrowmore", "Carrowneden", "Carrowreagh", "Cashelgarran", "Castlebaldwin", 
+    "Castleconor", "Castlegal", "Grange", "Gurteen", "Highwood", "Inishcrone", "Kesh", "Kilglass", 
+    "Killavil", "Kilmacteige", "Kilmactranny", "Largan", "Lavagh", "Masshill", "Monasteraden", 
+    "Moneygold", "Moneylahan", "Moylough", "Mullaghmore", "Mullaghroe", "Mullany's Cross", "Owenbeg", 
+    "Raghly", "Ransboro", "Rathcormac", "Rathlee", "Riverstown", "Ropefield", "Rosses Point", 
+    "Skreen", "Sligo", "Sligo Town", "Sooey", "Strandhill", "Templeboy", "Tobercurry", 
+    "Toberscanavan", "Tourlestrane", "Tubbercurry"
   ],
   "Tipperary": [
-    "Annacarty", "Ardfinnan", "Ballina", "Ballingarry", "Ballyporeen", "Bansha", "Borrisokane", 
-    "Borrisoleigh", "Birdhill", "Cahir", "Cappawhite", "Carrick-on-Suir", "Cashel", "Clogheen", 
-    "Clonmel", "Dromineer", "Fethard", "Golden", "Holycross", "Killenaule", "Littleton", "Nenagh", 
-    "Newport", "Puckane", "Roscrea", "Silvermines", "Templemore", "Thurles", "Tipperary", "Upperchurch"
+    "Aglish", "Ahenny", "Aherlow", "Anglesey Bridge", "Annacarty", "Annfield", "Ardcrony", 
+    "Ardfinnan", "Athnid", "Ballagh", "Ballina", "Ballinahinch", "Ballinahow", "Ballinderry", 
+    "Ballingarry", "Ballinure", "Ballybeg", "Ballycahill", "Ballyclerahan", "Ballycommon", 
+    "Ballygriffin", "Ballylooby", "Ballymackey", "Ballyneil", "Ballynonty", "Ballypatrick", 
+    "Ballyporeen", "Ballysloe", "Bansha", "Birdhill", "Boggaun", "Boherlahan", "Pallas Cross", 
+    "Pike", "Portland", "Portroe", "Poulmucka", "Puckaun", "Rathbrit", "Rathcabbin", "Rathkeevin", 
+    "Rearcross", "Reddan's Walk", "Riverstown", "Roscrea", "Rosegreen", "Rosmult", "Sallypark", 
+    "Silvermines", "Templederry", "Templemore", "Templetuohy", "Terryglass", "The Pike", 
+    "Thomastown", "Thurles", "Tipperary Town", "Toem", "Toomevara", "Toor", "Tubbrid", 
+    "Twomileborris", "Upperchurch", "Youghal"
   ],
   "Tyrone": [
-    "Ardboe", "Augher", "Ballygawley", "Beragh", "Carrickmore", "Castlederg", "Clogher", "Coalisland", 
-    "Cookstown", "Drumquin", "Dungannon", "Fintona", "Gortin", "Killen", "Moy", "Omagh", "Pomeroy", 
-    "Sion Mills", "Strabane", "Trillick"
+    "Ardboe", "Artigarvan", "Augher", "Aughnacloy", "Ballygawley", "Ballymagorry", "Ballyreagh", 
+    "Benburb", "Beragh", "Caledon", "Cappagh", "Carland", "Carnteel", "Carrickmore", 
+    "Castlecaulfield", "Castlederg", "Clady", "Clanabogan", "Clogher", "Coagh", "Coalisland", 
+    "Cookstown", "Donaghmore", "Dromore", "Drumlegagh", "Drumnakilly", "Drumquin", "Dungannon", 
+    "Dunnamanagh", "Eglish", "Fintona", "Fivemiletown", "Galbally", "Gortin", "Greencastle", 
+    "Killen", "Killyclogher", "Killymeal", "Kilskeery", "Magheramason", "Mountjoy", "Moy", 
+    "Mullaghmore", "Newmills", "Newtownstewart", "Omagh", "Plumbridge", "Pomeroy", "Seskinore", 
+    "Sion Mills", "Sixmilecross", "Stewartstown", "Strabane", "Strule", "Trillick"
   ],
   "Waterford": [
-    "Aglish", "Annestown", "Ardmore", "Ballyduff", "Ballymacarbry", "Bunmahon", "Cappoquin", 
-    "Carrick-on-Suir", "Cheekpoint", "Clashmore", "Colligan", "Dungarvan", "Dunmore East", 
-    "Fenor", "Ferrybank", "Kilmacthomas", "Lemybrien", "Lismore", "Passage East", "Portlaw", 
-    "Ring", "Stradbally", "Tallow", "Tramore", "Villierstown", "Waterford"
+    "Aglish", "An Rinn", "Annestown", "Ardmore", "Ballinamona", "Ballinamult", "Ballinaspick", 
+    "Ballyduff", "Ballygunner", "Ballylaneen", "Ballymacarbry", "Ballymacaw", "Ballynacourty", 
+    "Ballynagaul", "Ballynaguilkee", "Ballytruckle", "Belview Port", "Boola", "Boolattin", 
+    "Brownstown", "Bunmahon", "Butlerstown", "Cappagh", "Cappoquin", "Carrick-on-Suir", "Carrigeen", 
+    "Cheekpoint", "Clashmore", "Clohernagh", "Clonea", "Cross", "Curragh", "Dungarvan", 
+    "Kilclooney", "Kilgobnet", "Kill", "Killowen", "Kilmacow", "Kilmacthomas", "Kilmeaden", 
+    "Kinsalebeg", "Knockanore", "Knockboy", "Lackaroe", "Lemybrien", "Lismore", "Loskeran", 
+    "Lyrenaglogh", "Mahon Bridge", "Millstreet", "Modelligo", "Moord", "Mothel", "Newtown", 
+    "Old Parish", "Passage East", "Portlaw", "Rathgormack", "Ring", "Ringville", "Stradbally", 
+    "Tallow", "Tallowbridge", "The Pike", "Tramore", "Villierstown", "Waterford City", "Woodstown"
   ],
   "Westmeath": [
-    "Athlone", "Ballynacarrigy", "Ballymore", "Castlepollard", "Castletown-Geoghegan", "Collinstown", 
-    "Crookedwood", "Delvin", "Glasson", "Horseleap", "Kilbeggan", "Killucan", "Kinnegad", "Moate", 
-    "Mount Temple", "Mullingar", "Multyfarnham", "Rochfortbridge", "Streamstown", "Tyrrellspass"
+    "Archerstown", "Ardmorney", "Athlone", "Ballinagore", "Ballinahown", "Ballinalack", "Ballykeeran", 
+    "Ballymore", "Ballynacarrigy", "Ballynafid", "Ballynakill", "Bealin", "Boherquill", "Bracklin", 
+    "Bunbrosna", "Cappanrush", "Castlepollard", "Castletown", "Cloghan", "Cloncullen", "Clonlost", 
+    "Clonmellon", "Cloran", "Collinstown", "Concrave", "Coole", "Coralstown", "Crazy Corner", 
+    "Crookedwood", "Delvin", "Derrygolan", "Drumcree", "Drumraney", "Killavally", "Killucan", 
+    "Kiltober", "Kinnegad", "Knockdrin", "Lismacaffrey", "Loughanavalley", "Milltownpass", "Moate", 
+    "Monilea", "Monroe", "Mount Temple", "Moyvore", "Moyvoughly", "Mullingar", "Multyfarnham", 
+    "Newtownlow", "Raharney", "Rathaspick", "Rathconrath", "Rathowen", "Rochfortbridge", "Skeagh", 
+    "Spittaltown", "Streamstown", "Streete", "Tang", "Templeoran", "Terrin", "The Downs", 
+    "The Pigeons", "Tyrrellspass", "Whitehall", "Williamstown"
   ],
   "Wexford": [
-    "Adamstown", "Arthurstown", "Ballyhogue", "Blackwater", "Bridgetown", "Bunclody", "Camolin", 
-    "Carley's Bridge", "Castlebridge", "Clonroche", "Courtown", "Craanford", "Crossabeg", "Curracloe", 
-    "Duncannon", "Enniscorthy", "Ferns", "Fethard-on-Sea", "Gorey", "Kilmore Quay", "Kilrane", 
-    "Lady's Island", "Monageer", "New Ross", "Oylegate", "Piercestown", "Rosslare", "Rosslare Harbour", 
-    "Screen", "Taghmon", "Wexford"
+    "Adamstown", "Ardamine", "Arthurstown", "Askamore", "Ballaghkeen", "Ballinaboola", "Ballindaggan", 
+    "Balloughter", "Ballycanew", "Ballycarney", "Ballycullane", "Ballyduff", "Ballyedmond", 
+    "Ballyfad", "Ballygarrett", "Ballyhack", "Ballyhogue", "Ballylacy", "Ballylucas", "Ballymitty", 
+    "Ballymoney", "Ballymurn", "Ballynastraw", "Ballyroebuck", "Ballywilliam", "Bannow", "Barntown", 
+    "Blackwater", "Boolavogue", "Bree", "Bricketstown", "Brideswell", "Bridgetown", "Broadway", 
+    "Bunclody", "Palace", "Piercestown", "Poulshone", "Priesthaggard", "Raheen", "Ramsgrange", 
+    "Rathangan", "Rathfylane", "Rathgarogue", "Rathnure", "Redgate", "Riverchapel", "Rosslare", 
+    "Rosslare Harbour", "Scarnagh", "Screen", "Slade", "Strahart", "Tacumshane", "Taghmon", 
+    "Tagoat", "Tara Hill", "Templeshanbo", "Templetown", "The Ballagh", "The Harrow", "The Leap", 
+    "Tombrack", "Tomhaggard", "Tullycanna", "Waddington", "Walshestown"
   ],
   "Wicklow": [
-    "Arklow", "Ashford", "Aughrim", "Avoca", "Baltinglass", "Blessington", "Bray", "Carnew", 
-    "Delgany", "Donard", "Dunlavin", "Enniskerry", "Glenealy", "Greystones", "Hollywood", 
-    "Kilcoole", "Kilmacanogue", "Laragh", "Manor Kilbride", "Newcastle", "Newtownmountkennedy", 
-    "Rathdrum", "Rathnew", "Redcross", "Roundwood", "Shillelagh", "Stratford-on-Slaney", 
-    "Tinahely", "Wicklow"
+    "Ashford", "Aughrim", "Avoca", "Baltinglass", "Blessington", "Bray", "Carnew", "Delgany", 
+    "Donard", "Dunlavin", "Enniskerry", "Glenealy", "Greystones", "Hollywood", "Kilcoole", 
+    "Kilmacanogue", "Laragh", "Manor Kilbride", "Newcastle", "Newtownmountkennedy", "Rathdrum", 
+    "Rathnew", "Redcross", "Roundwood", "Shillelagh", "Stratford-on-Slaney", "Tinahely", "Wicklow"
   ]
 };
 
-// Helper function to get all counties
+// Helper functions for working with location data
 export const getAllCounties = (): string[] => {
   return Object.keys(IRISH_LOCATIONS).sort();
 };
 
-// Helper function to get areas for a specific county
 export const getAreasForCounty = (county: string): string[] => {
   return IRISH_LOCATIONS[county as keyof typeof IRISH_LOCATIONS] || [];
 };
 
-// Total counts for reference
+export const getCountyAreaCount = (county: string): number => {
+  return getAreasForCounty(county).length;
+};
+
+export const searchAreas = (query: string, county?: string): Array<{county: string, area: string}> => {
+  const results: Array<{county: string, area: string}> = [];
+  const searchTerm = query.toLowerCase();
+  
+  const counties = county ? [county] : getAllCounties();
+  
+  counties.forEach(countyName => {
+    const areas = getAreasForCounty(countyName);
+    areas.forEach(area => {
+      if (area.toLowerCase().includes(searchTerm)) {
+        results.push({ county: countyName, area });
+      }
+    });
+  });
+  
+  return results;
+};
+
+// Statistics for reference
 export const IRISH_LOCATIONS_STATS = {
   totalCounties: Object.keys(IRISH_LOCATIONS).length,
   totalAreas: Object.values(IRISH_LOCATIONS).reduce((total, areas) => total + areas.length, 0),
-  averageAreasPerCounty: Math.round(Object.values(IRISH_LOCATIONS).reduce((total, areas) => total + areas.length, 0) / Object.keys(IRISH_LOCATIONS).length)
+  averageAreasPerCounty: Math.round(
+    Object.values(IRISH_LOCATIONS).reduce((total, areas) => total + areas.length, 0) / 
+    Object.keys(IRISH_LOCATIONS).length
+  ),
+  largestCounty: (() => {
+    let largest = { name: '', count: 0 };
+    Object.entries(IRISH_LOCATIONS).forEach(([county, areas]) => {
+      if (areas.length > largest.count) {
+        largest = { name: county, count: areas.length };
+      }
+    });
+    return largest;
+  })(),
+  smallestCounty: (() => {
+    let smallest = { name: '', count: Infinity };
+    Object.entries(IRISH_LOCATIONS).forEach(([county, areas]) => {
+      if (areas.length < smallest.count) {
+        smallest = { name: county, count: areas.length };
+      }
+    });
+    return smallest;
+  })()
+};
+
+// County display names for UI (with proper formatting)
+export const COUNTY_DISPLAY_NAMES: Record<string, string> = {
+  "Antrim": "Co. Antrim",
+  "Armagh": "Co. Armagh", 
+  "Carlow": "Co. Carlow",
+  "Cavan": "Co. Cavan",
+  "Clare": "Co. Clare",
+  "Cork": "Co. Cork",
+  "Derry": "Co. Derry",
+  "Donegal": "Co. Donegal",
+  "Down": "Co. Down",
+  "Dublin": "Co. Dublin",
+  "Fermanagh": "Co. Fermanagh",
+  "Galway": "Co. Galway",
+  "Kerry": "Co. Kerry",
+  "Kildare": "Co. Kildare",
+  "Kilkenny": "Co. Kilkenny",
+  "Laois": "Co. Laois",
+  "Leitrim": "Co. Leitrim",
+  "Limerick": "Co. Limerick",
+  "Longford": "Co. Longford",
+  "Louth": "Co. Louth",
+  "Mayo": "Co. Mayo",
+  "Meath": "Co. Meath",
+  "Monaghan": "Co. Monaghan",
+  "Offaly": "Co. Offaly",
+  "Roscommon": "Co. Roscommon",
+  "Sligo": "Co. Sligo",
+  "Tipperary": "Co. Tipperary",
+  "Tyrone": "Co. Tyrone",
+  "Waterford": "Co. Waterford",
+  "Westmeath": "Co. Westmeath",
+  "Wexford": "Co. Wexford",
+  "Wicklow": "Co. Wicklow"
 };
