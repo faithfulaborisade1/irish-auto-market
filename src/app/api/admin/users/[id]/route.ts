@@ -57,7 +57,7 @@ async function verifyAdminAuth(request: NextRequest) {
   }
 }
 
-// Helper function to log admin actions
+// Helper function to log admin actions (with error handling)
 async function logAdminAction(adminId: string, action: string, details: any, ip?: string) {
   try {
     await prisma.adminAuditLog.create({
@@ -76,8 +76,8 @@ async function logAdminAction(adminId: string, action: string, details: any, ip?
         tags: undefined
       }
     });
-  } catch (error) {
-    console.error('Failed to log admin action:', error);
+  } catch (error: any) {
+    console.log('📝 Audit logging failed (non-critical):', error.message);
   }
 }
 
@@ -214,18 +214,20 @@ export async function GET(
       }))
     };
 
-    // Log access
-    await logAdminAction(
-      currentAdmin.id,
-      'USER_VIEWED',
-      {
-        targetUserId: userId,
-        targetEmail: user.email,
-        targetRole: user.role,
-        viewedBy: currentAdmin.email
-      },
-      request.headers.get('x-forwarded-for') || 'unknown'
-    );
+    // Log access (with fixed admin ID and null check)
+    if (currentAdmin.adminProfile) {
+      await logAdminAction(
+        currentAdmin.adminProfile.id, // 🔧 FIXED: Use adminProfile.id
+        'USER_VIEWED',
+        {
+          targetUserId: userId,
+          targetEmail: user.email,
+          targetRole: user.role,
+          viewedBy: currentAdmin.email
+        },
+        request.headers.get('x-forwarded-for') || 'unknown'
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -276,7 +278,7 @@ export async function PUT(
       const validationResult = UpdateUserStatusSchema.safeParse(body);
       if (!validationResult.success) {
         return NextResponse.json(
-          { error: 'Invalid status update data', details: validationResult.error.errors },
+          { error: 'Invalid status update data', details: validationResult.error.issues },
           { status: 400 }
         );
       }
@@ -313,23 +315,25 @@ export async function PUT(
         }
       });
 
-      // Log status change
-      await logAdminAction(
-        currentAdmin.id,
-        isActive ? 'USER_VERIFIED' : 'USER_SUSPENDED',
-        {
-          targetUserId: userId,
-          targetEmail: currentUser.email,
-          targetRole: currentUser.role,
-          oldStatus,
-          newStatus,
-          reason: reason || 'No reason provided',
-          updatedBy: currentAdmin.email,
-          oldValues: { status: oldStatus },
-          newValues: { status: newStatus, reason }
-        },
-        request.headers.get('x-forwarded-for') || 'unknown'
-      );
+      // Log status change (with fixed admin ID and null check)
+      if (currentAdmin.adminProfile) {
+        await logAdminAction(
+          currentAdmin.adminProfile.id, // 🔧 FIXED: Use adminProfile.id
+          isActive ? 'USER_VERIFIED' : 'USER_SUSPENDED',
+          {
+            targetUserId: userId,
+            targetEmail: currentUser.email,
+            targetRole: currentUser.role,
+            oldStatus,
+            newStatus,
+            reason: reason || 'No reason provided',
+            updatedBy: currentAdmin.email,
+            oldValues: { status: oldStatus },
+            newValues: { status: newStatus, reason }
+          },
+          request.headers.get('x-forwarded-for') || 'unknown'
+        );
+      }
 
       return NextResponse.json({
         success: true,
@@ -347,7 +351,7 @@ export async function PUT(
       const validationResult = UpdateUserDataSchema.safeParse(body);
       if (!validationResult.success) {
         return NextResponse.json(
-          { error: 'Invalid user data', details: validationResult.error.errors },
+          { error: 'Invalid user data', details: validationResult.error.issues },
           { status: 400 }
         );
       }
@@ -372,24 +376,26 @@ export async function PUT(
         }
       });
 
-      // Log update
-      await logAdminAction(
-        currentAdmin.id,
-        'USER_CREATED', // Using closest existing enum value
-        {
-          targetUserId: userId,
-          targetEmail: currentUser.email,
-          updatedBy: currentAdmin.email,
-          oldValues: {
-            firstName: currentUser.firstName,
-            lastName: currentUser.lastName,
-            phone: currentUser.phone,
-            role: currentUser.role
+      // Log update (with fixed admin ID and null check)
+      if (currentAdmin.adminProfile) {
+        await logAdminAction(
+          currentAdmin.adminProfile.id, // 🔧 FIXED: Use adminProfile.id
+          'USER_CREATED', // Using closest existing enum value
+          {
+            targetUserId: userId,
+            targetEmail: currentUser.email,
+            updatedBy: currentAdmin.email,
+            oldValues: {
+              firstName: currentUser.firstName,
+              lastName: currentUser.lastName,
+              phone: currentUser.phone,
+              role: currentUser.role
+            },
+            newValues: updateData
           },
-          newValues: updateData
-        },
-        request.headers.get('x-forwarded-for') || 'unknown'
-      );
+          request.headers.get('x-forwarded-for') || 'unknown'
+        );
+      }
 
       return NextResponse.json({
         success: true,
@@ -486,20 +492,22 @@ export async function DELETE(
       }
     });
 
-    // Log deletion
-    await logAdminAction(
-      currentAdmin.id,
-      'USER_DELETED',
-      {
-        targetUserId: userId,
-        targetEmail: user.email,
-        targetRole: user.role,
-        deletedBy: currentAdmin.email,
-        oldValues: { status: user.status },
-        newValues: { status: 'INACTIVE', deleted: true }
-      },
-      request.headers.get('x-forwarded-for') || 'unknown'
-    );
+    // Log deletion (with fixed admin ID and null check)
+    if (currentAdmin.adminProfile) {
+      await logAdminAction(
+        currentAdmin.adminProfile.id, // 🔧 FIXED: Use adminProfile.id
+        'USER_DELETED',
+        {
+          targetUserId: userId,
+          targetEmail: user.email,
+          targetRole: user.role,
+          deletedBy: currentAdmin.email,
+          oldValues: { status: user.status },
+          newValues: { status: 'INACTIVE', deleted: true }
+        },
+        request.headers.get('x-forwarded-for') || 'unknown'
+      );
+    }
 
     return NextResponse.json({
       success: true,

@@ -38,9 +38,15 @@ model User {
   savedSearches       SavedSearch[]
   sessions            Session[]
   
-  // NEW ADMIN RELATIONS
+  // ADMIN RELATIONS
   adminProfile        AdminProfile?
   revenueRecords      RevenueRecord[]
+  
+  // NEW SUPPORT RELATIONS
+  contactMessages     ContactMessage[]
+  feedback            Feedback[]
+  issueReports        IssueReport[]
+  dealerReports       IssueReport[]    @relation("DealerReports")
 
   @@map("users")
 }
@@ -109,7 +115,7 @@ model Car {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   
-  // NEW ADMIN MODERATION FIELDS
+  // ADMIN MODERATION FIELDS
   moderationStatus ModerationStatus @default(PENDING)
   moderatedBy     String?
   moderatedAt     DateTime?
@@ -126,9 +132,12 @@ model Car {
   notifications   Notification[]
   priceHistory    PriceHistory[]
   
-  // NEW ADMIN RELATIONS
+  // ADMIN RELATIONS
   featuredListings FeaturedListing[]
   revenueRecords   RevenueRecord[]
+  
+  // NEW SUPPORT RELATION
+  issueReports    IssueReport[]
 
   @@map("cars")
 }
@@ -295,7 +304,171 @@ model Message {
 }
 
 // ============================================================================
-// NEW ADMIN MODELS
+// NEW SUPPORT MODELS
+// ============================================================================
+
+model ContactMessage {
+  id            String           @id @default(cuid())
+  
+  // Contact Information
+  name          String
+  email         String
+  phone         String?
+  subject       String
+  message       String           @db.Text
+  
+  // Classification
+  category      ContactCategory  @default(GENERAL)
+  priority      MessagePriority  @default(MEDIUM)
+  
+  // User Information (optional - for logged-in users)
+  userId        String?
+  user          User?            @relation(fields: [userId], references: [id])
+  
+  // Status Tracking
+  status        MessageStatus    @default(NEW)
+  assignedTo    String?          // Admin ID
+  assignedAdmin AdminProfile?    @relation("AssignedContacts", fields: [assignedTo], references: [id])
+  
+  // Response Tracking
+  responded     Boolean          @default(false)
+  respondedAt   DateTime?
+  respondedBy   String?          // Admin ID
+  response      String?          @db.Text
+  
+  // Metadata
+  ipAddress     String?
+  userAgent     String?
+  source        String?          // 'website', 'mobile_app', etc.
+  
+  // Timestamps
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  
+  @@index([status, createdAt])
+  @@index([category, priority])
+  @@index([email])
+  @@map("contact_messages")
+}
+
+model Feedback {
+  id            String           @id @default(cuid())
+  
+  // User Information
+  userId        String?
+  user          User?            @relation(fields: [userId], references: [id])
+  
+  // Anonymous feedback support
+  email         String?
+  name          String?
+  
+  // Feedback Content
+  type          FeedbackType     @default(GENERAL)
+  rating        Int?             // 1-5 stars
+  subject       String?
+  message       String           @db.Text
+  
+  // Context
+  pageUrl       String?          // What page they were on
+  feature       String?          // What feature they're giving feedback about
+  
+  // Classification
+  category      FeedbackCategory @default(GENERAL)
+  priority      MessagePriority  @default(LOW)
+  
+  // Admin Response
+  status        FeedbackStatus   @default(NEW)
+  assignedTo    String?          // Admin ID
+  assignedAdmin AdminProfile?    @relation("AssignedFeedback", fields: [assignedTo], references: [id])
+  
+  adminNotes    String?          @db.Text
+  responded     Boolean          @default(false)
+  respondedAt   DateTime?
+  respondedBy   String?          // Admin ID
+  response      String?          @db.Text
+  
+  // Metadata
+  ipAddress     String?
+  userAgent     String?
+  browserInfo   Json?
+  
+  // Timestamps
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  
+  @@index([type, rating])
+  @@index([status, createdAt])
+  @@index([userId])
+  @@map("feedback")
+}
+
+model IssueReport {
+  id            String           @id @default(cuid())
+  
+  // Reporter Information
+  reporterId    String?          // User ID if logged in
+  reporter      User?            @relation(fields: [reporterId], references: [id])
+  
+  // Anonymous reporting support
+  reporterEmail String?
+  reporterName  String?
+  
+  // Issue Details
+  type          IssueType        @default(BUG)
+  severity      IssueSeverity    @default(MEDIUM)
+  title         String
+  description   String           @db.Text
+  
+  // Context
+  pageUrl       String?          // Where the issue occurred
+  carId         String?          // If reporting a specific car
+  car           Car?             @relation(fields: [carId], references: [id])
+  dealerId      String?          // If reporting a dealer
+  dealer        User?            @relation("DealerReports", fields: [dealerId], references: [id])
+  
+  // Evidence
+  screenshots   Json?            // Array of screenshot URLs
+  attachments   Json?            // Array of attachment URLs
+  
+  // Technical Details
+  browserInfo   Json?            // Browser, OS, device info
+  errorDetails  String?          @db.Text
+  stepsToReproduce String?       @db.Text
+  
+  // Status Tracking
+  status        ReportStatus     @default(NEW)
+  assignedTo    String?          // Admin ID
+  assignedAdmin AdminProfile?    @relation("AssignedReports", fields: [assignedTo], references: [id])
+  
+  // Resolution
+  resolved      Boolean          @default(false)
+  resolvedAt    DateTime?
+  resolvedBy    String?          // Admin ID
+  resolution    String?          @db.Text
+  
+  // Admin Notes
+  adminNotes    String?          @db.Text
+  internalNotes String?          @db.Text
+  
+  // Metadata
+  ipAddress     String?
+  userAgent     String?
+  source        String?          // 'web', 'mobile', etc.
+  
+  // Timestamps
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  
+  @@index([type, severity])
+  @@index([status, createdAt])
+  @@index([reporterId])
+  @@index([carId])
+  @@index([dealerId])
+  @@map("issue_reports")
+}
+
+// ============================================================================
+// ADMIN MODELS
 // ============================================================================
 
 model AdminProfile {
@@ -330,6 +503,11 @@ model AdminProfile {
   auditLogs       AdminAuditLog[]
   sessions        AdminSession[]
   featuredListings FeaturedListing[]
+  
+  // NEW SUPPORT RELATIONS
+  assignedContacts  ContactMessage[] @relation("AssignedContacts")
+  assignedFeedback  Feedback[]       @relation("AssignedFeedback")
+  assignedReports   IssueReport[]    @relation("AssignedReports")
   
   @@map("admin_profiles")
 }
@@ -515,7 +693,7 @@ model RevenueRecord {
 }
 
 // ============================================================================
-// EXISTING ENUMS (UPDATED)
+// EXISTING ENUMS
 // ============================================================================
 
 enum UserRole {
@@ -614,6 +792,9 @@ enum NotificationType {
   INQUIRY_RECEIVED
   SYSTEM_UPDATE
   MESSAGE_RECEIVED
+  CONTACT_RECEIVED
+  FEEDBACK_RECEIVED
+  ISSUE_REPORTED
 }
 
 enum ConversationStatus {
@@ -629,7 +810,7 @@ enum MessageType {
 }
 
 // ============================================================================
-// NEW ADMIN ENUMS
+// ADMIN ENUMS
 // ============================================================================
 
 enum AdminRole {
@@ -659,6 +840,9 @@ enum AdminAction {
   SECURITY_EVENT
   USER_BANNED
   IP_BLOCKED
+  CONTACT_RESPONDED
+  FEEDBACK_REVIEWED
+  ISSUE_RESOLVED
 }
 
 enum ResourceType {
@@ -670,6 +854,9 @@ enum ResourceType {
   MESSAGE
   SYSTEM_SETTING
   REVENUE_RECORD
+  CONTACT_MESSAGE
+  FEEDBACK
+  ISSUE_REPORT
 }
 
 enum LogSeverity {
@@ -761,4 +948,101 @@ enum RevenueSource {
   ADVERTISING
   COMMISSION
   OTHER
+}
+
+// ============================================================================
+// NEW SUPPORT ENUMS
+// ============================================================================
+
+enum ContactCategory {
+  GENERAL
+  TECHNICAL_SUPPORT
+  BILLING
+  DEALER_INQUIRY
+  PARTNERSHIP
+  MEDIA_INQUIRY
+  LEGAL
+  COMPLAINT
+  SUGGESTION
+}
+
+enum MessagePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MessageStatus {
+  NEW
+  ASSIGNED
+  IN_PROGRESS
+  WAITING_FOR_INFO
+  RESOLVED
+  CLOSED
+}
+
+enum FeedbackType {
+  GENERAL
+  BUG_REPORT
+  FEATURE_REQUEST
+  USABILITY
+  PERFORMANCE
+  CONTENT_QUALITY
+  MOBILE_EXPERIENCE
+  SEARCH_EXPERIENCE
+}
+
+enum FeedbackCategory {
+  GENERAL
+  USER_INTERFACE
+  FUNCTIONALITY
+  PERFORMANCE
+  MOBILE
+  SEARCH
+  MESSAGING
+  DEALER_TOOLS
+  ADMIN_TOOLS
+}
+
+enum FeedbackStatus {
+  NEW
+  REVIEWED
+  PLANNED
+  IN_PROGRESS
+  IMPLEMENTED
+  REJECTED
+  DUPLICATE
+}
+
+enum IssueType {
+  BUG
+  SCAM_LISTING
+  INAPPROPRIATE_CONTENT
+  FAKE_DEALER
+  PRICING_ERROR
+  SPAM
+  HARASSMENT
+  TECHNICAL_ISSUE
+  SECURITY_CONCERN
+  DATA_PRIVACY
+  OTHER
+}
+
+enum IssueSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ReportStatus {
+  NEW
+  ASSIGNED
+  INVESTIGATING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  DUPLICATE
+  INVALID
 }

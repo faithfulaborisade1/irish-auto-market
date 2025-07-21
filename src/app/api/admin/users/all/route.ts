@@ -67,7 +67,7 @@ async function verifyAdminAuth(request: NextRequest) {
   }
 }
 
-// Helper function to log admin actions
+// Helper function to log admin actions (with error handling)
 async function logAdminAction(adminId: string, action: string, details: any, ip?: string) {
   try {
     await prisma.adminAuditLog.create({
@@ -86,8 +86,8 @@ async function logAdminAction(adminId: string, action: string, details: any, ip?
         tags: undefined
       }
     });
-  } catch (error) {
-    console.error('Failed to log admin action:', error);
+  } catch (error: any) {
+    console.log('📝 Audit logging failed (non-critical):', error.message);
   }
 }
 
@@ -117,7 +117,12 @@ export async function GET(request: NextRequest) {
     const statusFilter = url.searchParams.get('status') || 'all';
 
     // Build where clause for filtering
-    const whereClause: any = {};
+    const whereClause: any = {
+      // 🔧 FIX: Exclude deleted users by default
+      status: {
+        not: 'INACTIVE'
+      }
+    };
 
     // Add search filter (name, email, business name)
     if (search) {
@@ -155,9 +160,15 @@ export async function GET(request: NextRequest) {
       whereClause.role = roleFilter;
     }
 
-    // Add status filter
+    // Add status filter - override the default INACTIVE exclusion if specifically requested
     if (statusFilter !== 'all') {
-      whereClause.status = statusFilter;
+      if (statusFilter === 'INACTIVE') {
+        // If specifically requesting INACTIVE users, show only those
+        whereClause.status = 'INACTIVE';
+      } else {
+        // For other statuses, show that status but still exclude INACTIVE
+        whereClause.status = statusFilter;
+      }
     }
 
     // Get total count for pagination
@@ -279,7 +290,7 @@ export async function GET(request: NextRequest) {
       return userData;
     });
 
-    // Calculate summary statistics
+    // Calculate summary statistics (exclude INACTIVE users from counts)
     const userStats = {
       totalUsers: totalCount,
       regularUsers: users.filter(u => u.role === 'USER').length,
@@ -290,20 +301,22 @@ export async function GET(request: NextRequest) {
       suspendedUsers: users.filter(u => u.status === 'SUSPENDED').length
     };
 
-    // Log successful access
-    await logAdminAction(
-      currentAdmin.id,
-      'USER_LIST_ACCESSED',
-      {
-        totalUsers: totalCount,
-        filters: { search, userType, roleFilter, statusFilter },
-        accessedBy: currentAdmin.email,
-        userStats
-      },
-      request.headers.get('x-forwarded-for') || 'unknown'
-    );
+    // Log successful access (with fixed admin ID and null check)
+    if (currentAdmin.adminProfile) {
+      await logAdminAction(
+        currentAdmin.adminProfile.id, // 🔧 FIXED: Use adminProfile.id
+        'USER_LIST_ACCESSED',
+        {
+          totalUsers: totalCount,
+          filters: { search, userType, roleFilter, statusFilter },
+          accessedBy: currentAdmin.email,
+          userStats
+        },
+        request.headers.get('x-forwarded-for') || 'unknown'
+      );
+    }
 
-    console.log(`✅ Retrieved ${transformedUsers.length} users (${totalCount} total)`);
+    console.log(`✅ Retrieved ${transformedUsers.length} users (${totalCount} total, INACTIVE users excluded)`);
 
     return NextResponse.json({
       success: true,
@@ -358,7 +371,6 @@ export async function PUT(request: NextRequest) {
     // TODO: Implement bulk operations
     // - Bulk status updates
     // - Bulk user deletion
-    // - Bulk dealer verification
     // - Export user data
 
     return NextResponse.json({

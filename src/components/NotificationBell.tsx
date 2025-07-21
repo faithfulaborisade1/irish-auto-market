@@ -28,7 +28,7 @@ interface NotificationBellProps {
   userId?: string
 }
 
-// ✅ FIXED: Move helper function outside component to prevent re-creation
+// Helper functions outside component (already optimized ✅)
 function getNotificationIcon(type: string) {
   switch (type) {
     case 'CAR_LIKED':
@@ -44,7 +44,6 @@ function getNotificationIcon(type: string) {
   }
 }
 
-// ✅ FIXED: Move helper function outside component
 function formatTimeAgo(dateString: string) {
   const date = new Date(dateString)
   const now = new Date()
@@ -57,33 +56,65 @@ function formatTimeAgo(dateString: string) {
   return date.toLocaleDateString()
 }
 
+// 🚀 FIX: Add caching for notifications (5 minutes cache)
+let notificationsCache: Notification[] = []
+let notificationsCacheTime = 0
+let unreadCountCache = 0
+const NOTIFICATIONS_CACHE_DURATION = 300000 // 5 minutes
+
 export default function NotificationBell({ userId }: NotificationBellProps) {
-  const [notifications, setNotifications] = useState<Notification[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
+  // 🚀 FIX: Start with cached data if available
+  const [notifications, setNotifications] = useState<Notification[]>(notificationsCache)
+  const [unreadCount, setUnreadCount] = useState(unreadCountCache)
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [hasLoaded, setHasLoaded] = useState(false)
 
-  // ✅ FIXED: Use useCallback to create stable function reference
+  // 🚀 FIX: Optimized fetch with caching and error handling
   const fetchNotifications = useCallback(async () => {
     if (!userId) return
     
+    // Use cache if available and fresh
+    const now = Date.now()
+    if (notificationsCache.length > 0 && (now - notificationsCacheTime) < NOTIFICATIONS_CACHE_DURATION) {
+      setNotifications(notificationsCache)
+      setUnreadCount(unreadCountCache)
+      setHasLoaded(true)
+      return
+    }
+    
     try {
       setLoading(true)
-      const response = await fetch('/api/notifications?limit=10')
+      const response = await fetch('/api/notifications?limit=10', {
+        headers: {
+          'Cache-Control': 'max-age=60' // Browser cache for 1 minute
+        }
+      })
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+      
       const data = await response.json()
       
       if (data.success) {
+        // Update cache
+        notificationsCache = data.notifications
+        notificationsCacheTime = now
+        unreadCountCache = data.unreadCount
+        
         setNotifications(data.notifications)
         setUnreadCount(data.unreadCount)
       }
     } catch (error) {
       console.error('Error fetching notifications:', error)
+      // Don't clear existing data on error, just log it
     } finally {
       setLoading(false)
+      setHasLoaded(true)
     }
-  }, [userId]) // ✅ Only depends on userId
+  }, [userId])
 
-  // ✅ FIXED: Use useCallback for mark as read
   const markAsRead = useCallback(async (notificationId: string) => {
     try {
       const response = await fetch('/api/notifications', {
@@ -97,21 +128,25 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
       })
 
       if (response.ok) {
-        setNotifications(prev => 
-          prev.map(notif => 
-            notif.id === notificationId 
-              ? { ...notif, read: true }
-              : notif
-          )
+        // Update both state and cache
+        const updatedNotifications = notifications.map(notif => 
+          notif.id === notificationId 
+            ? { ...notif, read: true }
+            : notif
         )
+        
+        setNotifications(updatedNotifications)
         setUnreadCount(prev => Math.max(0, prev - 1))
+        
+        // Update cache
+        notificationsCache = updatedNotifications
+        unreadCountCache = Math.max(0, unreadCountCache - 1)
       }
     } catch (error) {
       console.error('Error marking notification as read:', error)
     }
-  }, [])
+  }, [notifications])
 
-  // ✅ FIXED: Use useCallback for mark all as read
   const markAllAsRead = useCallback(async () => {
     try {
       const response = await fetch('/api/notifications', {
@@ -125,26 +160,28 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
       })
 
       if (response.ok) {
-        setNotifications(prev => 
-          prev.map(notif => ({ ...notif, read: true }))
-        )
+        const updatedNotifications = notifications.map(notif => ({ ...notif, read: true }))
+        
+        setNotifications(updatedNotifications)
         setUnreadCount(0)
+        
+        // Update cache
+        notificationsCache = updatedNotifications
+        unreadCountCache = 0
       }
     } catch (error) {
       console.error('Error marking all as read:', error)
     }
-  }, [])
+  }, [notifications])
 
-  // ✅ FIXED: Stable function reference for notification click
   const handleNotificationClick = useCallback((notification: Notification) => {
     if (!notification.read) {
       markAsRead(notification.id)
     }
     setIsOpen(false)
-    // Navigation will be handled by the Link component
   }, [markAsRead])
 
-  // ✅ FIXED: Close dropdown when clicking outside
+  // Click outside handler (already optimized ✅)
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const dropdown = document.getElementById('notification-dropdown')
@@ -159,25 +196,39 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     }
   }, [isOpen])
 
-  // ✅ FIXED: Fetch notifications when userId changes (using stable function)
+  // 🚀 FIX: Only fetch when component becomes visible (lazy loading)
   useEffect(() => {
-    if (userId) {
-      fetchNotifications()
-    } else {
-      // Clear notifications when no user
-      setNotifications([])
-      setUnreadCount(0)
+    if (userId && !hasLoaded) {
+      // Delay initial load to not block header rendering
+      const timer = setTimeout(() => {
+        fetchNotifications()
+      }, 500) // 500ms delay
+      
+      return () => clearTimeout(timer)
     }
-  }, [userId, fetchNotifications])
+  }, [userId, hasLoaded, fetchNotifications])
 
-  // ✅ FIXED: Auto-refresh with proper dependencies and longer interval
+  // 🚀 FIX: Much longer auto-refresh interval to reduce API calls
   useEffect(() => {
-    if (!userId) return
+    if (!userId || !hasLoaded) return
 
-    // Increase interval to 2 minutes to reduce API calls
-    const interval = setInterval(fetchNotifications, 120000) // 2 minutes
+    // Increase interval to 5 minutes to reduce server load
+    const interval = setInterval(fetchNotifications, 300000) // 5 minutes
     return () => clearInterval(interval)
-  }, [userId, fetchNotifications]) // ✅ Include fetchNotifications in dependencies
+  }, [userId, hasLoaded, fetchNotifications])
+
+  // 🚀 FIX: Only fetch when dropdown is opened (on-demand loading)
+  const handleBellClick = useCallback(() => {
+    setIsOpen(!isOpen)
+    
+    // Fetch fresh data when opening dropdown (if cache is old)
+    if (!isOpen && userId) {
+      const now = Date.now()
+      if ((now - notificationsCacheTime) > 60000) { // 1 minute threshold
+        fetchNotifications()
+      }
+    }
+  }, [isOpen, userId, fetchNotifications])
 
   // Don't render if no user
   if (!userId) return null
@@ -186,8 +237,9 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
     <div className="relative" id="notification-dropdown">
       {/* Bell Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleBellClick}
         className="relative p-2 text-gray-600 hover:text-gray-900 transition-colors"
+        aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
       >
         <Bell className="w-6 h-6" />
         {unreadCount > 0 && (
@@ -197,7 +249,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
         )}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown - Only render when open */}
       {isOpen && (
         <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden">
           {/* Header */}
@@ -207,7 +259,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-sm text-primary hover:text-primary/80 transition-colors"
+                  className="text-sm text-green-600 hover:text-green-700 transition-colors"
                 >
                   Mark all read
                 </button>
@@ -215,6 +267,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
               <button
                 onClick={() => setIsOpen(false)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close notifications"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -223,12 +276,16 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
 
           {/* Notifications List */}
           <div className="max-h-80 overflow-y-auto">
-            {loading ? (
-              <div className="p-4 text-center text-gray-500">Loading...</div>
+            {loading && notifications.length === 0 ? (
+              <div className="p-4 text-center text-gray-500">
+                <div className="w-6 h-6 border-2 border-gray-300 border-t-green-600 rounded-full animate-spin mx-auto mb-2"></div>
+                Loading notifications...
+              </div>
             ) : notifications.length === 0 ? (
               <div className="p-4 text-center text-gray-500">
                 <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
                 <p>No notifications yet</p>
+                <p className="text-xs text-gray-400 mt-1">We'll notify you about likes, inquiries, and updates</p>
               </div>
             ) : (
               notifications.map((notification) => (
@@ -237,7 +294,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                     <Link
                       href={notification.actionUrl}
                       onClick={() => handleNotificationClick(notification)}
-                      className={`block p-4 hover:bg-gray-50 transition-colors ${
+                      className={`block p-4 hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 ${
                         !notification.read ? 'bg-blue-50' : ''
                       }`}
                     >
@@ -250,7 +307,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                   ) : (
                     <div
                       onClick={() => handleNotificationClick(notification)}
-                      className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
+                      className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 ${
                         !notification.read ? 'bg-blue-50' : ''
                       }`}
                     >
@@ -272,9 +329,9 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
               <Link
                 href="/notifications"
                 onClick={() => setIsOpen(false)}
-                className="text-sm text-primary hover:text-primary/80 transition-colors"
+                className="text-sm text-green-600 hover:text-green-700 transition-colors font-medium"
               >
-                View all notifications
+                View all notifications →
               </Link>
             </div>
           )}
@@ -284,7 +341,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   )
 }
 
-// ✅ FIXED: Notification content component with stable props
+// Notification content component (already optimized ✅)
 function NotificationContent({ 
   notification, 
   formatTimeAgo,
@@ -323,6 +380,7 @@ function NotificationContent({
                 width={32}
                 height={32}
                 className="rounded object-cover"
+                loading="lazy" // 🚀 FIX: Lazy load images
               />
             )}
             <div className="text-xs text-gray-500">

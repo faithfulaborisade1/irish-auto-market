@@ -1,13 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { Search, MapPin, Grid, List, ArrowLeft, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Grid, List, ArrowLeft, Filter } from 'lucide-react'
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
-import LikeButton from '@/components/LikeButton'
 import CarFilters from '@/components/CarFilters'
+import CarCard from '@/components/CarCard' // ✅ Import the new component
 
 interface Car {
   id: string
@@ -95,134 +95,6 @@ interface FilterState {
   
   // Ad type
   adType: string
-}
-
-// Minimal Image Carousel Component - Preserves existing layout
-interface CarImageCarouselProps {
-  images: Array<{ id: string; url: string; alt: string }>
-  title: string
-  featured: boolean
-  price: number
-  carId: string
-  likesCount: number
-  isLiked: boolean
-  className?: string
-}
-
-function CarImageCarousel({ 
-  images, 
-  title, 
-  featured, 
-  price, 
-  carId, 
-  likesCount, 
-  isLiked,
-  className = ''
-}: CarImageCarouselProps) {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [isHovered, setIsHovered] = useState(false)
-  
-  const hasMultipleImages = images && images.length > 1
-  const currentImage = images?.[currentImageIndex] || null
-
-  const nextImage = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (hasMultipleImages) {
-      setCurrentImageIndex((prev) => (prev + 1) % images.length)
-    }
-  }
-
-  const prevImage = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (hasMultipleImages) {
-      setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)
-    }
-  }
-
-  return (
-    <div 
-      className={`relative ${className}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Main Image - Keep original structure */}
-      <img
-        src={currentImage?.url || '/placeholder-car.jpg'}
-        alt={currentImage?.alt || title}
-        className="w-full h-full object-cover"
-      />
-
-      {/* Featured Badge */}
-      {featured && (
-        <div className="absolute top-4 left-4">
-          <span className="bg-green-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-            Featured
-          </span>
-        </div>
-      )}
-
-      {/* Price & Like Button */}
-      <div className="absolute top-4 right-4 flex items-center space-x-2">
-        <span className="bg-white bg-opacity-90 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
-          €{price.toLocaleString()}
-        </span>
-        <LikeButton 
-          carId={carId}
-          initialLikesCount={likesCount}
-          initialIsLiked={isLiked}
-          size="sm"
-          showCount={false}
-          className="bg-white bg-opacity-90 rounded-full"
-        />
-      </div>
-
-      {/* Minimal Navigation - Only visible on hover and if multiple images */}
-      {hasMultipleImages && isHovered && (
-        <>
-          <button
-            onClick={prevImage}
-            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-60 hover:bg-opacity-80 text-white p-1.5 rounded-full transition-all duration-200 z-10"
-            aria-label="Previous image"
-          >
-            <ChevronLeft className="w-3 h-3" />
-          </button>
-          
-          <button
-            onClick={nextImage}
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-60 hover:bg-opacity-80 text-white p-1.5 rounded-full transition-all duration-200 z-10"
-            aria-label="Next image"
-          >
-            <ChevronRight className="w-3 h-3" />
-          </button>
-        </>
-      )}
-
-      {/* Subtle dot indicators - Only if multiple images */}
-      {hasMultipleImages && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex space-x-1">
-          {images.map((_, index) => (
-            <div
-              key={index}
-              className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${
-                index === currentImageIndex 
-                  ? 'bg-white' 
-                  : 'bg-white bg-opacity-50'
-              }`}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Small image counter - Only visible on hover if many images */}
-      {hasMultipleImages && images.length > 5 && isHovered && (
-        <div className="absolute bottom-3 right-3 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs">
-          {currentImageIndex + 1}/{images.length}
-        </div>
-      )}
-    </div>
-  )
 }
 
 function CarsContent() {
@@ -494,7 +366,7 @@ function CarsContent() {
             </div>
           </div>
 
-          {/* Cars Grid/List */}
+          {/* Cars Grid/List - ✅ SIMPLIFIED USING CarCard COMPONENT */}
           {loading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
@@ -503,87 +375,12 @@ function CarsContent() {
           ) : cars.length > 0 ? (
             <div className={`gap-6 ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'space-y-6'}`}>
               {cars.map((car) => (
-                <Link href={`/cars/${car.id}`} key={car.id}>
-                  <div className={`bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer ${
-                    viewMode === 'list' ? 'md:flex' : ''
-                  }`}>
-                    <CarImageCarousel
-                      images={car.images}
-                      title={car.title}
-                      featured={car.featured}
-                      price={car.price}
-                      carId={car.id}
-                      likesCount={car.likesCount}
-                      isLiked={car.isLiked}
-                      className={`${
-                        viewMode === 'list' 
-                          ? 'h-48 md:w-80 md:h-56 md:flex-shrink-0' 
-                          : 'h-48'
-                      }`}
-                    />
-
-                    <div className={`p-6 ${
-                      viewMode === 'list' 
-                        ? 'md:flex-1 md:flex md:flex-col md:justify-between' 
-                        : ''
-                    }`}>
-                      <div>
-                        <h3 className={`font-bold text-gray-900 mb-2 ${
-                          viewMode === 'list' ? 'text-xl md:text-2xl' : 'text-xl'
-                        }`}>
-                          {car.title}
-                        </h3>
-                        
-                        <div className="flex items-center text-gray-600 mb-3">
-                          <MapPin className="w-4 h-4 mr-1" />
-                          <span className="text-sm">{car.location.city}, {car.location.county}</span>
-                        </div>
-
-                        <div className={`grid gap-4 mb-4 text-sm ${
-                          viewMode === 'list' 
-                            ? 'grid-cols-2 md:grid-cols-4' 
-                            : 'grid-cols-2'
-                        }`}>
-                          <div>
-                            <span className="text-gray-500">Year:</span>
-                            <span className="font-medium ml-1">{car.year}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Mileage:</span>
-                            <span className="font-medium ml-1">{car.mileage?.toLocaleString()} km</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Fuel:</span>
-                            <span className="font-medium ml-1 capitalize">{car.fuelType?.toLowerCase()}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Transmission:</span>
-                            <span className="font-medium ml-1 capitalize">{car.transmission?.toLowerCase()}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 ${
-                        viewMode === 'list' ? 'md:mt-4' : ''
-                      }`}>
-                        <div className="flex items-center space-x-3">
-                          <span className="text-sm text-gray-600">
-                            {car.seller.verified ? '✓ Verified' : ''} {car.seller.type}
-                          </span>
-                          <LikeButton 
-                            carId={car.id}
-                            initialLikesCount={car.likesCount}
-                            initialIsLiked={car.isLiked}
-                            size="sm"
-                          />
-                        </div>
-                        <div className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors text-center sm:text-left">
-                          View Details
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
+                <CarCard
+                  key={car.id}
+                  car={car}
+                  variant={viewMode}
+                  className="w-full"
+                />
               ))}
             </div>
           ) : (

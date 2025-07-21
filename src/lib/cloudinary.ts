@@ -57,12 +57,23 @@ export const getImageUrl = (
     : `${baseUrl}/${publicId}`;
 };
 
-// Common transformations for car marketplace
+// FIXED: Car-friendly transformations that preserve full vehicles
 export const imageTransformations = {
+  // Thumbnails - square crops are OK for small previews
   thumbnail: 'c_thumb,w_150,h_150,g_auto',
-  medium: 'c_fill,w_400,h_300,g_auto',
-  large: 'c_fill,w_800,h_600,g_auto',
-  hero: 'c_fill,w_1200,h_600,g_auto,q_auto',
+  
+  // ✅ FIXED: Use c_limit to preserve car proportions
+  medium: 'c_limit,w_500,h_400,q_auto,f_auto',      // Shows full car, max 500x400
+  large: 'c_limit,w_800,h_600,q_auto,f_auto',       // Shows full car, max 800x600
+  
+  // ✅ ALTERNATIVE: Use c_fit to add padding instead of cropping
+  mediumFit: 'c_fit,w_400,h_300,b_white,q_auto',    // Fits car in 400x300 with white background
+  largeFit: 'c_fit,w_800,h_600,b_white,q_auto',     // Fits car in 800x600 with white background
+  
+  // Hero images for detail pages - allow wider aspect ratios
+  hero: 'c_limit,w_1200,h_800,q_auto,f_auto',       // Full car, max 1200x800
+  
+  // Other transformations remain the same
   avatar: 'c_thumb,w_100,h_100,g_face',
   messageImage: 'c_limit,w_300,h_300,q_auto',
 };
@@ -74,3 +85,31 @@ export const generateImageVariants = (publicId: string) => ({
   mediumUrl: getImageUrl(publicId, imageTransformations.medium),
   largeUrl: getImageUrl(publicId, imageTransformations.large),
 });
+
+// ✅ NEW: Car-specific variants with different options
+export const generateCarImageVariants = (publicId: string) => ({
+  originalUrl: getImageUrl(publicId),
+  thumbnailUrl: getImageUrl(publicId, imageTransformations.thumbnail),
+  
+  // Option 1: Limit size but preserve proportions
+  mediumUrl: getImageUrl(publicId, imageTransformations.medium),
+  largeUrl: getImageUrl(publicId, imageTransformations.large),
+  
+  // Option 2: Fit with white background (like DoneDeal)
+  mediumFitUrl: getImageUrl(publicId, imageTransformations.mediumFit),
+  largeFitUrl: getImageUrl(publicId, imageTransformations.largeFit),
+  
+  // Hero for detail pages
+  heroUrl: getImageUrl(publicId, imageTransformations.hero),
+});
+
+// ✅ Quick fix function to convert existing URLs
+export const fixExistingImageUrl = (url: string): string => {
+  if (!url.includes('cloudinary.com')) return url;
+  
+  // Remove the cropping transformations from existing URLs
+  return url.replace(
+    /\/c_fill,w_\d+,h_\d+,g_auto\//g, 
+    '/c_limit,w_500,h_400,q_auto,f_auto/'
+  );
+};

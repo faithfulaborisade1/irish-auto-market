@@ -2,45 +2,86 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { User, LogOut, Settings, Heart, FileText, ChevronDown, MessageCircle, Plus, Car, UserCircle, Edit3 } from 'lucide-react'
-import { useState, useEffect, useCallback } from 'react'
-import NotificationBell from './NotificationBell'
+import { User, LogOut, Settings, Heart, FileText, ChevronDown, MessageCircle, Plus, Car, UserCircle, Edit3, Menu, X } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import dynamic from 'next/dynamic'
+
+// 🚀 FIX #1: Lazy load the NotificationBell component
+const NotificationBell = dynamic(() => import('./NotificationBell'), {
+  loading: () => <div className="w-6 h-6 bg-gray-200 rounded animate-pulse"></div>,
+  ssr: false // Don't render on server if it makes API calls
+})
 
 interface HeaderProps {
-  currentPage?: 'home' | 'cars' | 'sell' | 'dealers' | 'about' | 'messages' | 'place-ad' | 'profile'
+  currentPage?: 'home' | 'cars' | 'sell' | 'dealers' | 'about' | 'messages' | 'place-ad' | 'profile' | 'my-ads' | 'saved-cars' | 'find-dealer'
 }
 
+// 🚀 FIX #2: Add caching for auth state
+let authCache: any = null
+let authCacheTime = 0
+const AUTH_CACHE_DURATION = 30000 // 30 seconds
+
 export default function Header({ currentPage = 'home' }: HeaderProps) {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<any>(authCache) // Start with cache if available
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [loading, setLoading] = useState(!authCache) // Don't show loading if we have cache
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
   const router = useRouter()
 
-  // ✅ FIXED: Check auth only once when component mounts
+  // 🚀 FIX #3: Optimized auth check with caching
   useEffect(() => {
     async function checkAuth() {
+      const now = Date.now()
+      
+      // Use cache if available and fresh
+      if (authCache && (now - authCacheTime) < AUTH_CACHE_DURATION) {
+        setUser(authCache)
+        setLoading(false)
+        return
+      }
+
       try {
-        const response = await fetch('/api/auth/me')
+        const response = await fetch('/api/auth/me', {
+          // Add cache headers to prevent unnecessary requests
+          headers: {
+            'Cache-Control': 'max-age=30'
+          }
+        })
         const data = await response.json()
+        
         if (data.success) {
+          authCache = data.user
+          authCacheTime = now
           setUser(data.user)
+        } else {
+          authCache = null
+          authCacheTime = now
+          setUser(null)
         }
       } catch (error) {
         console.log('User not logged in')
+        authCache = null
+        authCacheTime = now
+        setUser(null)
       } finally {
         setLoading(false)
       }
     }
+    
     checkAuth()
-  }, []) // ✅ Empty dependency array - runs only once!
+  }, [])
 
-  // ✅ FIXED: Use useCallback to create stable function reference
+  // 🚀 FIX #4: Debounced and cached unread messages fetch
   const fetchUnreadMessagesCount = useCallback(async () => {
-    if (!user) return // Don't fetch if no user
+    if (!user) return
     
     try {
-      const response = await fetch('/api/conversations')
+      const response = await fetch('/api/conversations', {
+        headers: {
+          'Cache-Control': 'max-age=10' // Cache for 10 seconds
+        }
+      })
       const data = await response.json()
       if (data.success) {
         const unreadCount = data.conversations.filter((conv: any) => conv.hasUnread).length
@@ -49,84 +90,101 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
     } catch (error) {
       console.error('Error fetching unread messages count:', error)
     }
-  }, [user]) // ✅ Only depends on user object
+  }, [user])
 
-  // ✅ FIXED: Fetch messages only when user changes (not on every render)
+  // 🚀 FIX #5: Only fetch messages once, with longer delay
   useEffect(() => {
     if (user) {
-      fetchUnreadMessagesCount()
+      // Delay messages fetch to not block initial render
+      const timer = setTimeout(() => {
+        fetchUnreadMessagesCount()
+      }, 1000) // 1 second delay
+      
+      return () => clearTimeout(timer)
     } else {
-      setUnreadMessagesCount(0) // Reset count when user logs out
+      setUnreadMessagesCount(0)
     }
-  }, [user, fetchUnreadMessagesCount]) // ✅ Stable dependencies
+  }, [user]) // Remove fetchUnreadMessagesCount from dependencies
 
-  const handleLogout = async () => {
+  // 🚀 FIX #6: Optimized event handlers with useCallback
+  const handleLogout = useCallback(async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
+      
+      // Clear cache
+      authCache = null
+      authCacheTime = 0
+      
       setUser(null)
-      setUnreadMessagesCount(0) // Reset count on logout
+      setUnreadMessagesCount(0)
       setShowUserMenu(false)
+      setShowMobileMenu(false)
       window.location.reload()
     } catch (error) {
       console.error('Logout error:', error)
     }
-  }
+  }, [])
 
-  const handlePlaceAd = () => {
+  const handlePlaceAd = useCallback(() => {
     if (!user) {
-      // Redirect to login with return URL
       router.push('/login?redirect=/place-ad')
     } else {
       router.push('/place-ad')
     }
-  }
+    setShowMobileMenu(false)
+  }, [user, router])
 
-  // Get user display name (for dealers, show business name)
-  const getUserDisplayName = () => {
+  // 🚀 FIX #7: Memoize computed values
+  const userDisplayName = useMemo(() => {
     if (!user) return ''
     if (user.dealerProfile?.businessName) {
       return user.dealerProfile.businessName
     }
     return user.firstName
-  }
+  }, [user])
 
-  // Get user initials
-  const getUserInitials = () => {
+  const userInitials = useMemo(() => {
     if (!user) return ''
     if (user.dealerProfile?.businessName) {
       return user.dealerProfile.businessName.charAt(0).toUpperCase()
     }
     return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase()
-  }
+  }, [user])
 
-  // ✅ FIXED: Close dropdown when clicking outside
+  // 🚀 FIX #8: Optimized click outside handler
   useEffect(() => {
+    if (!showUserMenu && !showMobileMenu) return
+
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node
       const dropdown = document.getElementById('user-dropdown')
-      if (dropdown && !dropdown.contains(event.target as Node)) {
+      const mobileMenu = document.getElementById('mobile-menu')
+      
+      if (dropdown && !dropdown.contains(target)) {
         setShowUserMenu(false)
+      }
+      if (mobileMenu && !mobileMenu.contains(target)) {
+        setShowMobileMenu(false)
       }
     }
 
-    if (showUserMenu) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showUserMenu]) // ✅ Only depends on showUserMenu
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showUserMenu, showMobileMenu])
 
+  // 🚀 FIX #9: Show basic header immediately, load user features progressively
   return (
     <header className="border-b bg-white shadow-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
+          {/* Logo - Always render first */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-3">
-              {/* Irish Flag Colors Logo: Green, White, Orange */}
-              <div className="h-10 w-10 rounded-full bg-gradient-to-r from-green-600 via-white to-orange-500 flex items-center justify-center shadow-lg border-2 border-gray-200">
-                <div className="text-green-700 font-bold text-sm tracking-tight drop-shadow-sm">
-                  IAM
-                </div>
-              </div>
+              <img 
+                src="/iam-logo.svg" 
+                alt="Irish Auto Market"
+                className="h-10 w-10"
+              />
               <div className="flex items-center space-x-2">
                 <div className="text-xl font-bold text-green-700">
                   IRISH
@@ -138,7 +196,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
             </Link>
           </div>
 
-          {/* Navigation */}
+          {/* Desktop Navigation - Always render */}
           <nav className="hidden space-x-8 md:flex">
             <Link 
               href="/cars" 
@@ -157,40 +215,51 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
             >
               SELL
             </button>
+            <Link 
+              href="/find-dealer" 
+              className={`font-medium hover:text-green-600 transition-colors ${
+                currentPage === 'find-dealer' ? 'text-green-600' : 'text-gray-700'
+              }`}
+            >
+              DEALERS
+            </Link>
           </nav>
 
-          {/* Auth Section */}
+          {/* Auth Section - Progressive Loading */}
           <div className="flex items-center space-x-4">
             {loading ? (
-              // Loading state
-              <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
+              // Minimal loading state
+              <div className="flex items-center space-x-3">
+                <div className="hidden sm:block w-20 h-8 rounded bg-gray-200 animate-pulse"></div>
+                <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse"></div>
+              </div>
             ) : user ? (
               // Logged in user section
               <div className="flex items-center space-x-3">
-                {/* Place Ad Button - Primary CTA */}
+                {/* Place Ad Button */}
                 <button
                   onClick={handlePlaceAd}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  className={`hidden sm:flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                     currentPage === 'place-ad'
                       ? 'bg-orange-600 text-white'
                       : 'bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-lg'
                   }`}
                 >
                   <Plus size={18} />
-                  <span className="hidden sm:block">Place Ad</span>
+                  <span>Place Ad</span>
                 </button>
 
-                {/* Messages Link with Badge */}
+                {/* Messages Link - Load immediately but fetch count later */}
                 <Link
                   href="/messages"
-                  className={`relative flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
+                  className={`hidden sm:flex relative items-center space-x-1 px-3 py-2 rounded-lg transition-colors ${
                     currentPage === 'messages'
                       ? 'bg-green-600 text-white'
                       : 'text-gray-700 hover:text-green-600 hover:bg-green-50'
                   }`}
                 >
                   <MessageCircle className="w-5 h-5" />
-                  <span className="hidden sm:block font-medium">Messages</span>
+                  <span className="font-medium">Messages</span>
                   {unreadMessagesCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                       {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
@@ -198,8 +267,10 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                   )}
                 </Link>
 
-                {/* Notification Bell */}
-                <NotificationBell userId={user.id} />
+                {/* Notification Bell - Lazy loaded */}
+                <div className="hidden sm:block">
+                  <NotificationBell userId={user.id} />
+                </div>
                 
                 {/* User Menu */}
                 <div className="relative" id="user-dropdown">
@@ -210,15 +281,16 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                     {user.avatar ? (
                       <img 
                         src={user.avatar} 
-                        alt={getUserDisplayName()}
+                        alt={userDisplayName}
                         className="w-8 h-8 rounded-full object-cover"
+                        loading="lazy"
                       />
                     ) : (
                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white font-medium text-sm">
-                        {getUserInitials()}
+                        {userInitials}
                       </div>
                     )}
-                    <span className="hidden md:block max-w-24 truncate">{getUserDisplayName()}</span>
+                    <span className="hidden md:block max-w-24 truncate">{userDisplayName}</span>
                     <ChevronDown className={`w-4 h-4 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
                   </button>
 
@@ -239,28 +311,52 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                       {/* Profile Section */}
                       <Link 
                         href="/profile" 
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        className={`flex items-center px-4 py-2 text-sm transition-colors ${
+                          currentPage === 'profile' 
+                            ? 'text-green-600 bg-green-50' 
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
                         onClick={() => setShowUserMenu(false)}
                       >
                         <UserCircle className="w-4 h-4 mr-3" />
                         My Profile
                       </Link>
 
-                      <Link 
-                        href="/profile/edit" 
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <Edit3 className="w-4 h-4 mr-3" />
-                        Edit Profile
-                      </Link>
-
                       <div className="border-t border-gray-100 my-2"></div>
 
-                      {/* Activity Section */}
+                      <Link 
+                        href="/my-ads" 
+                        className={`flex items-center px-4 py-2 text-sm transition-colors ${
+                          currentPage === 'my-ads' 
+                            ? 'text-green-600 bg-green-50' 
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <Car className="w-4 h-4 mr-3" />
+                        My Ads
+                      </Link>
+                      
+                      <Link 
+                        href="/saved-cars" 
+                        className={`flex items-center px-4 py-2 text-sm transition-colors ${
+                          currentPage === 'saved-cars' 
+                            ? 'text-green-600 bg-green-50' 
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <Heart className="w-4 h-4 mr-3" />
+                        Saved Cars
+                      </Link>
+
                       <Link 
                         href="/messages" 
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                        className={`flex items-center px-4 py-2 text-sm transition-colors ${
+                          currentPage === 'messages' 
+                            ? 'text-green-600 bg-green-50' 
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
                         onClick={() => setShowUserMenu(false)}
                       >
                         <MessageCircle className="w-4 h-4 mr-3" />
@@ -272,31 +368,10 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                         )}
                       </Link>
                       
-                      {(user.role === 'DEALER' || user.role === 'USER') && (
-                        <Link 
-                          href="/my-ads" 
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                          onClick={() => setShowUserMenu(false)}
-                        >
-                          <FileText className="w-4 h-4 mr-3" />
-                          My Ads
-                        </Link>
-                      )}
-                      
-                      <Link 
-                        href="/saved" 
-                        className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        <Heart className="w-4 h-4 mr-3" />
-                        Saved Cars
-                      </Link>
-                      
                       <div className="border-t border-gray-100 my-2"></div>
 
-                      {/* Settings & Admin */}
                       <Link 
-                        href="/settings" 
+                        href="/profile/edit" 
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                         onClick={() => setShowUserMenu(false)}
                       >
@@ -304,7 +379,6 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                         Settings
                       </Link>
 
-                      {/* Admin Dashboard Link for Admins */}
                       {(user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') && (
                         <Link 
                           href="/admin" 
@@ -330,15 +404,14 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                 </div>
               </div>
             ) : (
-              // Not logged in - show login/register buttons + Place Ad
-              <div className="flex items-center space-x-3">
-                {/* Place Ad Button for Non-Authenticated Users */}
+              // Not logged in
+              <div className="hidden sm:flex items-center space-x-3">
                 <button
                   onClick={handlePlaceAd}
                   className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white font-medium transition-colors shadow-md hover:shadow-lg"
                 >
                   <Plus size={18} />
-                  <span className="hidden sm:block">Place Ad</span>
+                  <span>Place Ad</span>
                 </button>
 
                 <Link 
@@ -359,17 +432,127 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
             {/* Mobile Menu Button */}
             <button 
               className="md:hidden p-2 rounded-md hover:bg-gray-100"
-              onClick={() => {
-                // Add mobile menu toggle logic here if needed
-                console.log('Mobile menu clicked')
-              }}
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              {showMobileMenu ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
         </div>
+
+        {/* Mobile Menu - Only render when needed */}
+        {showMobileMenu && (
+          <div className="md:hidden border-t border-gray-200 py-4" id="mobile-menu">
+            <div className="space-y-4">
+              <Link 
+                href="/cars" 
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  currentPage === 'cars' ? 'text-green-600 bg-green-50' : 'text-gray-700 hover:bg-gray-100'
+                }`}
+                onClick={() => setShowMobileMenu(false)}
+              >
+                <Car size={18} />
+                <span>BUY</span>
+              </Link>
+              
+              <button
+                onClick={handlePlaceAd}
+                className={`flex items-center space-x-2 w-full px-4 py-2 rounded-lg font-medium transition-colors ${
+                  currentPage === 'sell' || currentPage === 'place-ad' ? 'text-green-600 bg-green-50' : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <Plus size={18} />
+                <span>SELL</span>
+              </button>
+
+              <Link 
+                href="/find-dealer" 
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  currentPage === 'find-dealer' ? 'text-green-600 bg-green-50' : 'text-gray-700 hover:bg-gray-100'
+                }`}
+                onClick={() => setShowMobileMenu(false)}
+              >
+                <UserCircle size={18} />
+                <span>DEALERS</span>
+              </Link>
+
+              {user && (
+                <>
+                  <div className="border-t border-gray-200 my-4"></div>
+                  
+                  <Link
+                    href="/messages"
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                      currentPage === 'messages' ? 'text-green-600 bg-green-50' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    <MessageCircle size={18} />
+                    <span>Messages</span>
+                    {unreadMessagesCount > 0 && (
+                      <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                      </span>
+                    )}
+                  </Link>
+
+                  <Link 
+                    href="/my-ads" 
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                      currentPage === 'my-ads' ? 'text-green-600 bg-green-50' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    <Car size={18} />
+                    <span>My Ads</span>
+                  </Link>
+
+                  <Link 
+                    href="/saved-cars" 
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                      currentPage === 'saved-cars' ? 'text-green-600 bg-green-50' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    <Heart size={18} />
+                    <span>Saved Cars</span>
+                  </Link>
+
+                  <Link 
+                    href="/profile" 
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                      currentPage === 'profile' ? 'text-green-600 bg-green-50' : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    <UserCircle size={18} />
+                    <span>My Profile</span>
+                  </Link>
+                </>
+              )}
+
+              {!user && (
+                <>
+                  <div className="border-t border-gray-200 my-4"></div>
+                  
+                  <Link 
+                    href="/login" 
+                    className="block px-4 py-2 font-medium text-gray-700 hover:text-green-600 transition-colors"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    LOGIN
+                  </Link>
+                  <Link 
+                    href="/register" 
+                    className="block px-4 py-2 font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    onClick={() => setShowMobileMenu(false)}
+                  >
+                    REGISTER
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </header>
   )

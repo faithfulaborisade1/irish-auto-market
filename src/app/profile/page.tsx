@@ -256,7 +256,7 @@ export default function ProfilePage() {
               className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2"
             >
               <Settings className="w-4 h-4" />
-              <span>Edit Profile</span>
+              <span>Setting</span>
             </a>
           </div>
 

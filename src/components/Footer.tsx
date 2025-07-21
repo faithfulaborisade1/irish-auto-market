@@ -25,12 +25,12 @@ export default function Footer() {
           {/* Company Info */}
           <div className="space-y-4">
             <div className="flex items-center space-x-3">
-              {/* CSS-based logo matching header */}
-               <div className="h-10 w-10 rounded-full bg-gradient-to-r from-green-600 via-white to-orange-500 flex items-center justify-center shadow-lg border-2 border-gray-200">
-                <div className="text-green-700 font-bold text-sm tracking-tight drop-shadow-sm">
-                  IAM
-                </div>
-              </div>
+              {/* Updated logo using SVG */}
+              <img 
+                src="/iam-logo.svg" 
+                alt="Irish Auto Market"
+                className="h-10 w-10"
+              />
               <div className="flex items-center space-x-2">
                 <div className="text-xl font-bold text-white">
                   IRISH
@@ -118,11 +118,22 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/dealers" className="text-gray-300 hover:text-white transition-colors text-sm">
+                <Link href="/find-dealer" className="text-gray-300 hover:text-white transition-colors text-sm">
                   Find Dealers
                 </Link>
               </li>
               <li>
+                <Link href="/saved-cars" className="text-gray-300 hover:text-white transition-colors text-sm">
+                  Saved Cars
+                </Link>
+              </li>
+              <li>
+                <Link href="/my-ads" className="text-gray-300 hover:text-white transition-colors text-sm">
+                  My Ads
+                </Link>
+              </li>
+              {/* Future links - commented out for now */}
+              {/* <li>
                 <Link href="/finance" className="text-gray-300 hover:text-white transition-colors text-sm">
                   Car Finance
                 </Link>
@@ -136,7 +147,7 @@ export default function Footer() {
                 <Link href="/valuations" className="text-gray-300 hover:text-white transition-colors text-sm">
                   Car Valuations
                 </Link>
-              </li>
+              </li> */}
             </ul>
           </div>
 
@@ -145,23 +156,8 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-4">Support</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/help" className="text-gray-300 hover:text-white transition-colors text-sm">
-                  Help Center
-                </Link>
-              </li>
-              <li>
                 <Link href="/contact" className="text-gray-300 hover:text-white transition-colors text-sm">
                   Contact Us
-                </Link>
-              </li>
-              <li>
-                <Link href="/safety" className="text-gray-300 hover:text-white transition-colors text-sm">
-                  Safety Tips
-                </Link>
-              </li>
-              <li>
-                <Link href="/faq" className="text-gray-300 hover:text-white transition-colors text-sm">
-                  FAQ
                 </Link>
               </li>
               <li>
@@ -174,6 +170,22 @@ export default function Footer() {
                   Report an Issue
                 </Link>
               </li>
+              {/* Future support links - commented out for now */}
+              {/* <li>
+                <Link href="/help" className="text-gray-300 hover:text-white transition-colors text-sm">
+                  Help Center
+                </Link>
+              </li>
+              <li>
+                <Link href="/faq" className="text-gray-300 hover:text-white transition-colors text-sm">
+                  FAQ
+                </Link>
+              </li>
+              <li>
+                <Link href="/safety" className="text-gray-300 hover:text-white transition-colors text-sm">
+                  Safety Tips
+                </Link>
+              </li> */}
             </ul>
           </div>
 

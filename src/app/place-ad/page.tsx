@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ImageUpload from '@/components/ImageUpload';
 import Header from '@/components/Header';
-import { Car, MapPin, Euro, Calendar, Gauge, Fuel, Settings, Eye, CheckCircle } from 'lucide-react';
+import { Car, MapPin, Euro, Calendar, Gauge, Fuel, Settings, Eye, CheckCircle, Palette } from 'lucide-react';
 
 // Import comprehensive car and location data
 import { CAR_MAKES_MODELS, getAllCarMakes, getModelsForMake } from '@/data/car-makes-models';
@@ -21,6 +21,36 @@ interface UploadedImage {
   fileName: string;
   size: number;
 }
+
+// ✅ COMPLETE COLOR OPTIONS WITH VISUAL SELECTION
+const COLOR_OPTIONS = [
+  { value: 'white', label: 'White', color: '#ffffff', border: '#e5e7eb' },
+  { value: 'black', label: 'Black', color: '#000000', border: '#000000' },
+  { value: 'silver', label: 'Silver', color: '#c0c0c0', border: '#9ca3af' },
+  { value: 'grey', label: 'Grey', color: '#6b7280', border: '#6b7280' },
+  { value: 'blue', label: 'Blue', color: '#3b82f6', border: '#3b82f6' },
+  { value: 'red', label: 'Red', color: '#ef4444', border: '#ef4444' },
+  { value: 'green', label: 'Green', color: '#10b981', border: '#10b981' },
+  { value: 'yellow', label: 'Yellow', color: '#eab308', border: '#eab308' },
+  { value: 'orange', label: 'Orange', color: '#f97316', border: '#f97316' },
+  { value: 'brown', label: 'Brown', color: '#8b4513', border: '#8b4513' },
+  { value: 'purple', label: 'Purple', color: '#8b5cf6', border: '#8b5cf6' },
+  { value: 'gold', label: 'Gold', color: '#d97706', border: '#d97706' }
+];
+
+// ✅ COMPLETE BODY TYPES (ALL 10 FROM DATABASE)
+const BODY_TYPES = [
+  { value: 'HATCHBACK', label: 'Hatchback', icon: '🚗', description: 'Compact with rear door' },
+  { value: 'SALOON', label: 'Saloon/Sedan', icon: '🚘', description: 'Traditional 4-door car' },
+  { value: 'ESTATE', label: 'Estate/Wagon', icon: '🚐', description: 'Extended rear cargo area' },
+  { value: 'SUV', label: 'SUV', icon: '🚙', description: 'Sport Utility Vehicle' },
+  { value: 'COUPE', label: 'Coupe', icon: '🏎️', description: 'Sporty 2-door' },
+  { value: 'CONVERTIBLE', label: 'Convertible', icon: '🏎️', description: 'Removable/folding roof' },
+  { value: 'MPV', label: 'MPV', icon: '🚌', description: 'Multi-Purpose Vehicle' },
+  { value: 'VAN', label: 'Van', icon: '🚚', description: 'Commercial vehicle' },
+  { value: 'PICKUP', label: 'Pickup Truck', icon: '🛻', description: 'Open cargo bed' },
+  { value: 'OTHER', label: 'Other', icon: '🚗', description: 'Other vehicle type' }
+];
 
 export default function PlaceAdPage() {
   const router = useRouter();
@@ -354,6 +384,8 @@ export default function PlaceAdPage() {
                   <option value="ELECTRIC">Electric</option>
                   <option value="HYBRID">Hybrid</option>
                   <option value="PLUGIN_HYBRID">Plug-in Hybrid</option>
+                  <option value="LPG">LPG</option>
+                  <option value="CNG">CNG</option>
                 </select>
               </div>
 
@@ -371,46 +403,163 @@ export default function PlaceAdPage() {
                   <option value="MANUAL">Manual</option>
                   <option value="AUTOMATIC">Automatic</option>
                   <option value="SEMI_AUTOMATIC">Semi-Automatic</option>
+                  <option value="CVT">CVT</option>
                 </select>
               </div>
 
-              {/* Body Type */}
+              {/* Engine Size */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Body Type
-                </label>
-                <select
-                  value={formData.bodyType}
-                  onChange={(e) => handleInputChange('bodyType', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="">Select Body Type</option>
-                  <option value="HATCHBACK">Hatchback</option>
-                  <option value="SALOON">Saloon/Sedan</option>
-                  <option value="ESTATE">Estate</option>
-                  <option value="SUV">SUV</option>
-                  <option value="COUPE">Coupe</option>
-                  <option value="CONVERTIBLE">Convertible</option>
-                  <option value="MPV">MPV</option>
-                  <option value="VAN">Van</option>
-                  <option value="PICKUP">Pickup</option>
-                  <option value="OTHER">Other</option>
-                </select>
-              </div>
-
-              {/* Color */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Color
+                  Engine Size (L)
                 </label>
                 <input
-                  type="text"
-                  value={formData.color}
-                  onChange={(e) => handleInputChange('color', e.target.value)}
+                  type="number"
+                  step="0.1"
+                  value={formData.engineSize}
+                  onChange={(e) => handleInputChange('engineSize', e.target.value)}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="e.g. Black, White, Silver"
+                  placeholder="e.g. 2.0"
                 />
               </div>
+
+              {/* Doors */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Doors
+                </label>
+                <select
+                  value={formData.doors}
+                  onChange={(e) => handleInputChange('doors', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="">Select Doors</option>
+                  <option value="2">2 Doors</option>
+                  <option value="3">3 Doors</option>
+                  <option value="4">4 Doors</option>
+                  <option value="5">5 Doors</option>
+                </select>
+              </div>
+
+              {/* Seats */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Seats
+                </label>
+                <select
+                  value={formData.seats}
+                  onChange={(e) => handleInputChange('seats', e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="">Select Seats</option>
+                  <option value="2">2 Seats</option>
+                  <option value="4">4 Seats</option>
+                  <option value="5">5 Seats</option>
+                  <option value="7">7 Seats</option>
+                  <option value="8">8+ Seats</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* ✅ NEW: Body Type Section with Visual Selection */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <Settings className="mr-2 text-green-600" size={20} />
+              Body Type
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Choose the type of vehicle you're selling
+            </p>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {BODY_TYPES.map(bodyType => (
+                <label key={bodyType.value} className="cursor-pointer">
+                  <input
+                    type="radio"
+                    name="bodyType"
+                    value={bodyType.value}
+                    checked={formData.bodyType === bodyType.value}
+                    onChange={() => handleInputChange('bodyType', bodyType.value)}
+                    className="sr-only"
+                  />
+                  <div className={`
+                    border-2 rounded-lg p-4 text-center transition-all hover:shadow-md
+                    ${formData.bodyType === bodyType.value
+                      ? 'border-green-500 bg-green-50 shadow-md'
+                      : 'border-gray-200 hover:border-gray-300'
+                    }
+                  `}>
+                    <div className="text-3xl mb-2">{bodyType.icon}</div>
+                    <div className="text-sm font-medium text-gray-900 mb-1">
+                      {bodyType.label}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {bodyType.description}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* ✅ NEW: Color Selection Section */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <Palette className="mr-2 text-green-600" size={20} />
+              Car Color
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Select your car's color or leave blank if unsure
+            </p>
+            
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {COLOR_OPTIONS.map(colorOption => (
+                <label key={colorOption.value} className="cursor-pointer">
+                  <input
+                    type="radio"
+                    name="color"
+                    value={colorOption.value}
+                    checked={formData.color === colorOption.value}
+                    onChange={() => handleInputChange('color', colorOption.value)}
+                    className="sr-only"
+                  />
+                  <div className={`
+                    border-2 rounded-lg p-3 text-center transition-all hover:shadow-md
+                    ${formData.color === colorOption.value
+                      ? 'border-green-500 bg-green-50 shadow-md'
+                      : 'border-gray-200 hover:border-gray-300'
+                    }
+                  `}>
+                    <div 
+                      className="w-8 h-8 rounded-full border mx-auto mb-2"
+                      style={{ 
+                        backgroundColor: colorOption.color,
+                        borderColor: colorOption.border
+                      }}
+                    />
+                    <div className="text-xs font-medium text-gray-900">
+                      {colorOption.label}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+            
+            {/* Clear Color Option */}
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => handleInputChange('color', '')}
+                className={`
+                  px-4 py-2 text-sm rounded-lg border transition-colors
+                  ${!formData.color
+                    ? 'border-green-500 bg-green-50 text-green-700'
+                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }
+                `}
+              >
+                {!formData.color ? '✓ No Color Selected' : 'Clear Color Selection'}
+              </button>
             </div>
           </div>
 
@@ -476,58 +625,6 @@ export default function PlaceAdPage() {
             </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Engine Size */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Engine Size (L)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={formData.engineSize}
-                  onChange={(e) => handleInputChange('engineSize', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="e.g. 2.0"
-                />
-              </div>
-
-              {/* Doors */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Doors
-                </label>
-                <select
-                  value={formData.doors}
-                  onChange={(e) => handleInputChange('doors', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="">Select Doors</option>
-                  <option value="2">2 Doors</option>
-                  <option value="3">3 Doors</option>
-                  <option value="4">4 Doors</option>
-                  <option value="5">5 Doors</option>
-                </select>
-              </div>
-
-              {/* Seats */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Seats
-                </label>
-                <select
-                  value={formData.seats}
-                  onChange={(e) => handleInputChange('seats', e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="">Select Seats</option>
-                  <option value="2">2 Seats</option>
-                  <option value="4">4 Seats</option>
-                  <option value="5">5 Seats</option>
-                  <option value="7">7 Seats</option>
-                  <option value="8">8 Seats</option>
-                </select>
-              </div>
-
               {/* Previous Owners */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -570,7 +667,7 @@ export default function PlaceAdPage() {
                 >
                   <option value="NEW">New</option>
                   <option value="USED">Used</option>
-                  <option value="DAMAGED">Damaged</option>
+                  <option value="CERTIFIED_PRE_OWNED">Certified Pre-Owned</option>
                 </select>
               </div>
             </div>
