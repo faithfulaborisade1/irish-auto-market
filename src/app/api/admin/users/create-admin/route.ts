@@ -8,14 +8,13 @@ import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
-// Validation schema for creating admin - Updated to match your schema
+// ✅ FIXED: Validation schema for creating admin - Use z.nativeEnum without errorMap
 const CreateAdminSchema = z.object({
   email: z.string().email('Invalid email format'),
   firstName: z.string().min(1, 'First name required').max(50, 'First name too long'),
   lastName: z.string().min(1, 'Last name required').max(50, 'Last name too long'),
-  role: z.enum(['SUPER_ADMIN', 'CONTENT_MOD', 'FINANCE_ADMIN', 'SUPPORT_ADMIN'], {
-    errorMap: () => ({ message: 'Role must be SUPER_ADMIN, CONTENT_MOD, FINANCE_ADMIN, or SUPPORT_ADMIN' })
-  })
+  // ✅ FIXED: Simple z.nativeEnum - custom error handled in catch block
+  role: z.nativeEnum(AdminRole)
 });
 
 // Helper function to verify admin authentication and permissions
@@ -162,9 +161,13 @@ export async function POST(request: NextRequest) {
     const validationResult = CreateAdminSchema.safeParse(body);
 
     if (!validationResult.success) {
-      const errorMessages = validationResult.error.errors.map(err => 
-        `${err.path.join('.')}: ${err.message}`
-      ).join(', ');
+      // ✅ FIXED: Use .issues and provide custom role error message
+      const errorMessages = validationResult.error.issues.map(err => {
+        if (err.path.includes('role')) {
+          return `role: Role must be SUPER_ADMIN, CONTENT_MOD, FINANCE_ADMIN, or SUPPORT_ADMIN`;
+        }
+        return `${err.path.join('.')}: ${err.message}`;
+      }).join(', ');
 
       await logAdminAction(
         currentAdmin.adminProfile!.id,
@@ -217,8 +220,8 @@ export async function POST(request: NextRequest) {
     const verificationToken = generateVerificationToken();
     const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
 
-    // Map frontend role to Prisma AdminRole enum
-    const adminRoleEnum: AdminRole = AdminRole[role as keyof typeof AdminRole];
+    // ✅ FIXED: role is already validated as AdminRole by z.nativeEnum
+    const adminRoleEnum: AdminRole = role;
 
     // Create user and admin profile in transaction
     const newAdmin = await prisma.$transaction(async (tx) => {
@@ -232,8 +235,6 @@ export async function POST(request: NextRequest) {
           role: 'ADMIN', // Base UserRole for all admins
           status: 'ACTIVE',
           emailVerified: new Date(), // Set to current date instead of boolean
-          // Note: Your schema doesn't have mustChangePassword, emailVerificationToken, emailVerificationExpiry
-          // We'll handle password change requirement in AdminProfile
         }
       });
 
@@ -248,7 +249,6 @@ export async function POST(request: NextRequest) {
           sessionTimeout: 1800,
           isActive: true,
           failedLoginAttempts: 0
-          // Note: mustChangePassword doesn't exist in your AdminProfile schema
         }
       });
 
