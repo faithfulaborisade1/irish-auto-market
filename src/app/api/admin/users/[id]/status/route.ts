@@ -102,7 +102,7 @@ export async function PUT(
     const validationResult = UpdateStatusSchema.safeParse(body);
 
     if (!validationResult.success) {
-      const errorMessages = validationResult.error.errors.map(err => 
+      const errorMessages = validationResult.error.issues.map(err => 
         `${err.path.join('.')}: ${err.message}`
       ).join(', ');
 
@@ -123,15 +123,17 @@ export async function PUT(
     });
 
     if (!targetAdmin) {
-      await logAdminAction(
-        currentAdmin.id,
-        'ADMIN_STATUS_UPDATE_FAILED',
-        {
-          reason: 'Target admin not found',
-          targetUserId
-        },
-        request.headers.get('x-forwarded-for') || 'unknown'
-      );
+      if (currentAdmin.adminProfile) {
+        await logAdminAction(
+          currentAdmin.adminProfile.id,
+          'ADMIN_STATUS_UPDATE_FAILED',
+          {
+            reason: 'Target admin not found',
+            targetUserId
+          },
+          request.headers.get('x-forwarded-for') || 'unknown'
+        );
+      }
 
       return NextResponse.json(
         { error: 'Admin user not found' },
@@ -148,15 +150,17 @@ export async function PUT(
 
     // Prevent admin from disabling themselves
     if (targetUserId === currentAdmin.id) {
-      await logAdminAction(
-        currentAdmin.id,
-        'ADMIN_STATUS_UPDATE_FAILED',
-        {
-          reason: 'Cannot disable own account',
-          targetUserId
-        },
-        request.headers.get('x-forwarded-for') || 'unknown'
-      );
+      if (currentAdmin.adminProfile) {
+        await logAdminAction(
+          currentAdmin.adminProfile.id,
+          'ADMIN_STATUS_UPDATE_FAILED',
+          {
+            reason: 'Cannot disable own account',
+            targetUserId
+          },
+          request.headers.get('x-forwarded-for') || 'unknown'
+        );
+      }
 
       return NextResponse.json(
         { error: 'Cannot disable your own admin account' },
@@ -176,15 +180,17 @@ export async function PUT(
       });
 
       if (superAdminCount <= 1) {
-        await logAdminAction(
-          currentAdmin.id,
-          'ADMIN_STATUS_UPDATE_FAILED',
-          {
-            reason: 'Cannot disable last SUPER_ADMIN',
-            targetUserId
-          },
-          request.headers.get('x-forwarded-for') || 'unknown'
-        );
+        if (currentAdmin.adminProfile) {
+          await logAdminAction(
+            currentAdmin.adminProfile.id,
+            'ADMIN_STATUS_UPDATE_FAILED',
+            {
+              reason: 'Cannot disable last SUPER_ADMIN',
+              targetUserId
+            },
+            request.headers.get('x-forwarded-for') || 'unknown'
+          );
+        }
 
         return NextResponse.json(
           { error: 'Cannot disable the last Super Admin account' },
@@ -212,20 +218,22 @@ export async function PUT(
     });
 
     // Log successful status update
-    await logAdminAction(
-      currentAdmin.id,
-      isActive ? 'USER_VERIFIED' : 'USER_SUSPENDED', // Use existing AdminAction enum values
-      {
-        targetUserId,
-        targetEmail: targetAdmin.email,
-        targetRole: targetAdmin.adminProfile.adminRole,
-        newStatus,
-        oldStatus: targetAdmin.status,
-        reason: reason || 'No reason provided',
-        updatedBy: currentAdmin.email
-      },
-      request.headers.get('x-forwarded-for') || 'unknown'
-    );
+    if (currentAdmin.adminProfile) {
+      await logAdminAction(
+        currentAdmin.adminProfile.id,
+        isActive ? 'USER_VERIFIED' : 'USER_SUSPENDED', // Use existing AdminAction enum values
+        {
+          targetUserId,
+          targetEmail: targetAdmin.email,
+          targetRole: targetAdmin.adminProfile.adminRole,
+          newStatus,
+          oldStatus: targetAdmin.status,
+          reason: reason || 'No reason provided',
+          updatedBy: currentAdmin.email
+        },
+        request.headers.get('x-forwarded-for') || 'unknown'
+      );
+    }
 
     console.log(`✅ Admin status updated: ${targetAdmin.email} → ${newStatus}`);
 
@@ -249,9 +257,9 @@ export async function PUT(
     // Log error
     try {
       const authResult = await verifyAdminAuth(request);
-      if (authResult.user) {
+      if (authResult.user && authResult.user.adminProfile) {
         await logAdminAction(
-          authResult.user.id,
+          authResult.user.adminProfile.id,
           'ADMIN_STATUS_UPDATE_FAILED',
           {
             reason: 'Server error',
