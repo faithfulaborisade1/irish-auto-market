@@ -1,111 +1,103 @@
-// src/app/api/report/route.ts - Complete with Email Integration
+// src/app/api/report/route.ts - FIXED - Matches Your Email Service Exactly
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/database'
+import { IssueType, IssueSeverity, ReportStatus, SecurityEventType, SecuritySeverity, NotificationType } from '@prisma/client'
 import jwt from 'jsonwebtoken'
-import { sendSupportConfirmation, sendAdminNotification } from '@/lib/email'
+import { z } from 'zod'
 
-const prisma = new PrismaClient()
+// Validation schema using your exact Prisma enums
+const ReportSchema = z.object({
+  reporterName: z.string().max(100, 'Name too long').optional(),
+  reporterEmail: z.string().email('Invalid email format').optional(),
+  type: z.nativeEnum(IssueType),
+  severity: z.nativeEnum(IssueSeverity),
+  title: z.string().min(5, 'Title must be at least 5 characters').max(200, 'Title too long'),
+  description: z.string().min(10, 'Description must be at least 10 characters').max(5000, 'Description too long'),
+  pageUrl: z.string().optional(),
+  carId: z.string().optional(),
+  dealerId: z.string().optional(),
+  stepsToReproduce: z.string().optional(),
+  errorDetails: z.string().optional(),
+  anonymous: z.boolean().optional().default(false)
+})
 
-// Type definitions
-type IssueType = 'BUG' | 'SCAM_LISTING' | 'INAPPROPRIATE_CONTENT' | 'FAKE_DEALER' | 'PRICING_ERROR' | 'SPAM' | 'HARASSMENT' | 'TECHNICAL_ISSUE' | 'SECURITY_CONCERN' | 'DATA_PRIVACY' | 'OTHER'
-type IssueSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+// Check if issue should trigger urgent admin notification
+function shouldNotifyAdmin(type: IssueType, severity: IssueSeverity): boolean {
+  // ✅ FIXED: Type-safe critical type checking
+  const isCriticalType = type === IssueType.SCAM_LISTING ||
+                        type === IssueType.FAKE_DEALER ||
+                        type === IssueType.SECURITY_CONCERN ||
+                        type === IssueType.HARASSMENT;
+                        
+  return severity === IssueSeverity.CRITICAL || 
+         severity === IssueSeverity.HIGH ||
+         isCriticalType;
+}
 
-// Valid issue types
-const VALID_ISSUE_TYPES = [
-  'BUG',
-  'SCAM_LISTING',
-  'INAPPROPRIATE_CONTENT',
-  'FAKE_DEALER',
-  'PRICING_ERROR',
-  'SPAM',
-  'HARASSMENT',
-  'TECHNICAL_ISSUE',
-  'SECURITY_CONCERN',
-  'DATA_PRIVACY',
-  'OTHER'
-]
-
-// Valid severity levels
-const VALID_SEVERITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+// Get notification type for admin emails
+function getNotificationType(type: IssueType, severity: IssueSeverity): 'urgent_report' | 'support_contact' {
+  // ✅ FIXED: Type-safe critical type checking
+  const isCriticalType = type === IssueType.SCAM_LISTING ||
+                        type === IssueType.FAKE_DEALER ||
+                        type === IssueType.SECURITY_CONCERN ||
+                        type === IssueType.HARASSMENT;
+                        
+  return (severity === IssueSeverity.CRITICAL || isCriticalType) 
+    ? 'urgent_report' 
+    : 'support_contact';
+}
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🚨 Processing issue report submission...')
+
+    // Parse form data
     const formData = await request.formData()
     
-    // Extract form fields
-    const reporterName = formData.get('reporterName') as string
-    const reporterEmail = formData.get('reporterEmail') as string
-    const type = formData.get('type') as string
-    const severity = formData.get('severity') as string
-    const title = formData.get('title') as string
-    const description = formData.get('description') as string
-    const pageUrl = formData.get('pageUrl') as string
-    const carId = formData.get('carId') as string
-    const dealerId = formData.get('dealerId') as string
-    const stepsToReproduce = formData.get('stepsToReproduce') as string
-    const errorDetails = formData.get('errorDetails') as string
-    const anonymous = formData.get('anonymous') === 'true'
-
-    // Validate required fields
-    if (!title || !description || !type || !severity) {
-      return NextResponse.json(
-        { success: false, message: 'Title, description, type, and severity are required' },
-        { status: 400 }
-      )
+    // Extract and validate form fields
+    const reportData = {
+      reporterName: formData.get('reporterName') as string || undefined,
+      reporterEmail: formData.get('reporterEmail') as string || undefined,
+      type: formData.get('type') as string,
+      severity: formData.get('severity') as string,
+      title: formData.get('title') as string,
+      description: formData.get('description') as string,
+      pageUrl: formData.get('pageUrl') as string || undefined,
+      carId: formData.get('carId') as string || undefined,
+      dealerId: formData.get('dealerId') as string || undefined,
+      stepsToReproduce: formData.get('stepsToReproduce') as string || undefined,
+      errorDetails: formData.get('errorDetails') as string || undefined,
+      anonymous: formData.get('anonymous') === 'true'
     }
 
-    // Validate issue type
-    if (!VALID_ISSUE_TYPES.includes(type)) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid issue type selected' },
-        { status: 400 }
-      )
-    }
+    const validatedData = ReportSchema.parse(reportData)
 
-    // Validate severity
-    if (!VALID_SEVERITIES.includes(severity)) {
-      return NextResponse.json(
-        { success: false, message: 'Invalid severity level selected' },
-        { status: 400 }
-      )
-    }
+    // Get user info if authenticated (optional)
+    let userId: string | undefined
+    let user: any = null
 
-    // Validate email format if provided
-    if (reporterEmail && !anonymous) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(reporterEmail)) {
-        return NextResponse.json(
-          { success: false, message: 'Please enter a valid email address' },
-          { status: 400 }
-        )
-      }
-    }
-
-    // Validate description length
-    if (description.length > 5000) {
-      return NextResponse.json(
-        { success: false, message: 'Description is too long (maximum 5000 characters)' },
-        { status: 400 }
-      )
-    }
-
-    // Check if user is logged in (optional)
-    let userId = null
     try {
       const token = request.cookies.get('auth-token')?.value || request.cookies.get('admin-token')?.value
-      
       if (token) {
         const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
-        userId = decoded.userId
+        user = await prisma.user.findUnique({
+          where: { id: decoded.userId },
+          select: { id: true, firstName: true, lastName: true, email: true }
+        })
+        if (user) {
+          userId = user.id
+        }
       }
-    } catch (error) {
-      // User not logged in - that's okay for reports
+    } catch (authError) {
+      console.log('No authentication - proceeding as anonymous report')
     }
 
-    // Get IP address and user agent for tracking
-    const forwarded = request.headers.get('x-forwarded-for')
-    const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown'
-    const userAgent = request.headers.get('user-agent') || 'unknown'
+    // Get request metadata
+    const ipAddress = request.headers.get('x-forwarded-for') || 
+                     request.headers.get('x-real-ip') || 
+                     'unknown'
+    const userAgent = request.headers.get('user-agent')
+    const referer = request.headers.get('referer')
 
     // Process uploaded screenshots
     const screenshots: string[] = []
@@ -114,26 +106,26 @@ export async function POST(request: NextRequest) {
     for (const [key, file] of screenshotEntries) {
       if (file instanceof File) {
         // TODO: Upload to cloud storage (AWS S3, Cloudinary, etc.)
-        // For now, we'll just store the filename
+        // For now, we'll store the filename
         screenshots.push(file.name)
       }
     }
 
     // Validate car ID if provided
-    let validCarId = null
-    if (carId) {
+    let validCarId: string | undefined
+    if (validatedData.carId) {
       const car = await prisma.car.findUnique({
-        where: { id: carId },
+        where: { id: validatedData.carId },
         select: { id: true }
       })
-      validCarId = car?.id || null
+      validCarId = car?.id
     }
 
-    // Validate dealer ID if provided
-    let validDealerId = null
-    if (dealerId) {
+    // Validate dealer ID if provided  
+    let validDealerId: string | undefined
+    if (validatedData.dealerId) {
       const dealer = await prisma.user.findUnique({
-        where: { id: dealerId },
+        where: { id: validatedData.dealerId },
         select: { id: true, role: true }
       })
       if (dealer && dealer.role === 'DEALER') {
@@ -141,291 +133,350 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get browser info
-    const browserInfo = {
-      userAgent: userAgent,
-      referer: request.headers.get('referer'),
-      platform: request.headers.get('sec-ch-ua-platform'),
-      mobile: request.headers.get('sec-ch-ua-mobile'),
-      anonymous: anonymous
-    }
-
     // Create issue report in database
     const issueReport = await prisma.issueReport.create({
       data: {
         reporterId: userId,
-        reporterName: anonymous ? null : (reporterName?.trim() || null),
-        reporterEmail: anonymous ? null : (reporterEmail?.toLowerCase().trim() || null),
-        type: type as IssueType,
-        severity: severity as IssueSeverity,
-        title: title.trim(),
-        description: description.trim(),
-        pageUrl: pageUrl?.trim() || null,
+        reporterName: validatedData.anonymous ? undefined : validatedData.reporterName,
+        reporterEmail: validatedData.anonymous ? undefined : validatedData.reporterEmail,
+        type: validatedData.type,
+        severity: validatedData.severity,
+        title: validatedData.title,
+        description: validatedData.description,
+        pageUrl: validatedData.pageUrl || referer,
         carId: validCarId,
         dealerId: validDealerId,
-        stepsToReproduce: stepsToReproduce?.trim() || null,
-        errorDetails: errorDetails?.trim() || null,
+        stepsToReproduce: validatedData.stepsToReproduce,
+        errorDetails: validatedData.errorDetails,
         screenshots: screenshots.length > 0 ? screenshots : undefined,
-        browserInfo: browserInfo,
-        ipAddress: ip,
+        browserInfo: {
+          userAgent: userAgent,
+          referer: referer,
+          platform: request.headers.get('sec-ch-ua-platform'),
+          mobile: request.headers.get('sec-ch-ua-mobile'),
+          anonymous: validatedData.anonymous
+        },
+        ipAddress: ipAddress,
         userAgent: userAgent,
-        source: 'web'
+        source: 'web',
+        status: ReportStatus.NEW
       }
     })
 
-    const reportNumber = `IAM-${issueReport.id.slice(-8).toUpperCase()}`;
-    console.log(`✅ Issue report created: ${reportNumber} (${type}, ${severity})`);
+    console.log(`✅ Issue report created: ${issueReport.id}`)
 
-    // ============================================================================
-    // EMAIL NOTIFICATIONS
-    // ============================================================================
+    // Create reference number
+    const reportNumber = `IAM-${issueReport.id.slice(-8).toUpperCase()}`
 
-    // Send confirmation email to reporter (if not anonymous and email provided)
-    if (!anonymous && reporterEmail) {
-      sendSupportConfirmation({
-        email: reporterEmail,
-        name: reporterName || 'User',
-        subject: `Issue Report: ${title}`,
-        category: `REPORT_${type}`,
-        id: issueReport.id
-      }).then(emailResult => {
-        if (emailResult.success) {
-          console.log(`✅ Report confirmation sent to ${reporterEmail}`);
-        } else {
-          console.error(`❌ Failed to send report confirmation:`, emailResult.error);
+    // ✅ FIXED: Send confirmation email using your exact function signature
+    let confirmationResult: { success: boolean; error?: string; emailId?: string } = { 
+      success: false, 
+      error: 'Email service not available or anonymous report' 
+    }
+    
+    if (!validatedData.anonymous && validatedData.reporterEmail) {
+      try {
+        if (process.env.RESEND_API_KEY) {
+          const { sendSupportConfirmation } = await import('@/lib/email')
+          
+          // Using your exact function signature: sendSupportConfirmation(contact: { email, name, subject, category, id })
+          confirmationResult = await sendSupportConfirmation({
+            email: validatedData.reporterEmail,
+            name: validatedData.reporterName || 'User',
+            subject: `Issue Report: ${validatedData.title}`,
+            category: `REPORT_${validatedData.type}`,
+            id: issueReport.id
+          })
         }
-      }).catch(emailError => {
-        console.error('❌ Report confirmation error:', emailError);
-      });
+      } catch (emailError: any) {
+        console.error('❌ Confirmation email failed:', emailError.message)
+        confirmationResult = { success: false, error: emailError.message }
+      }
+
+      console.log(`📧 Confirmation email result:`, confirmationResult)
     }
 
-    // Send admin notification for critical/high severity issues or specific types
-    const criticalTypes = ['SCAM_LISTING', 'FAKE_DEALER', 'SECURITY_CONCERN', 'HARASSMENT'];
-    const shouldNotifyAdmin = (
-      severity === 'CRITICAL' || 
-      severity === 'HIGH' ||
-      criticalTypes.includes(type)
-    );
-
-    if (shouldNotifyAdmin) {
-      const notificationType = (severity === 'CRITICAL' || criticalTypes.includes(type)) 
-        ? 'urgent_report' 
-        : 'support_contact';
-
-      sendAdminNotification({
-        type: notificationType,
-        data: {
-          reporterName: anonymous ? 'Anonymous User' : (reporterName || 'User'),
-          reporterEmail: anonymous ? 'anonymous@report' : (reporterEmail || 'no-email'),
-          type: type,
-          severity: severity,
-          title: title,
-          description: description.substring(0, 200) + (description.length > 200 ? '...' : ''),
-          id: issueReport.id,
-          pageUrl: pageUrl,
-          carId: validCarId,
-          dealerId: validDealerId
+    // ✅ FIXED: Send admin notification using your exact function signature
+    let adminResult: { success: boolean; error?: string; emailId?: string } = { 
+      success: false, 
+      error: 'Not urgent report' 
+    }
+    
+    if (shouldNotifyAdmin(validatedData.type, validatedData.severity)) {
+      try {
+        if (process.env.RESEND_API_KEY) {
+          const { sendAdminNotification } = await import('@/lib/email')
+          
+          // Using your exact function signature: sendAdminNotification(notification: { type, data })
+          adminResult = await sendAdminNotification({
+            type: getNotificationType(validatedData.type, validatedData.severity),
+            data: {
+              type: validatedData.type.replace('_', ' '),
+              severity: validatedData.severity,
+              title: validatedData.title,
+              reporterName: validatedData.anonymous ? 'Anonymous User' : (validatedData.reporterName || 'User'),
+              reporterEmail: validatedData.anonymous ? 'anonymous@report' : (validatedData.reporterEmail || 'no-email'),
+              message: validatedData.description.substring(0, 200) + (validatedData.description.length > 200 ? '...' : ''),
+              id: issueReport.id
+            }
+          })
         }
-      }).then(adminResult => {
-        if (adminResult.success) {
-          console.log(`✅ Admin notification sent for ${severity} ${type} report`);
-        } else {
-          console.error(`❌ Failed to send admin notification:`, adminResult.error);
-        }
-      }).catch(adminError => {
-        console.error('❌ Admin notification error:', adminError);
-      });
+      } catch (adminEmailError: any) {
+        console.error('❌ Admin notification failed:', adminEmailError.message)
+        adminResult = { success: false, error: adminEmailError.message }
+      }
+
+      console.log(`🔔 Admin notification result:`, adminResult)
     }
 
-    // Create in-app notification for admins (for all reports)
+    // Create in-app notifications for admins
     try {
       const adminProfiles = await prisma.adminProfile.findMany({
         where: { isActive: true },
         select: { userId: true }
-      });
+      })
 
       if (adminProfiles.length > 0) {
-        const urgencyIcon = severity === 'CRITICAL' ? '🚨' : severity === 'HIGH' ? '⚠️' : '📝';
+        const urgencyIcon = validatedData.severity === IssueSeverity.CRITICAL ? '🚨' : 
+                           validatedData.severity === IssueSeverity.HIGH ? '⚠️' : '📝'
         
         const notifications = adminProfiles.map(admin => ({
           userId: admin.userId,
-          type: 'ISSUE_REPORTED' as const,
-          title: `${urgencyIcon} ${severity} Report: ${type.replace('_', ' ')}`,
-          message: `${anonymous ? 'Anonymous user' : (reporterName || 'User')} reported: "${title}"`,
+          type: NotificationType.ISSUE_REPORTED,
+          title: `${urgencyIcon} ${validatedData.severity} Report: ${validatedData.type.replace(/_/g, ' ')}`,
+          message: `${validatedData.anonymous ? 'Anonymous user' : (validatedData.reporterName || 'User')} reported: "${validatedData.title}"`,
           metadata: {
             reportId: issueReport.id,
-            type: type,
-            severity: severity,
+            type: validatedData.type,
+            severity: validatedData.severity,
             reportNumber: reportNumber,
-            anonymous: anonymous,
+            anonymous: validatedData.anonymous,
             carId: validCarId,
             dealerId: validDealerId
           }
-        }));
+        }))
 
         await prisma.notification.createMany({
           data: notifications
-        });
+        })
 
-        console.log(`🔔 Created ${notifications.length} admin notifications for ${severity} report`);
+        console.log(`🔔 Created ${notifications.length} admin notifications`)
       }
     } catch (notificationError) {
-      console.warn('⚠️ Failed to create admin notifications:', notificationError);
-      // Don't fail report submission if notifications fail
+      console.warn('⚠️ Admin notifications failed:', notificationError)
+      // Don't fail the request if notifications fail
     }
 
     // Create security event for security-related reports
-    if (type === 'SECURITY_CONCERN' || severity === 'CRITICAL') {
+    if (validatedData.type === IssueType.SECURITY_CONCERN || validatedData.severity === IssueSeverity.CRITICAL) {
       try {
         await prisma.securityEvent.create({
           data: {
-            eventType: 'SUSPICIOUS_ACTIVITY',
-            severity: severity === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
-            description: `Security report: ${title}`,
-            targetUserId: validDealerId || undefined,
-            targetIP: ip,
-            targetResource: validCarId || validDealerId || undefined,
+            eventType: SecurityEventType.SUSPICIOUS_ACTIVITY,
+            severity: validatedData.severity === IssueSeverity.CRITICAL ? SecuritySeverity.CRITICAL : SecuritySeverity.HIGH,
+            description: `Security report: ${validatedData.title}`,
+            targetUserId: validDealerId,
+            targetIP: ipAddress,
+            targetResource: validCarId || validDealerId,
             userAgent: userAgent,
             requestData: {
               reportId: issueReport.id,
-              type: type,
-              anonymous: anonymous,
-              pageUrl: pageUrl
+              type: validatedData.type,
+              anonymous: validatedData.anonymous,
+              pageUrl: validatedData.pageUrl
             },
             blocked: false,
             detectionMethod: 'user_report',
-            riskScore: severity === 'CRITICAL' ? 90 : 70
+            riskScore: validatedData.severity === IssueSeverity.CRITICAL ? 90 : 70
           }
-        });
+        })
 
-        console.log(`🔒 Security event created for ${type} report`);
+        console.log(`🔒 Security event created for ${validatedData.type} report`)
       } catch (securityError) {
-        console.warn('⚠️ Failed to create security event:', securityError);
+        console.warn('⚠️ Failed to create security event:', securityError)
       }
     }
 
+    // Return success response
     return NextResponse.json({
       success: true,
-      message: anonymous 
+      message: validatedData.anonymous 
         ? `Anonymous report submitted successfully! Reference: ${reportNumber}`
         : `Report submitted successfully! We'll investigate and get back to you. Reference: ${reportNumber}`,
-      id: issueReport.id,
-      reportNumber: reportNumber
+      data: {
+        id: issueReport.id,
+        reportNumber: reportNumber,
+        type: validatedData.type,
+        severity: validatedData.severity,
+        confirmationEmail: {
+          sent: confirmationResult.success,
+          error: confirmationResult.error
+        },
+        adminNotification: {
+          sent: adminResult.success,
+          reason: adminResult.error || 'Sent successfully'
+        }
+      }
     })
 
-  } catch (error) {
-    console.error('Issue report submission error:', error)
+  } catch (error: any) {
+    console.error('❌ Error processing report:', error)
+
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Invalid report data',
+          errors: error.issues.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        },
+        { status: 400 }
+      )
+    }
+
+    // Handle database errors
+    if (error.code === 'P2002') {
+      return NextResponse.json(
+        { success: false, message: 'Duplicate report submission detected' },
+        { status: 409 }
+      )
+    }
+
+    // Generic error response
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { 
+        success: false, 
+        message: 'Failed to submit report. Please try again.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }
 }
 
+// GET endpoint for admin access (report statistics)
 export async function GET(request: NextRequest) {
-  // This endpoint can be used to get issue report statistics for admin
   try {
-    // Check if user is admin
-    const token = request.cookies.get('admin-token')?.value
-    
+    // Verify admin authentication
+    const token = request.cookies.get('admin-token')?.value || request.cookies.get('auth-token')?.value
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Admin access required' },
+        { success: false, message: 'Authentication required' },
         { status: 401 }
       )
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
-    const userId = decoded.userId
-
-    // Get admin profile
-    const adminProfile = await prisma.adminProfile.findUnique({
-      where: { userId }
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      include: { adminProfile: true }
     })
 
-    if (!adminProfile) {
+    if (!user?.adminProfile) {
       return NextResponse.json(
         { success: false, message: 'Admin access required' },
         { status: 403 }
       )
     }
 
+    // Parse query parameters
+    const url = new URL(request.url)
+    const page = parseInt(url.searchParams.get('page') || '1')
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 100)
+    const type = url.searchParams.get('type')
+    const status = url.searchParams.get('status')
+    const severity = url.searchParams.get('severity')
+
+    // Build where clause
+    const where: any = {}
+    if (type) where.type = type
+    if (status) where.status = status
+    if (severity) where.severity = severity
+
     // Get issue report statistics
-    const stats = await prisma.issueReport.groupBy({
-      by: ['status'],
-      _count: {
-        id: true
-      }
-    })
+    const [reportsList, totalCount, criticalIssues] = await Promise.all([
+      prisma.issueReport.findMany({
+        where,
+        select: {
+          id: true,
+          reporterName: true,
+          reporterEmail: true,
+          type: true,
+          severity: true,
+          title: true,
+          status: true,
+          resolved: true,
+          createdAt: true,
+          carId: true,
+          dealerId: true,
+          description: true
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit
+      }),
+      prisma.issueReport.count({ where }),
+      prisma.issueReport.findMany({
+        where: {
+          severity: IssueSeverity.CRITICAL,
+          resolved: false
+        },
+        select: {
+          id: true,
+          title: true,
+          type: true,
+          createdAt: true,
+          reporterName: true
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    ])
 
-    const typeStats = await prisma.issueReport.groupBy({
-      by: ['type'],
-      _count: {
-        id: true
-      }
-    })
-
-    const severityStats = await prisma.issueReport.groupBy({
-      by: ['severity'],
-      _count: {
-        id: true
-      }
-    })
-
-    // Get recent reports
-    const recentReports = await prisma.issueReport.findMany({
-      take: 10,
-      orderBy: {
-        createdAt: 'desc'
-      },
-      select: {
-        id: true,
-        reporterName: true,
-        reporterEmail: true,
-        type: true,
-        severity: true,
-        title: true,
-        status: true,
-        createdAt: true,
-        carId: true,
-        dealerId: true
-      }
-    })
-
-    // Get critical unresolved issues
-    const criticalIssues = await prisma.issueReport.findMany({
-      where: {
-        severity: 'CRITICAL',
-        resolved: false
-      },
-      select: {
-        id: true,
-        title: true,
-        type: true,
-        createdAt: true,
-        reporterName: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    })
+    // Transform data for response
+    const transformedReports = reportsList.map(report => ({
+      id: report.id,
+      reporterName: report.reporterName || 'Anonymous',
+      reporterEmail: report.reporterEmail || 'Not provided',
+      type: report.type,
+      severity: report.severity,
+      title: report.title,
+      status: report.status,
+      resolved: report.resolved,
+      createdAt: report.createdAt,
+      carId: report.carId,
+      dealerId: report.dealerId,
+      descriptionPreview: report.description?.substring(0, 100) + (report.description && report.description.length > 100 ? '...' : ''),
+      reportNumber: `IAM-${report.id.slice(-8).toUpperCase()}`
+    }))
 
     return NextResponse.json({
       success: true,
       data: {
-        stats,
-        typeStats,
-        severityStats,
-        recentReports,
-        criticalIssues
+        reports: transformedReports,
+        pagination: {
+          page,
+          limit,
+          total: totalCount,
+          pages: Math.ceil(totalCount / limit),
+          hasNext: page * limit < totalCount,
+          hasPrev: page > 1
+        },
+        criticalIssues: criticalIssues.length
       }
     })
 
-  } catch (error) {
-    console.error('Issue report stats error:', error)
+  } catch (error: any) {
+    console.error('❌ Error fetching reports:', error)
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, message: 'Failed to fetch reports' },
       { status: 500 }
     )
   }
 }
+
+// Runtime configuration
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
