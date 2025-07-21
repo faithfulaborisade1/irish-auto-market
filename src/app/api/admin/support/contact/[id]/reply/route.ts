@@ -1,9 +1,26 @@
 // src/app/api/admin/support/contact/[id]/reply/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/database'
-import { sendSupportResponse } from '@/lib/email'
 import jwt from 'jsonwebtoken'
 import { z } from 'zod'
+
+// ✅ FIXED: Dynamic import for email service to prevent build-time initialization
+async function sendSupportResponseSafely(emailData: any): Promise<{ success: boolean; emailId?: string; error?: string }> {
+  try {
+    // Check if email service is available
+    if (!process.env.RESEND_API_KEY) {
+      console.warn('⚠️ Email service not available - RESEND_API_KEY missing');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    // Dynamic import to prevent build-time issues
+    const { sendSupportResponse } = await import('@/lib/email');
+    return await sendSupportResponse(emailData);
+  } catch (error: any) {
+    console.error('❌ Email sending failed:', error.message);
+    return { success: false, error: error.message };
+  }
+}
 
 const ReplySchema = z.object({
   message: z.string().min(10, 'Reply message must be at least 10 characters'),
@@ -59,12 +76,15 @@ export async function POST(
       data: {
         status: validatedData.status || 'RESOLVED',
         assignedTo: admin.adminProfile.id,
-        respondedAt: new Date()
+        respondedAt: new Date(),
+        responded: true,
+        respondedBy: admin.adminProfile.id,
+        response: validatedData.message
       }
     })
 
-    // Send email response to user
-    const emailResult = await sendSupportResponse({
+    // ✅ FIXED: Safe email sending with error handling
+    const emailResult = await sendSupportResponseSafely({
       to: contact.email,
       name: contact.name,
       originalSubject: contact.subject,
@@ -74,26 +94,29 @@ export async function POST(
       status: validatedData.status || 'RESOLVED'
     })
 
-    // Log admin action (audit trail)
-    await prisma.adminAuditLog.create({
-      data: {
-        adminId: admin.adminProfile.id,
-        action: 'SYSTEM_MAINTENANCE', // Using existing enum value from your schema
-        resourceType: 'USER',
-        resourceId: contact.id,
-        description: `Replied to contact message from ${contact.name}`,
-        oldValues: { status: contact.status },
-        newValues: { 
-          status: validatedData.status || 'RESOLVED',
-          responseMessage: validatedData.message,
-          emailSent: emailResult.success
-        },
-        ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
-        userAgent: request.headers.get('user-agent') || undefined,
-        endpoint: `/api/admin/support/contact/${params.id}/reply`,
-        severity: 'INFO'
+    // Log admin action (audit trail) - Only if admin profile exists
+    if (admin.adminProfile) {
+      try {
+        await prisma.adminAuditLog.create({
+          data: {
+            adminId: admin.adminProfile.id,
+            action: 'CONTACT_RESPONDED', // Using more specific action
+            resourceType: 'CONTACT_MESSAGE',
+            resourceId: contact.id,
+            description: `Replied to contact message from ${contact.name}`,
+            oldValues: undefined, // Use undefined instead of object for optional JSON
+            newValues: undefined, // Use undefined instead of object for optional JSON
+            ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+            userAgent: request.headers.get('user-agent') || undefined,
+            endpoint: `/api/admin/support/contact/${params.id}/reply`,
+            severity: 'INFO'
+          }
+        })
+      } catch (auditError) {
+        console.error('⚠️ Audit logging failed:', auditError);
+        // Don't fail the entire operation if audit logging fails
       }
-    })
+    }
 
     return NextResponse.json({
       success: true,
@@ -102,13 +125,14 @@ export async function POST(
         contactId: updatedContact.id,
         status: updatedContact.status,
         emailSent: emailResult.success,
-        emailId: emailResult.emailId
+        emailId: emailResult.emailId,
+        emailError: emailResult.error
       }
     })
 
   } catch (error: any) {
     console.error('❌ Error sending reply:', error)
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { success: false, message: 'Invalid input data', errors: error.issues },
@@ -122,3 +146,7 @@ export async function POST(
     )
   }
 }
+
+// ✅ FIXED: Add dynamic runtime to prevent build-time execution
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
