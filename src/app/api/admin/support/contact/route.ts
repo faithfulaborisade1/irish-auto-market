@@ -1,209 +1,19 @@
-// src/app/api/contact/route.ts - Enhanced Contact API with Email Notifications
+// src/app/api/admin/support/contact/route.ts - Admin Contact Management with Email Response
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/database'
-import { sendSupportConfirmation, sendAdminNotification } from '@/lib/email'
-import { ContactCategory, MessagePriority, MessageStatus } from '@prisma/client'
+import { MessageStatus, AdminAction, ResourceType, LogSeverity } from '@prisma/client'
 import jwt from 'jsonwebtoken'
 import { z } from 'zod'
 
-// Validation schema using your exact Prisma enums
-const ContactSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name too long'),
-  email: z.string().email('Invalid email format'),
-  subject: z.string().min(5, 'Subject must be at least 5 characters').max(200, 'Subject too long'),
-  message: z.string().min(10, 'Message must be at least 10 characters').max(5000, 'Message too long'),
-  category: z.nativeEnum(ContactCategory)
+// ✅ NO DIRECT EMAIL IMPORTS - This fixes the build error
+
+// Validation schema for admin reply
+const AdminReplySchema = z.object({
+  contactId: z.string().cuid(),
+  responseMessage: z.string().min(10, 'Response must be at least 10 characters').max(5000, 'Response too long'),
+  status: z.nativeEnum(MessageStatus).optional()
 })
 
-// Priority assignment based on category using your actual enum values
-function getPriority(category: ContactCategory): MessagePriority {
-  switch (category) {
-    case ContactCategory.TECHNICAL_SUPPORT:
-    case ContactCategory.BILLING:
-    case ContactCategory.LEGAL:
-    case ContactCategory.COMPLAINT:
-      return MessagePriority.HIGH
-    case ContactCategory.DEALER_INQUIRY:
-    case ContactCategory.PARTNERSHIP:
-    case ContactCategory.MEDIA_INQUIRY:
-      return MessagePriority.MEDIUM
-    case ContactCategory.GENERAL:
-    case ContactCategory.SUGGESTION:
-    default:
-      return MessagePriority.LOW
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    console.log('📞 Processing contact form submission...')
-
-    // Parse and validate request body
-    const body = await request.json()
-    const validatedData = ContactSchema.parse(body)
-
-    // Get user info if authenticated (optional)
-    let userId: string | undefined
-    let user: any = null
-
-    try {
-      const token = request.cookies.get('auth-token')?.value || request.cookies.get('admin-token')?.value
-      if (token) {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
-        user = await prisma.user.findUnique({
-          where: { id: decoded.userId },
-          select: { id: true, firstName: true, lastName: true, email: true }
-        })
-        if (user) {
-          userId = user.id
-        }
-      }
-    } catch (authError) {
-      // Authentication is optional for contact form
-      console.log('No authentication or invalid token - proceeding as anonymous user')
-    }
-
-    // Get request metadata
-    const ipAddress = request.headers.get('x-forwarded-for') || 
-                     request.headers.get('x-real-ip') || 
-                     'unknown'
-    const userAgent = request.headers.get('user-agent')
-
-    // Determine priority
-    const priority = getPriority(validatedData.category)
-
-    // Create contact message in database
-    const contactMessage = await prisma.contactMessage.create({
-      data: {
-        name: validatedData.name,
-        email: validatedData.email,
-        subject: validatedData.subject,
-        message: validatedData.message,
-        category: validatedData.category,
-        priority: priority,
-        status: MessageStatus.NEW,
-        userId: userId,
-        ipAddress: ipAddress,
-        userAgent: userAgent
-      }
-    })
-
-    console.log(`✅ Contact message created: ${contactMessage.id}`)
-
-    // Send confirmation email to user
-    const confirmationResult = await sendSupportConfirmation({
-      email: validatedData.email,
-      name: validatedData.name,
-      subject: validatedData.subject,
-      category: validatedData.category,
-      id: contactMessage.id
-    })
-
-    console.log(`📧 Confirmation email result:`, confirmationResult)
-
-    // Send notification email to admin
-    const adminNotificationResult = await sendAdminNotification({
-      type: 'support_contact',
-      data: {
-        id: contactMessage.id,
-        name: validatedData.name,
-        email: validatedData.email,
-        subject: validatedData.subject,
-        category: validatedData.category,
-        priority: priority,
-        message: validatedData.message,
-        isAuthenticated: !!userId,
-        userInfo: user ? `${user.firstName} ${user.lastName}` : 'Anonymous'
-      }
-    })
-
-    console.log(`🔔 Admin notification result:`, adminNotificationResult)
-
-    // Create notification for admin users (if any admins exist)
-    try {
-      const adminProfiles = await prisma.adminProfile.findMany({
-        where: { isActive: true },
-        select: { userId: true }
-      })
-
-      if (adminProfiles.length > 0) {
-        // Create notification for all active admins
-        const notifications = adminProfiles.map(admin => ({
-          userId: admin.userId,
-          type: 'SYSTEM_UPDATE' as const, // Using existing enum value from your schema
-          title: `New ${validatedData.category.replace('_', ' ')} Contact`,
-          message: `${validatedData.name} sent: "${validatedData.subject}"`,
-          metadata: {
-            contactId: contactMessage.id,
-            priority: priority,
-            category: validatedData.category
-          }
-        }))
-
-        await prisma.notification.createMany({
-          data: notifications
-        })
-
-        console.log(`🔔 Created ${notifications.length} admin notifications`)
-      }
-    } catch (notificationError) {
-      console.warn('⚠️ Failed to create admin notifications:', notificationError)
-      // Don't fail the whole request if notifications fail
-    }
-
-    // Return success response
-    return NextResponse.json({
-      success: true,
-      message: 'Contact message sent successfully',
-      data: {
-        id: contactMessage.id,
-        referenceId: `IAM-${contactMessage.id.slice(-8).toUpperCase()}`,
-        status: contactMessage.status,
-        priority: priority,
-        emailSent: confirmationResult.success,
-        adminNotified: adminNotificationResult.success
-      }
-    })
-
-  } catch (error: any) {
-    console.error('❌ Error processing contact form:', error)
-
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Invalid form data',
-          errors: error.issues.map(err => ({
-            field: err.path.join('.'),
-            message: err.message
-          }))
-        },
-        { status: 400 }
-      )
-    }
-
-    // Handle database errors
-    if (error.code === 'P2002') {
-      return NextResponse.json(
-        { success: false, message: 'Duplicate contact submission detected' },
-        { status: 409 }
-      )
-    }
-
-    // Generic error response
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Failed to send contact message. Please try again.',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
-      },
-      { status: 500 }
-    )
-  }
-}
-
-// GET endpoint for retrieving contact messages (admin only)
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication
@@ -216,12 +26,12 @@ export async function GET(request: NextRequest) {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
-    const user = await prisma.user.findUnique({
+    const currentAdmin = await prisma.user.findUnique({
       where: { id: decoded.userId },
       include: { adminProfile: true }
     })
 
-    if (!user?.adminProfile) {
+    if (!currentAdmin?.adminProfile) {
       return NextResponse.json(
         { success: false, message: 'Admin access required' },
         { status: 403 }
@@ -284,10 +94,16 @@ export async function GET(request: NextRequest) {
       priority: contact.priority,
       status: contact.status,
       createdAt: contact.createdAt,
+      updatedAt: contact.updatedAt,
       userId: contact.userId,
       userAgent: contact.userAgent,
       ipAddress: contact.ipAddress,
+      response: contact.response,
+      respondedAt: contact.respondedAt,
+      respondedBy: contact.respondedBy,
+      assignedTo: contact.assignedTo,
       messagePreview: contact.message.substring(0, 150) + (contact.message.length > 150 ? '...' : ''),
+      referenceNumber: `IAM-${contact.id.slice(-8).toUpperCase()}`,
       timeSinceCreated: getTimeSince(contact.createdAt),
       user: contact.user
     }))
@@ -308,9 +124,207 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('❌ Error fetching contact messages:', error)
+    console.error('❌ Error fetching admin contacts:', error)
     return NextResponse.json(
-      { success: false, message: 'Failed to fetch contact messages' },
+      { success: false, message: 'Failed to fetch contacts' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    console.log('🔧 Processing admin contact reply...')
+
+    // Verify admin authentication
+    const token = request.cookies.get('admin-token')?.value || request.cookies.get('auth-token')?.value
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      )
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any
+    const currentAdmin = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      include: { adminProfile: true }
+    })
+
+    if (!currentAdmin?.adminProfile) {
+      return NextResponse.json(
+        { success: false, message: 'Admin access required' },
+        { status: 403 }
+      )
+    }
+
+    // Parse and validate request body
+    const body = await request.json()
+    const validatedData = AdminReplySchema.parse(body)
+
+    // Get the original contact message
+    const contactMessage = await prisma.contactMessage.findUnique({
+      where: { id: validatedData.contactId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      }
+    })
+
+    if (!contactMessage) {
+      return NextResponse.json(
+        { success: false, message: 'Contact message not found' },
+        { status: 404 }
+      )
+    }
+
+    // Get request metadata
+    const ipAddress = request.headers.get('x-forwarded-for') || 
+                     request.headers.get('x-real-ip') || 
+                     'unknown'
+    const userAgent = request.headers.get('user-agent')
+
+    // Update contact message with admin response
+    const updatedContact = await prisma.contactMessage.update({
+      where: { id: validatedData.contactId },
+      data: {
+        response: validatedData.responseMessage,
+        status: validatedData.status || MessageStatus.IN_PROGRESS,
+        responded: true,
+        respondedAt: new Date(),
+        respondedBy: currentAdmin.adminProfile.id,
+        assignedTo: currentAdmin.adminProfile.id
+      }
+    })
+
+    console.log(`✅ Admin response saved for contact: ${contactMessage.id}`)
+
+    // ✅ SAFE: Send email response using dynamic import
+    let emailResult: { success: boolean; error?: string; emailId?: string } = { 
+      success: false, 
+      error: 'Email service not available' 
+    }
+    
+    try {
+      if (process.env.RESEND_API_KEY) {
+        const { sendSupportResponse } = await import('@/lib/email')
+        
+        // Using your exact function signature
+        emailResult = await sendSupportResponse({
+          to: contactMessage.email,
+          name: contactMessage.name,
+          originalSubject: contactMessage.subject,
+          referenceId: `IAM-${contactMessage.id.slice(-8).toUpperCase()}`,
+          responseMessage: validatedData.responseMessage,
+          adminName: `${currentAdmin.firstName} ${currentAdmin.lastName}`,
+          status: validatedData.status || 'In Progress'
+        })
+      }
+    } catch (emailError: any) {
+      console.error('❌ Email response failed:', emailError.message)
+      emailResult = { success: false, error: emailError.message }
+    }
+
+    console.log(`📧 Email response result:`, emailResult)
+
+    // Create audit log
+    try {
+      if (currentAdmin.adminProfile) {
+        await prisma.adminAuditLog.create({
+          data: {
+            adminId: currentAdmin.adminProfile.id,
+            action: AdminAction.CONTACT_RESPONDED,
+            resourceType: ResourceType.CONTACT_MESSAGE,
+            resourceId: contactMessage.id,
+            description: `Admin responded to contact: "${contactMessage.subject}"`,
+            newValues: {
+              response: validatedData.responseMessage,
+              status: validatedData.status,
+              emailSent: emailResult.success
+            },
+            ipAddress: ipAddress,
+            userAgent: userAgent,
+            endpoint: '/api/admin/support/contact',
+            severity: LogSeverity.INFO
+          }
+        })
+      }
+    } catch (auditError) {
+      console.warn('⚠️ Audit logging failed:', auditError)
+      // Don't fail the response if audit logging fails
+    }
+
+    // Create notification for the user (if they have an account)
+    if (contactMessage.userId) {
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: contactMessage.userId,
+            type: 'SYSTEM_UPDATE',
+            title: 'Support Response Received',
+            message: `We've responded to your contact: "${contactMessage.subject}"`,
+            metadata: {
+              contactId: contactMessage.id,
+              referenceNumber: `IAM-${contactMessage.id.slice(-8).toUpperCase()}`,
+              responsePreview: validatedData.responseMessage.substring(0, 100)
+            }
+          }
+        })
+      } catch (notificationError) {
+        console.warn('⚠️ User notification failed:', notificationError)
+      }
+    }
+
+    // Return success response
+    return NextResponse.json({
+      success: true,
+      message: 'Admin response sent successfully',
+      data: {
+        contactId: contactMessage.id,
+        referenceNumber: `IAM-${contactMessage.id.slice(-8).toUpperCase()}`,
+        status: updatedContact.status,
+        emailResponse: {
+          sent: emailResult.success,
+          error: emailResult.error
+        },
+        adminInfo: {
+          respondedBy: `${currentAdmin.firstName} ${currentAdmin.lastName}`,
+          respondedAt: updatedContact.respondedAt
+        }
+      }
+    })
+
+  } catch (error: any) {
+    console.error('❌ Error processing admin reply:', error)
+
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Invalid request data',
+          errors: error.issues.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        },
+        { status: 400 }
+      )
+    }
+
+    // Generic error response
+    return NextResponse.json(
+      { 
+        success: false, 
+        message: 'Failed to send admin response. Please try again.',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     )
   }
@@ -330,3 +344,7 @@ function getTimeSince(date: Date): string {
   if (diffDays < 7) return `${diffDays}d ago`
   return date.toLocaleDateString()
 }
+
+// Runtime configuration
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
