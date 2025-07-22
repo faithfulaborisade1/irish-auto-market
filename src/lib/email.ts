@@ -1,9 +1,25 @@
-// src/lib/email.ts - Email Service with Resend
+// src/lib/email.ts - Complete Error-Free Email Service
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend with API key check
+let resend: Resend | null = null;
 
-// Email types for type safety
+try {
+  if (process.env.RESEND_API_KEY) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+} catch (error) {
+  console.warn('⚠️ Resend initialization failed:', error);
+}
+
+// Email configuration
+const EMAIL_CONFIG = {
+  from: process.env.EMAIL_FROM || 'Irish Auto Market <noreply@irishautomarket.ie>',
+  adminEmail: process.env.ADMIN_EMAIL || 'info@irishautomarket.ie',
+  supportEmail: process.env.SUPPORT_EMAIL || 'support@irishautomarket.ie'
+};
+
+// Type definitions that match your database schema
 export type EmailType = 
   | 'welcome'
   | 'admin_notification'
@@ -11,54 +27,173 @@ export type EmailType =
   | 'support_confirmation'
   | 'admin_alert';
 
-// Email configuration
-const EMAIL_CONFIG = {
-  from: process.env.EMAIL_FROM || 'Irish Auto Market <noreply@irishautomarket.ie>',
-  adminEmail: process.env.ADMIN_EMAIL || 'admin@irishautomarket.ie',
-  supportEmail: process.env.SUPPORT_EMAIL || 'support@irishautomarket.ie'
-};
+// User type from your database schema
+export type UserRole = 'USER' | 'DEALER' | 'ADMIN' | 'SUPER_ADMIN' | 'CONTENT_MOD' | 'FINANCE_ADMIN' | 'SUPPORT_ADMIN';
 
-// Base email template wrapper
-const getEmailTemplate = (content: string, title: string) => `
+// Contact category from your database schema
+export type ContactCategory = 'GENERAL' | 'TECHNICAL_SUPPORT' | 'BILLING' | 'DEALER_INQUIRY' | 'PARTNERSHIP' | 'MEDIA_INQUIRY' | 'LEGAL' | 'COMPLAINT' | 'SUGGESTION';
+
+// Modern Email Template with Irish Branding
+const getEmailTemplate = (content: string, title: string, type: 'user' | 'dealer' | 'admin' = 'user') => {
+  const colors = {
+    user: { primary: '#059669', secondary: '#ea580c' },
+    dealer: { primary: '#1e40af', secondary: '#059669' },
+    admin: { primary: '#dc2626', secondary: '#059669' }
+  };
+  
+  const color = colors[type];
+  
+  return `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
   <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #059669, #ea580c); padding: 20px; text-align: center; }
-    .header h1 { color: white; margin: 0; font-size: 24px; }
-    .content { background: #f9f9f9; padding: 30px; }
-    .footer { background: #333; color: white; padding: 20px; text-align: center; font-size: 12px; }
-    .button { display: inline-block; background: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 10px 0; }
-    .button:hover { background: #047857; }
-    .alert { background: #fef2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 5px; margin: 15px 0; }
-    .success { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6; 
+      color: #1f2937; 
+      background: #f9fafb;
+      margin: 0; 
+      padding: 20px; 
+    }
+    .container { 
+      max-width: 600px; 
+      margin: 0 auto; 
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .header { 
+      background: linear-gradient(135deg, ${color.primary} 0%, ${color.secondary} 100%);
+      padding: 30px;
+      text-align: center;
+    }
+    .header h1 { 
+      color: white; 
+      margin: 0; 
+      font-size: 24px; 
+      font-weight: 700;
+    }
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: white;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .content { 
+      padding: 30px;
+    }
+    .content h2 {
+      color: #111827;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .content p {
+      color: #4b5563;
+      font-size: 16px;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .success-card {
+      background: #ecfdf5;
+      border: 1px solid #bbf7d0;
+      border-left: 4px solid #10b981;
+    }
+    .info-card {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-left: 4px solid #3b82f6;
+    }
+    .warning-card {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      border-left: 4px solid #f59e0b;
+    }
+    .button {
+      display: inline-block;
+      background: ${color.primary};
+      color: white !important;
+      padding: 12px 24px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      margin: 16px 0;
+    }
+    .button-container {
+      text-align: center;
+      margin: 24px 0;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    .footer { 
+      background: #1f2937;
+      color: #d1d5db;
+      padding: 24px;
+      text-align: center;
+      font-size: 14px;
+    }
+    .footer a {
+      color: #60a5fa;
+      text-decoration: none;
+    }
+    @media (max-width: 600px) {
+      .container { margin: 0; border-radius: 0; }
+      .header, .content { padding: 20px; }
+      .header h1 { font-size: 20px; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>🚗 Irish Auto Market</h1>
+      <div class="logo">
+        🚗 Irish Auto Market
+      </div>
+      <h1>${title}</h1>
+      <div style="color: rgba(255,255,255,0.9); font-size: 14px;">Ireland's Premier Car Marketplace</div>
     </div>
+    
     <div class="content">
       ${content}
     </div>
+    
     <div class="footer">
       <p>© ${new Date().getFullYear()} Irish Auto Market. All rights reserved.</p>
-      <p>This email was sent from an automated system. Please do not reply directly to this email.</p>
-      <p><a href="https://irishautomarket.ie" style="color: #ccc;">Visit Our Website</a> | <a href="https://irishautomarket.ie/contact" style="color: #ccc;">Contact Support</a></p>
+      <p>
+        <a href="https://irishautomarket.ie">Visit Website</a> | 
+        <a href="https://irishautomarket.ie/contact">Contact Support</a>
+      </p>
+      <p style="margin-top: 16px; font-size: 12px; color: #9ca3af;">
+        Irish Auto Market, Dublin, Ireland<br>
+        <a href="mailto:support@irishautomarket.ie">support@irishautomarket.ie</a>
+      </p>
     </div>
   </div>
 </body>
 </html>
 `;
+};
 
 // ============================================================================
-// USER EMAILS
+// WELCOME EMAIL (Matches your database User schema)
 // ============================================================================
 
 export async function sendWelcomeEmail(user: {
@@ -68,63 +203,111 @@ export async function sendWelcomeEmail(user: {
   role: string;
 }) {
   try {
+    if (!resend) {
+      console.warn('⚠️ Email service not configured - Resend API key missing');
+      return { success: false, error: 'Email service not configured' };
+    }
+
     const isDealer = user.role === 'DEALER';
     const name = `${user.firstName} ${user.lastName}`.trim();
     
-    const content = `
-      <h2>Welcome to Irish Auto Market, ${user.firstName}! 🎉</h2>
-      
-      <p>Thank you for joining Ireland's leading car marketplace. Your account has been successfully created.</p>
-      
-      ${isDealer ? `
-        <div class="success">
-          <h3>🏢 Dealer Account Created</h3>
-          <p>As a registered dealer, you now have access to:</p>
-          <ul>
-            <li>✅ Professional dealer profile</li>
-            <li>✅ Unlimited car listings</li>
-            <li>✅ Advanced analytics and reporting</li>
-            <li>✅ Direct customer messaging</li>
-            <li>✅ Featured listing opportunities</li>
-          </ul>
-          <p><strong>Next Step:</strong> Complete your business verification to unlock premium features.</p>
+    let content = '';
+    let subject = '';
+    
+    if (isDealer) {
+      subject = `Welcome ${user.firstName}! 🏢 Complete Your Dealer Setup`;
+      content = `
+        <h2>Welcome to Professional Car Sales! 🏢</h2>
+        
+        <p>Hi ${user.firstName}!</p>
+        
+        <p>Thank you for registering as a dealer with Irish Auto Market. You now have access to Ireland's most advanced dealer platform.</p>
+        
+        <div class="warning-card">
+          <h3>⚠️ Business Verification Required</h3>
+          <p><strong>Important:</strong> Complete your business verification within 48 hours to unlock all dealer features and start listing vehicles.</p>
         </div>
-      ` : `
-        <div class="success">
-          <h3>🚗 Start Your Car Search</h3>
-          <p>You now have access to:</p>
+        
+        <div class="success-card">
+          <h3>🚀 Professional Dealer Tools</h3>
           <ul>
-            <li>✅ Advanced car search with filters</li>
-            <li>✅ Save favorite cars and searches</li>
-            <li>✅ Direct messaging with sellers</li>
-            <li>✅ Price alerts and notifications</li>
+            <li><strong>Unlimited Listings:</strong> List as many vehicles as you want</li>
+            <li><strong>Professional Profile:</strong> Showcase your dealership brand</li>
+            <li><strong>Advanced Analytics:</strong> Track performance and ROI</li>
+            <li><strong>Featured Listings:</strong> Promote your best inventory</li>
+            <li><strong>Lead Management:</strong> CRM tools for customer follow-up</li>
           </ul>
         </div>
-      `}
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="https://irishautomarket.ie/login" class="button">
-          ${isDealer ? 'Access Dealer Dashboard' : 'Start Browsing Cars'}
-        </a>
+        
+        <div class="info-card">
+          <h3>📈 Next Steps</h3>
+          <ul>
+            <li>✅ Complete your dealer profile</li>
+            <li>📸 Upload your business logo</li>
+            <li>📄 Submit verification documents</li>
+            <li>🚗 Start listing your inventory</li>
+          </ul>
+        </div>
+        
+        <div class="button-container">
+          <a href="https://irishautomarket.ie/profile/edit" class="button">Complete Dealer Setup</a>
+        </div>
+      `;
+    } else {
+      subject = `Welcome ${user.firstName}! 🚗 Find Your Perfect Car`;
+      content = `
+        <h2>Ready to Find Your Perfect Car? 🎉</h2>
+        
+        <p>Hi ${user.firstName}!</p>
+        
+        <p>Welcome to Ireland's most trusted car marketplace. We're excited to help you find the perfect vehicle or sell your current one.</p>
+        
+        <div class="success-card">
+          <h3>🚗 Your Car Platform</h3>
+          <ul>
+            <li><strong>Advanced Search:</strong> Find cars by make, model, price, and location</li>
+            <li><strong>Save Favorites:</strong> Bookmark cars and get price alerts</li>
+            <li><strong>Direct Messaging:</strong> Chat directly with sellers</li>
+            <li><strong>Sell Your Car:</strong> List your vehicle for free</li>
+            <li><strong>Verified Dealers:</strong> Buy from trusted professionals</li>
+          </ul>
+        </div>
+        
+        <div class="info-card">
+          <h3>💡 Getting Started</h3>
+          <ul>
+            <li>🔍 Use our advanced filters to find your ideal car</li>
+            <li>📱 Message sellers with specific questions</li>
+            <li>📍 Start with cars in your local area</li>
+            <li>🏆 Look for our "Verified Dealer" badges</li>
+          </ul>
+        </div>
+        
+        <div class="button-container">
+          <a href="https://irishautomarket.ie/cars" class="button">Start Browsing Cars</a>
+        </div>
+      `;
+    }
+    
+    content += `
+      <div class="card">
+        <h3>📞 Need Help?</h3>
+        <p>Our Irish support team is here to help:</p>
+        <p>
+          📧 <a href="mailto:support@irishautomarket.ie">support@irishautomarket.ie</a><br>
+          ❓ <a href="https://irishautomarket.ie/help">Help Center</a>
+        </p>
+        <p style="text-align: center; margin-top: 16px;">
+          <strong>Welcome to the Irish Auto Market family!</strong> 🇮🇪🚗
+        </p>
       </div>
-      
-      <h3>📞 Need Help?</h3>
-      <p>Our support team is here to help:</p>
-      <ul>
-        <li>📧 Email: <a href="mailto:support@irishautomarket.ie">support@irishautomarket.ie</a></li>
-        <li>📱 Visit: <a href="https://irishautomarket.ie/contact">Contact Support</a></li>
-        <li>❓ FAQ: <a href="https://irishautomarket.ie/help">Help Center</a></li>
-      </ul>
-      
-      <p>Happy car hunting! 🚗</p>
-      <p><strong>The Irish Auto Market Team</strong></p>
     `;
 
     const result = await resend.emails.send({
       from: EMAIL_CONFIG.from,
       to: user.email,
-      subject: `Welcome to Irish Auto Market, ${user.firstName}! 🚗`,
-      html: getEmailTemplate(content, 'Welcome to Irish Auto Market')
+      subject: subject,
+      html: getEmailTemplate(content, subject, isDealer ? 'dealer' : 'user')
     });
 
     console.log(`✅ Welcome email sent to ${user.email}:`, result.data?.id);
@@ -136,6 +319,10 @@ export async function sendWelcomeEmail(user: {
   }
 }
 
+// ============================================================================
+// SUPPORT CONFIRMATION EMAIL
+// ============================================================================
+
 export async function sendSupportConfirmation(contact: {
   email: string;
   name: string;
@@ -144,42 +331,56 @@ export async function sendSupportConfirmation(contact: {
   id: string;
 }) {
   try {
+    if (!resend) {
+      console.warn('⚠️ Email service not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
     const content = `
       <h2>Support Request Received ✅</h2>
       
       <p>Hi ${contact.name},</p>
       
-      <p>Thank you for contacting Irish Auto Market support. We've received your message and will respond as soon as possible.</p>
+      <p>Thank you for contacting Irish Auto Market support. We've received your message and our team will respond as soon as possible.</p>
       
-      <div class="success">
+      <div class="success-card">
         <h3>📝 Your Request Details</h3>
-        <p><strong>Reference ID:</strong> IAM-${contact.id.slice(-8).toUpperCase()}</p>
+        <p><strong>Reference ID:</strong> <code>IAM-${contact.id.slice(-8).toUpperCase()}</code></p>
         <p><strong>Subject:</strong> ${contact.subject}</p>
         <p><strong>Category:</strong> ${contact.category.replace('_', ' ')}</p>
-        <p><strong>Submitted:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
+        <p><strong>Submitted:</strong> ${new Date().toLocaleDateString('en-IE', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        })}</p>
       </div>
       
-      <h3>⏱️ Response Times</h3>
-      <ul>
-        <li><strong>General Inquiries:</strong> Within 24 hours</li>
-        <li><strong>Technical Support:</strong> Within 4-8 hours</li>
-        <li><strong>Urgent Issues:</strong> Within 2 hours</li>
-      </ul>
+      <div class="info-card">
+        <h3>⏱️ Expected Response Times</h3>
+        <ul>
+          <li><strong>Urgent Issues:</strong> Within 2 hours</li>
+          <li><strong>Technical Support:</strong> 4-8 hours</li>
+          <li><strong>General Inquiries:</strong> Within 24 hours</li>
+        </ul>
+        <p>If your issue is urgent, please mention it in your follow-up message.</p>
+      </div>
       
-      <p>If your issue is urgent, please call us directly or visit our help center for immediate assistance.</p>
-      
-      <div style="text-align: center; margin: 30px 0;">
+      <div class="button-container">
         <a href="https://irishautomarket.ie/help" class="button">Visit Help Center</a>
       </div>
       
-      <p>Best regards,<br><strong>Irish Auto Market Support Team</strong></p>
+      <p style="text-align: center; margin-top: 20px;">
+        Best regards,<br>
+        <strong>Irish Auto Market Support Team</strong> 🇮🇪
+      </p>
     `;
 
     const result = await resend.emails.send({
       from: EMAIL_CONFIG.supportEmail,
       to: contact.email,
-      subject: `Support Request Received - ${contact.subject} [#IAM-${contact.id.slice(-8).toUpperCase()}]`,
-      html: getEmailTemplate(content, 'Support Request Confirmation')
+      subject: `Support Request Received - ${contact.category.replace('_', ' ')} [IAM-${contact.id.slice(-8).toUpperCase()}]`,
+      html: getEmailTemplate(content, 'Support Request Received', 'user')
     });
 
     console.log(`✅ Support confirmation sent to ${contact.email}:`, result.data?.id);
@@ -192,121 +393,175 @@ export async function sendSupportConfirmation(contact: {
 }
 
 // ============================================================================
-// ADMIN EMAILS
+// ADMIN NOTIFICATION EMAIL
 // ============================================================================
 
 export async function sendAdminNotification(notification: {
-  type: 'new_user' | 'new_dealer' | 'support_contact' | 'urgent_report' | 'critical_issue';
+  type: 'new_user' | 'new_dealer' | 'support_contact' | 'urgent_report' | 'urgent_feedback';
   data: any;
 }) {
   try {
-    let subject = '';
+    if (!resend) {
+      console.warn('⚠️ Email service not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
     let content = '';
+    let subject = '';
 
     switch (notification.type) {
       case 'new_user':
-        subject = `🆕 New User Registration - ${notification.data.name}`;
+        const user = notification.data;
+        subject = `🆕 New User Registration - ${user.firstName} ${user.lastName}`;
         content = `
-          <h2>New User Registration 👤</h2>
+          <h2>New User Registration 👋</h2>
           
-          <div class="success">
-            <h3>User Details</h3>
-            <p><strong>Name:</strong> ${notification.data.firstName} ${notification.data.lastName}</p>
-            <p><strong>Email:</strong> ${notification.data.email}</p>
-            <p><strong>Role:</strong> ${notification.data.role}</p>
+          <p>A new user has registered on Irish Auto Market.</p>
+          
+          <div class="info-card">
+            <h3>📋 User Details</h3>
+            <p><strong>Name:</strong> ${user.firstName} ${user.lastName}</p>
+            <p><strong>Email:</strong> ${user.email}</p>
+            <p><strong>Role:</strong> ${user.role}</p>
+            <p><strong>Phone:</strong> ${user.phone || 'Not provided'}</p>
             <p><strong>Registered:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
           </div>
           
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="https://irishautomarket.ie/admin/users" class="button">View in Admin Panel</a>
+          <div class="button-container">
+            <a href="https://irishautomarket.ie/admin/users" class="button">View in Admin Dashboard</a>
           </div>
         `;
         break;
 
       case 'new_dealer':
-        subject = `🏢 New Dealer Registration - ${notification.data.businessName}`;
+        const dealer = notification.data;
+        subject = `🏢 New Dealer Registration - ${dealer.firstName} ${dealer.lastName}`;
         content = `
           <h2>New Dealer Registration 🏢</h2>
           
-          <div class="alert">
-            <h3>⚠️ Verification Required</h3>
-            <p>A new dealer has registered and requires business verification.</p>
-          </div>
+          <p><strong>⚠️ Action Required:</strong> A new dealer has registered and requires business verification.</p>
           
-          <div class="success">
-            <h3>Dealer Details</h3>
-            <p><strong>Business Name:</strong> ${notification.data.businessName}</p>
-            <p><strong>Contact:</strong> ${notification.data.firstName} ${notification.data.lastName}</p>
-            <p><strong>Email:</strong> ${notification.data.email}</p>
-            <p><strong>Phone:</strong> ${notification.data.phone || 'Not provided'}</p>
+          <div class="warning-card">
+            <h3>🏢 Dealer Details</h3>
+            <p><strong>Name:</strong> ${dealer.firstName} ${dealer.lastName}</p>
+            <p><strong>Email:</strong> ${dealer.email}</p>
+            <p><strong>Phone:</strong> ${dealer.phone || 'Not provided'}</p>
             <p><strong>Registered:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
           </div>
           
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="https://irishautomarket.ie/admin/users/dealers" class="button">Review Dealer</a>
+          <div class="info-card">
+            <h3>📝 Next Steps</h3>
+            <ul>
+              <li>Review business registration details</li>
+              <li>Verify business legitimacy</li>
+              <li>Approve or request additional information</li>
+              <li>Enable dealer features upon approval</li>
+            </ul>
+          </div>
+          
+          <div class="button-container">
+            <a href="https://irishautomarket.ie/admin/dealers" class="button">Review Dealer Application</a>
           </div>
         `;
         break;
 
       case 'support_contact':
-        subject = `📞 New Support Contact - ${notification.data.category}`;
+        const contact = notification.data;
+        subject = `📞 New Support Contact - ${contact.category.replace('_', ' ')} [IAM-${contact.id.slice(-8).toUpperCase()}]`;
         content = `
-          <h2>New Support Request 📞</h2>
+          <h2>New Support Contact 📞</h2>
           
-          <div class="success">
-            <h3>Contact Details</h3>
-            <p><strong>From:</strong> ${notification.data.name} (${notification.data.email})</p>
-            <p><strong>Subject:</strong> ${notification.data.subject}</p>
-            <p><strong>Category:</strong> ${notification.data.category}</p>
-            <p><strong>Priority:</strong> ${notification.data.priority}</p>
-            <p><strong>Reference:</strong> IAM-${notification.data.id.slice(-8).toUpperCase()}</p>
+          <p>A ${contact.category === 'COMPLAINT' || contact.category === 'LEGAL' ? 'high priority' : ''} support request has been submitted.</p>
+          
+          <div class="${contact.category === 'COMPLAINT' || contact.category === 'LEGAL' ? 'warning-card' : 'info-card'}">
+            <h3>📋 Contact Details</h3>
+            <p><strong>Reference:</strong> IAM-${contact.id.slice(-8).toUpperCase()}</p>
+            <p><strong>From:</strong> ${contact.name} (${contact.email})</p>
+            <p><strong>Category:</strong> ${contact.category.replace('_', ' ')}</p>
+            <p><strong>Priority:</strong> ${contact.priority}</p>
+            <p><strong>Subject:</strong> ${contact.subject}</p>
+            <p><strong>Phone:</strong> ${contact.phone || 'Not provided'}</p>
+            
+            <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #059669;">
+              <h4>Message:</h4>
+              <p>${contact.message}</p>
+            </div>
           </div>
           
-          <div style="background: #f3f4f6; padding: 15px; border-radius: 5px; margin: 15px 0;">
-            <h4>Message:</h4>
-            <p style="margin: 0;">${notification.data.message.substring(0, 200)}${notification.data.message.length > 200 ? '...' : ''}</p>
-          </div>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="https://irishautomarket.ie/admin/support/contact" class="button">Respond to Contact</a>
+          <div class="button-container">
+            <a href="https://irishautomarket.ie/admin/support/contact" class="button">View & Respond</a>
           </div>
         `;
         break;
 
       case 'urgent_report':
-        subject = `🚨 URGENT: Critical Issue Report - ${notification.data.type}`;
+        const report = notification.data;
+        subject = `🚨 URGENT: ${report.type.replace('_', ' ')} Report [IAM-${report.id.slice(-8).toUpperCase()}]`;
         content = `
-          <h2>🚨 Critical Issue Report</h2>
+          <h2>🚨 Urgent Issue Report</h2>
           
-          <div class="alert">
-            <h3>⚠️ IMMEDIATE ACTION REQUIRED</h3>
-            <p>A critical issue has been reported that requires immediate attention.</p>
+          <p><strong style="color: #ef4444;">IMMEDIATE ACTION REQUIRED:</strong> A critical issue has been reported.</p>
+          
+          <div class="warning-card">
+            <h3>⚠️ Report Details</h3>
+            <p><strong>Reference:</strong> IAM-${report.id.slice(-8).toUpperCase()}</p>
+            <p><strong>Type:</strong> ${report.type.replace('_', ' ')}</p>
+            <p><strong>Severity:</strong> ${report.severity}</p>
+            <p><strong>Title:</strong> ${report.title}</p>
+            <p><strong>Reporter:</strong> ${report.reporterName || 'Anonymous'}</p>
+            
+            <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #ef4444;">
+              <h4>Description:</h4>
+              <p>${report.description}</p>
+            </div>
           </div>
           
-          <div class="success">
-            <h3>Report Details</h3>
-            <p><strong>Type:</strong> ${notification.data.type}</p>
-            <p><strong>Severity:</strong> ${notification.data.severity}</p>
-            <p><strong>Title:</strong> ${notification.data.title}</p>
-            <p><strong>Reporter:</strong> ${notification.data.reporterName || 'Anonymous'}</p>
-            <p><strong>Reference:</strong> IAM-${notification.data.id.slice(-8).toUpperCase()}</p>
+          <div class="button-container">
+            <a href="https://irishautomarket.ie/admin/reports" class="button">Investigate Now</a>
+          </div>
+        `;
+        break;
+
+      case 'urgent_feedback':
+        const feedback = notification.data;
+        subject = `📝 Urgent Feedback: ${feedback.type.replace('_', ' ')} ${feedback.rating ? `(${feedback.rating}/5 stars)` : ''}`;
+        content = `
+          <h2>📝 Urgent Feedback Alert</h2>
+          
+          <p>${feedback.rating && feedback.rating <= 2 ? 'Low rating alert:' : ''} ${feedback.type === 'BUG_REPORT' ? 'Bug report:' : ''} Important feedback requiring attention.</p>
+          
+          <div class="${feedback.rating && feedback.rating <= 2 ? 'warning-card' : 'info-card'}">
+            <h3>📋 Feedback Details</h3>
+            <p><strong>Type:</strong> ${feedback.type.replace('_', ' ')}</p>
+            <p><strong>Rating:</strong> ${feedback.rating ? `${feedback.rating}/5 stars` : 'Not rated'}</p>
+            <p><strong>From:</strong> ${feedback.name || 'Anonymous'}</p>
+            <p><strong>Subject:</strong> ${feedback.subject || 'No subject'}</p>
+            
+            <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #059669;">
+              <h4>Message:</h4>
+              <p>${feedback.message}</p>
+            </div>
           </div>
           
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="https://irishautomarket.ie/admin/support/reports" class="button" style="background: #dc2626;">Handle Immediately</a>
+          <div class="button-container">
+            <a href="https://irishautomarket.ie/admin/feedback" class="button">Review Feedback</a>
           </div>
         `;
         break;
 
       default:
-        throw new Error(`Unknown notification type: ${notification.type}`);
+        subject = '📬 Irish Auto Market Notification';
+        content = `
+          <h2>System Notification 📬</h2>
+          <p>A new notification has been generated.</p>
+        `;
     }
 
     const result = await resend.emails.send({
       from: EMAIL_CONFIG.from,
       to: EMAIL_CONFIG.adminEmail,
       subject: subject,
-      html: getEmailTemplate(content, subject)
+      html: getEmailTemplate(content, subject, 'admin')
     });
 
     console.log(`✅ Admin notification sent (${notification.type}):`, result.data?.id);
@@ -318,51 +573,78 @@ export async function sendAdminNotification(notification: {
   }
 }
 
+// ============================================================================
+// SUPPORT RESPONSE EMAIL (Admin Reply to User)
+// ============================================================================
+
 export async function sendSupportResponse(response: {
   to: string;
   name: string;
-  originalSubject: string;
+  subject: string;
+  message: string;
   referenceId: string;
-  responseMessage: string;
   adminName: string;
-  status: string;
+  originalMessage?: string;
 }) {
   try {
+    if (!resend) {
+      console.warn('⚠️ Email service not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
     const content = `
-      <h2>Support Response 📧</h2>
+      <h2>Support Response from Irish Auto Market 📧</h2>
       
       <p>Hi ${response.name},</p>
       
-      <p>We've reviewed your support request and have an update for you.</p>
+      <p>Thank you for contacting Irish Auto Market support. We've reviewed your inquiry and here's our response:</p>
       
-      <div class="success">
+      <div class="success-card">
         <h3>📝 Reference Details</h3>
-        <p><strong>Reference ID:</strong> ${response.referenceId}</p>
-        <p><strong>Original Subject:</strong> ${response.originalSubject}</p>
-        <p><strong>Status:</strong> ${response.status}</p>
-        <p><strong>Responded by:</strong> ${response.adminName}</p>
+        <p><strong>Reference ID:</strong> <code>${response.referenceId}</code></p>
+        <p><strong>Subject:</strong> ${response.subject}</p>
+        <p><strong>Response Date:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
       </div>
       
-      <div style="background: #f3f4f6; padding: 20px; border-radius: 5px; margin: 20px 0;">
-        <h4>Response:</h4>
-        <p style="margin: 0; white-space: pre-wrap;">${response.responseMessage}</p>
+      <div style="background: #ffffff; padding: 20px; border-radius: 8px; border-left: 4px solid #059669; margin: 20px 0;">
+        <h3 style="margin: 0 0 12px 0; color: #059669;">💬 Our Response:</h3>
+        <div style="white-space: pre-wrap; line-height: 1.6;">${response.message}</div>
       </div>
       
-      <h3>Need Further Assistance?</h3>
-      <p>If you have additional questions about this issue, simply reply to this email with the reference ID included.</p>
+      ${response.originalMessage ? `
+      <div class="info-card">
+        <h4>📄 Your Original Message:</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 6px; color: #6b7280; font-style: italic;">
+          "${response.originalMessage}"
+        </div>
+      </div>
+      ` : ''}
       
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="https://irishautomarket.ie/contact" class="button">Contact Support Again</a>
+      <div class="card">
+        <h3>❓ Need Additional Help?</h3>
+        <p>If you have follow-up questions, simply reply to this email with your reference ID (<strong>${response.referenceId}</strong>) for faster service.</p>
+        <p>
+          📧 <a href="mailto:support@irishautomarket.ie">support@irishautomarket.ie</a><br>
+          ❓ <a href="https://irishautomarket.ie/help">Help Center</a>
+        </p>
       </div>
       
-      <p>Best regards,<br><strong>${response.adminName}<br>Irish Auto Market Support Team</strong></p>
+      <div class="button-container">
+        <a href="https://irishautomarket.ie" class="button">Return to Irish Auto Market</a>
+      </div>
+      
+      <p style="text-align: center; margin-top: 20px;">
+        Best regards,<br>
+        <strong>${response.adminName}</strong><br>
+        Irish Auto Market Support Team 🇮🇪
+      </p>
     `;
 
     const result = await resend.emails.send({
       from: EMAIL_CONFIG.supportEmail,
       to: response.to,
-      subject: `Re: ${response.originalSubject} [#${response.referenceId}]`,
-      html: getEmailTemplate(content, 'Support Response')
+      subject: `Re: ${response.subject} [${response.referenceId}]`,
+      html: getEmailTemplate(content, 'Support Response', 'user')
     });
 
     console.log(`✅ Support response sent to ${response.to}:`, result.data?.id);
@@ -375,50 +657,56 @@ export async function sendSupportResponse(response: {
 }
 
 // ============================================================================
-// UTILITY FUNCTIONS
+// EMAIL SERVICE TEST FUNCTION
 // ============================================================================
 
-export async function testEmailConnection() {
+export async function testEmailService() {
   try {
-    // Send a test email to verify Resend is working
-    const result = await resend.emails.send({
-      from: EMAIL_CONFIG.from,
-      to: EMAIL_CONFIG.adminEmail,
-      subject: '🧪 Email Service Test - Irish Auto Market',
-      html: getEmailTemplate(`
-        <h2>Email Service Test ✅</h2>
-        <p>This is a test email to verify that the Irish Auto Market email service is working correctly.</p>
-        <div class="success">
-          <p><strong>Configuration:</strong></p>
-          <ul>
-            <li>From: ${EMAIL_CONFIG.from}</li>
-            <li>Admin Email: ${EMAIL_CONFIG.adminEmail}</li>
-            <li>Support Email: ${EMAIL_CONFIG.supportEmail}</li>
-            <li>Timestamp: ${new Date().toISOString()}</li>
-          </ul>
-        </div>
-        <p>If you received this email, the service is working correctly! 🎉</p>
-      `, 'Email Service Test')
-    });
+    if (!resend) {
+      return { success: false, error: 'Email service not configured - missing RESEND_API_KEY' };
+    }
 
-    console.log('✅ Test email sent successfully:', result.data?.id);
-    return { success: true, emailId: result.data?.id };
+    console.log('🧪 Testing email service...');
+    
+    const testUser = {
+      email: EMAIL_CONFIG.adminEmail,
+      firstName: 'Test',
+      lastName: 'User',
+      role: 'USER'
+    };
+
+    const result = await sendWelcomeEmail(testUser);
+    
+    if (result.success) {
+      console.log('✅ Email service test successful!');
+      return { success: true, message: 'Email service is working correctly' };
+    } else {
+      console.error('❌ Email service test failed:', result.error);
+      return { success: false, error: result.error };
+    }
 
   } catch (error: any) {
-    console.error('❌ Email service test failed:', error);
+    console.error('❌ Email service test error:', error);
     return { success: false, error: error.message };
   }
 }
 
-// Environment variable validation
-export function validateEmailConfig() {
-  const required = ['RESEND_API_KEY'];
-  const missing = required.filter(key => !process.env[key]);
-  
-  if (missing.length > 0) {
-    throw new Error(`Missing required email environment variables: ${missing.join(', ')}`);
-  }
-  
-  console.log('✅ Email configuration validated');
-  return true;
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+export function getEmailConfig() {
+  return {
+    ...EMAIL_CONFIG,
+    hasResendKey: !!process.env.RESEND_API_KEY,
+    environment: process.env.NODE_ENV || 'development'
+  };
 }
+
+export function validateEmailAddress(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+// Export email configuration for use in other modules
+export { EMAIL_CONFIG };

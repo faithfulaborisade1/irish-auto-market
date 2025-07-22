@@ -1,11 +1,11 @@
-// src/app/api/auth/register/route.ts - FIXED - Matches Your Email Service Exactly
+// src/app/api/auth/register/route.ts - FIXED - Matching email service signature
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/database'
 import bcrypt from 'bcryptjs'
 import { UserRole, UserStatus, NotificationType } from '@prisma/client'
 import { z } from 'zod'
 
-// Validation schema
+// ✅ FIXED: More flexible userType validation that handles multiple formats
 const RegisterSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters').max(50, 'First name too long'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters').max(50, 'Last name too long'),
@@ -13,7 +13,17 @@ const RegisterSchema = z.object({
   phone: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
-  userType: z.enum(['user', 'dealer']),
+  // ✅ FIXED: Match your frontend's actual userType values
+  userType: z.enum(['buyer', 'private_seller', 'dealer']).transform((val) => {
+    // Convert frontend userType to database-compatible format
+    if (val === 'buyer' || val === 'private_seller') {
+      return 'user'  // Both buyer and private_seller map to USER role
+    }
+    if (val === 'dealer') {
+      return 'dealer'  // Dealer maps to DEALER role
+    }
+    throw new Error(`Invalid user type: ${val}`)
+  }),
   businessName: z.string().optional(),
   agreeToTerms: z.boolean(),
   marketingConsent: z.boolean().optional()
@@ -26,9 +36,43 @@ export async function POST(request: NextRequest) {
   try {
     console.log('👤 Processing user registration...')
 
-    // Parse and validate request body
+    // Parse request body first and log the userType
     const body = await request.json()
-    const validatedData = RegisterSchema.parse(body)
+    console.log('📝 Registration data received:', { 
+      email: body.email, 
+      userType: body.userType,  // This will be "buyer", "private_seller", or "dealer"
+      businessName: body.businessName 
+    })
+
+    // Validate with proper error handling
+    let validatedData
+    try {
+      validatedData = RegisterSchema.parse(body)  // Use original body
+      console.log('✅ Validation successful, userType:', validatedData.userType)
+    } catch (validationError: any) {
+      console.error('❌ Validation error details:', {
+        error: validationError,
+        receivedUserType: body.userType,
+        issues: validationError.issues
+      })
+      
+      // Handle validation errors
+      if (validationError instanceof z.ZodError) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: 'Invalid registration data',
+            errors: validationError.issues.map(err => ({
+              field: err.path.join('.'),
+              message: err.message,
+              receivedValue: err.path.includes('userType') ? body.userType : undefined
+            }))
+          },
+          { status: 400 }
+        )
+      }
+      throw validationError
+    }
 
     // Additional business validation
     if (validatedData.userType === 'dealer' && !validatedData.businessName) {
@@ -87,7 +131,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ User created: ${newUser.email} (${newUser.role})`)
 
-    // ✅ FIXED: Send welcome email using your exact function signature
+    // ✅ FIXED: Send welcome email using EXACT function signature from email service
     let welcomeEmailResult: { success: boolean; error?: string; emailId?: string } = { 
       success: false, 
       error: 'Email service not available' 
@@ -97,12 +141,13 @@ export async function POST(request: NextRequest) {
       if (process.env.RESEND_API_KEY) {
         const { sendWelcomeEmail } = await import('@/lib/email')
         
-        // Using your exact function signature: sendWelcomeEmail(user: { email, firstName, lastName, role })
+        // ✅ FIXED: Using exact function signature: { email, firstName, lastName, role }
+        // The email service will determine user type based on role automatically
         welcomeEmailResult = await sendWelcomeEmail({
           email: newUser.email,
           firstName: newUser.firstName,
           lastName: newUser.lastName,
-          role: newUser.role
+          role: newUser.role  // This is enough - email service handles dealer detection
         })
       }
     } catch (emailError: any) {
@@ -112,7 +157,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`📧 Welcome email result:`, welcomeEmailResult)
 
-    // ✅ FIXED: Send admin notification using your exact function signature  
+    // ✅ Send admin notification using your exact function signature  
     let adminResult: { success: boolean; error?: string; emailId?: string } = { 
       success: false, 
       error: 'Admin notification not needed for regular users' 
@@ -220,21 +265,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ Registration error:', error)
-
-    // Handle validation errors
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Invalid registration data',
-          errors: error.issues.map(err => ({
-            field: err.path.join('.'),
-            message: err.message
-          }))
-        },
-        { status: 400 }
-      )
-    }
 
     // Handle database errors
     if (error.code === 'P2002') {

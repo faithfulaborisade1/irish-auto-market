@@ -22,7 +22,7 @@ interface Car {
   bodyType: string
   color: string
   description: string
-  location: { city: string; county: string }
+  location: { city: string; county: string; area?: string; town?: string } // 🔥 ENHANCED: Added area and town
   featured: boolean
   views: number
   inquiries: number
@@ -102,7 +102,7 @@ function CarsContent() {
   const router = useRouter()
   const [cars, setCars] = useState<Car[]>([])
   const [loading, setLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list') // 🔥 FIXED: Changed default to 'list'
   const [filtersOpen, setFiltersOpen] = useState(true)
   const [sortBy, setSortBy] = useState('newest')
   
@@ -366,20 +366,24 @@ function CarsContent() {
             </div>
           </div>
 
-          {/* Cars Grid/List - ✅ SIMPLIFIED USING CarCard COMPONENT */}
+          {/* Cars Grid/List - ✅ FIXED: Professional 2-column grid + optimized list */}
           {loading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
               <p className="text-gray-600 mt-4">Loading cars...</p>
             </div>
           ) : cars.length > 0 ? (
-            <div className={`gap-6 ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'space-y-6'}`}>
+            <div className={`${
+              viewMode === 'grid' 
+                ? 'grid grid-cols-1 lg:grid-cols-2 gap-10'  // 🔥 INCREASED: Bigger gap for more spacious layout
+                : 'space-y-4'
+            }`}>
               {cars.map((car) => (
                 <CarCard
                   key={car.id}
                   car={car}
                   variant={viewMode}
-                  className="w-full"
+                  className={viewMode === 'grid' ? 'h-full' : 'w-full'} // 🔥 NEW: Full height for grid cards
                 />
               ))}
             </div>

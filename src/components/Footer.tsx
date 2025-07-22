@@ -197,8 +197,8 @@ export default function Footer() {
                 <MapPin className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-gray-300">
                   <p>Irish Auto Market Ltd.</p>
-                  <p>123 O'Connell Street</p>
-                  <p>Dublin 1, D01 F5P2</p>
+                  <p>26 Upper Pembroke Street</p>
+                  <p>Dublin 2, D02X361</p>
                   <p>Ireland</p>
                 </div>
               </div>
@@ -207,7 +207,7 @@ export default function Footer() {
                 <Phone className="w-5 h-5 text-orange-500 flex-shrink-0" />
                 <div className="text-sm text-gray-300">
                   <a href="tel:+35318001234" className="hover:text-white transition-colors">
-                    +353 1 800 1234
+                    +353 871708603
                   </a>
                 </div>
               </div>

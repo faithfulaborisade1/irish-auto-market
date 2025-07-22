@@ -1,4 +1,4 @@
-// 🚀 OPTIMIZED CARCARD COMPONENT - MAJOR PERFORMANCE FIXES
+// 🚀 COMPLETE CARCARD COMPONENT - GRID FIX + LOCATION DISPLAY FIX
 'use client'
 
 import React from 'react'
@@ -26,7 +26,7 @@ interface Car {
   bodyType: string
   color: string
   description: string
-  location: { city: string; county: string }
+  location: { city: string; county: string; area?: string; town?: string } // 🔥 ENHANCED: Added area and town
   featured: boolean
   views: number
   inquiries: number
@@ -55,7 +55,7 @@ interface CarCardProps {
   className?: string
 }
 
-// 🚀 FIX #2: Memoized Image Carousel Component
+// 🚀 ENHANCED Image Carousel Component
 const CarImageCarousel = React.memo(({ 
   images, 
   title, 
@@ -65,7 +65,8 @@ const CarImageCarousel = React.memo(({
   likesCount, 
   isLiked,
   savedDate,
-  className = ''
+  className = '',
+  variant = 'grid'
 }: {
   images: Array<{ id: string; url: string; alt: string }>
   title: string
@@ -76,6 +77,7 @@ const CarImageCarousel = React.memo(({
   isLiked: boolean
   savedDate?: string
   className?: string
+  variant?: 'grid' | 'list' | 'compact'
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [isHovered, setIsHovered] = useState(false)
@@ -83,7 +85,6 @@ const CarImageCarousel = React.memo(({
   const hasMultipleImages = images && images.length > 1
   const currentImage = images?.[currentImageIndex] || null
 
-  // 🚀 FIX #3: useCallback for event handlers
   const nextImage = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -100,16 +101,13 @@ const CarImageCarousel = React.memo(({
     }
   }, [hasMultipleImages, images.length])
 
-  // 🚀 FIX #4: Memoized image URL processing
   const optimizedImageUrl = useMemo(() => {
     if (!currentImage?.url) return '/placeholder-car.jpg'
     
-    // 🔧 IMAGE CROPPING FIX: Use proper aspect ratio instead of forcing crop
-    // Remove any existing transformations and apply proper sizing
     return currentImage.url
-      .replace(/\/c_fill,w_\d+,h_\d+,g_auto\//, '/') // Remove crop transformations
-      .replace(/\/c_thumb,w_\d+,h_\d+,g_auto\//, '/') // Remove thumbnail crops
-      + '?w=600&h=400&fit=cover&auto=format,compress&q=85' // Use proper fit instead of crop
+      .replace(/\/c_fill,w_\d+,h_\d+,g_auto\//, '/')
+      .replace(/\/c_thumb,w_\d+,h_\d+,g_auto\//, '/')
+      + '?w=600&h=400&fit=cover&auto=format,compress&q=85'
   }, [currentImage?.url])
 
   return (
@@ -118,14 +116,12 @@ const CarImageCarousel = React.memo(({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* 🔧 FIXED: Proper image sizing without forced cropping */}
       <img  
         src={optimizedImageUrl}
         alt={currentImage?.alt || title}
-        className="w-full h-full object-cover" // Changed from object-cover to object-contain for full image
-        loading="lazy" // 🚀 FIX #5: Lazy loading for images
+        className="w-full h-full object-cover"
+        loading="lazy"
         onError={(e) => {
-          // Fallback to placeholder on error
           e.currentTarget.src = '/placeholder-car.jpg'
         }}
       />
@@ -149,26 +145,28 @@ const CarImageCarousel = React.memo(({
         </div>
       )}
 
-      {/* Price Tag */}
+      {/* Price Tag - Adjusted size based on variant */}
       <div className="absolute top-3 right-3">
-        <div className="bg-white text-gray-900 px-3 py-1.5 rounded font-bold shadow-md">
+        <div className={`bg-white text-gray-900 rounded font-bold shadow-md ${
+          variant === 'grid' ? 'px-4 py-2 text-lg' : 'px-3 py-1.5 text-base'
+        }`}>
           €{price.toLocaleString()}
         </div>
       </div>
 
-      {/* Like Button - Lazy loaded */}
+      {/* Like Button */}
       <div className="absolute bottom-3 right-3">
         <LikeButton 
           carId={carId}
           initialLikesCount={likesCount}
           initialIsLiked={isLiked}
-          size="sm"
+          size={variant === 'grid' ? 'md' : 'sm'}
           showCount={true}
-          className="bg-white shadow-md rounded"
+          className="bg-white shadow-md rounded px-3 py-2"
         />
       </div>
 
-      {/* Navigation - Only on hover and multiple images */}
+      {/* Navigation arrows */}
       {hasMultipleImages && isHovered && (
         <>
           <button
@@ -213,13 +211,11 @@ export default function CarCard({
   className = ''
 }: CarCardProps) {
   
-  // Safety check
   if (!car || !car.id) {
     console.warn('CarCard: car object is undefined or missing id:', car)
     return null
   }
   
-  // 🚀 FIX #6: Memoized date formatting
   const formattedDate = useMemo(() => {
     if (!showSavedDate || !car.savedAt) return undefined
     
@@ -239,39 +235,39 @@ export default function CarCard({
     }
   }, [showSavedDate, car.savedAt])
 
-  // 🚀 FIX #7: Memoized CSS classes
+  // 🔥 COMPLETELY REDESIGNED: Professional layout classes
   const containerClasses = useMemo(() => {
     const base = "bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-200"
     
     switch (variant) {
       case 'list':
-        return `${base} md:flex cursor-pointer overflow-hidden`
+        return `${base} flex cursor-pointer overflow-hidden` // Horizontal layout
       case 'compact':
         return `${base} cursor-pointer overflow-hidden`
       default: // 'grid'
-        return `${base} cursor-pointer overflow-hidden`
+        return `${base} cursor-pointer overflow-hidden flex flex-col` // 🔥 NEW: Vertical flex layout
     }
   }, [variant])
 
   const imageContainerClasses = useMemo(() => {
     switch (variant) {
       case 'list':
-        return 'h-48 md:w-80 md:h-56 md:flex-shrink-0'
+        return 'w-80 h-56 flex-shrink-0' // List: Fixed width
       case 'compact':
         return 'h-44'
       default: // 'grid'
-        return 'h-48'
+        return 'h-72 w-full' // 🔥 INCREASED: Bigger image for grid (288px height)
     }
   }, [variant])
 
   const contentClasses = useMemo(() => {
     switch (variant) {
       case 'list':
-        return 'p-6 md:flex-1 md:flex md:flex-col md:justify-between'
+        return 'flex-1 p-6 flex flex-col justify-between' // List: Flex content
       case 'compact':
         return 'p-4'
       default: // 'grid'
-        return 'p-5'
+        return 'p-7 flex-1 flex flex-col' // 🔥 INCREASED: More padding for larger cards
     }
   }, [variant])
 
@@ -279,7 +275,7 @@ export default function CarCard({
     <div className={`${containerClasses} ${className}`}>
       {/* Conditional Link wrapper */}
       {showActions.length === 0 ? (
-        <Link href={`/cars/${car.id}`} className="block">
+        <Link href={`/cars/${car.id}`} className={variant === 'list' ? 'flex w-full' : 'flex flex-col h-full w-full'}>
           <CarImageCarousel
             images={car.images}
             title={car.title}
@@ -290,6 +286,7 @@ export default function CarCard({
             isLiked={car.isLiked}
             savedDate={formattedDate}
             className={imageContainerClasses}
+            variant={variant}
           />
           
           <div className={contentClasses}>
@@ -305,7 +302,7 @@ export default function CarCard({
           </div>
         </Link>
       ) : (
-        <>
+        <div className={variant === 'list' ? 'flex w-full' : 'flex flex-col h-full w-full'}>
           <CarImageCarousel
             images={car.images}
             title={car.title}
@@ -316,6 +313,7 @@ export default function CarCard({
             isLiked={car.isLiked}
             savedDate={formattedDate}
             className={imageContainerClasses}
+            variant={variant}
           />
           
           <div className={contentClasses}>
@@ -329,13 +327,13 @@ export default function CarCard({
               onPromote={onPromote}
             />
           </div>
-        </>
+        </div>
       )}
     </div>
   )
 }
 
-// 🚀 FIX #8: Memoized Content Component
+// 🔥 ENHANCED: Content Component with better grid layout + FIXED LOCATION
 const CarContent = React.memo(({ 
   car, 
   variant, 
@@ -354,34 +352,58 @@ const CarContent = React.memo(({
   onPromote?: (carId: string) => void
 }) => {
   
+  // 🔥 NEW: Smart location display function
+  const getLocationDisplay = () => {
+    const area = car.location.area || car.location.city || car.location.town;
+    const county = car.location.county;
+    
+    if (area && county) {
+      return `${area}, Co. ${county}`;
+    } else if (county) {
+      return `Co. ${county}`;
+    } else {
+      return 'Location not specified';
+    }
+  };
+  
   return (
     <>
-      <div>
+      {/* Main Content - Grows to fill space */}
+      <div className="flex-1">
         {/* Car Title */}
-        <h3 className={`font-bold text-gray-900 mb-3 leading-tight ${
-          variant === 'list' ? 'text-xl md:text-2xl' : 
-          variant === 'compact' ? 'text-lg' : 'text-xl'
+        <h3 className={`font-bold text-gray-900 leading-tight mb-3 ${
+          variant === 'grid' ? 'text-xl' :  // 🔥 NEW: Larger title for grid
+          variant === 'list' ? 'text-xl' : 'text-lg'
         }`}>
           {car.title}
         </h3>
         
-        {/* Location */}
+        {/* Location - 🔥 FIXED: Now shows area + county */}
         <div className="flex items-center text-gray-600 mb-4">
           <MapPin className="w-4 h-4 mr-2 text-green-600" />
-          <span className="text-sm font-medium">{car.location.city}, {car.location.county}</span>
+          <span className={`font-medium ${
+            variant === 'grid' ? 'text-sm' : 'text-sm'
+          }`}>
+            {getLocationDisplay()}
+          </span>
         </div>
 
         {/* Car Specifications */}
-        <div className={`grid gap-4 mb-4 ${
-          variant === 'list' ? 'grid-cols-2 md:grid-cols-4' : 
-          variant === 'compact' ? 'grid-cols-2' : 'grid-cols-2'
+        <div className={`grid gap-3 mb-4 ${
+          variant === 'list' ? 'grid-cols-4' :      // List: 4 columns
+          variant === 'grid' ? 'grid-cols-2' :      // 🔥 NEW: Grid 2 columns for better spacing
+          'grid-cols-2'                              // Compact: 2 columns
         }`}>
           <div className="flex flex-col">
             <div className="flex items-center text-gray-500 text-xs mb-1">
               <Calendar className="w-3 h-3 mr-1" />
               Year
             </div>
-            <span className="font-semibold text-gray-900">{car.year}</span>
+            <span className={`font-semibold text-gray-900 ${
+              variant === 'grid' ? 'text-base' : 'text-sm'
+            }`}>
+              {car.year}
+            </span>
           </div>
           
           <div className="flex flex-col">
@@ -389,7 +411,11 @@ const CarContent = React.memo(({
               <Gauge className="w-3 h-3 mr-1" />
               Mileage
             </div>
-            <span className="font-semibold text-gray-900">{car.mileage?.toLocaleString()} km</span>
+            <span className={`font-semibold text-gray-900 ${
+              variant === 'grid' ? 'text-base' : 'text-sm'
+            }`}>
+              {car.mileage?.toLocaleString()} km
+            </span>
           </div>
           
           <div className="flex flex-col">
@@ -397,7 +423,11 @@ const CarContent = React.memo(({
               <Fuel className="w-3 h-3 mr-1" />
               Fuel
             </div>
-            <span className="font-semibold text-gray-900 capitalize">{car.fuelType?.toLowerCase()}</span>
+            <span className={`font-semibold text-gray-900 capitalize ${
+              variant === 'grid' ? 'text-base' : 'text-sm'
+            }`}>
+              {car.fuelType?.toLowerCase()}
+            </span>
           </div>
           
           <div className="flex flex-col">
@@ -405,15 +435,17 @@ const CarContent = React.memo(({
               <Settings className="w-3 h-3 mr-1" />
               Trans
             </div>
-            <span className="font-semibold text-gray-900 capitalize">{car.transmission?.toLowerCase()}</span>
+            <span className={`font-semibold text-gray-900 capitalize ${
+              variant === 'grid' ? 'text-base' : 'text-sm'
+            }`}>
+              {car.transmission?.toLowerCase()}
+            </span>
           </div>
         </div>
 
         {/* Performance Stats */}
         {showPerformance && (
-          <div className={`grid gap-3 mb-4 ${
-            variant === 'list' ? 'grid-cols-3' : 'grid-cols-3'
-          }`}>
+          <div className="grid grid-cols-3 gap-3 mb-4">
             <div className="text-center p-3 bg-green-50 border border-green-200 rounded-lg">
               <div className="font-bold text-green-700 text-lg">{car.views}</div>
               <div className="text-xs text-green-600">Views</div>
@@ -430,12 +462,12 @@ const CarContent = React.memo(({
         )}
       </div>
 
-      {/* Actions Area */}
-      <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 mt-4 pt-4 border-t border-gray-100 ${
-        variant === 'list' ? 'md:mt-auto' : ''
+      {/* Footer - Always at bottom */}
+      <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 pt-6 border-t border-gray-100 ${
+        variant === 'grid' ? 'mt-6' : 'mt-auto'
       }`}>
         {/* Seller Info */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center">
           <div className="flex items-center text-sm text-gray-600">
             <User className="w-4 h-4 mr-1.5 text-gray-400" />
             <span className="flex items-center">
@@ -474,7 +506,10 @@ const CarContent = React.memo(({
             )}
           </div>
         ) : (
-          <div className="bg-gradient-to-r from-green-600 to-green-700 text-white px-6 py-2.5 rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 text-center sm:text-left font-medium shadow-md">
+          <div className={`bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 font-medium shadow-md ${
+            variant === 'grid' ? 'px-6 py-3 text-center w-full' :  // 🔥 NEW: Full width button for grid
+            'px-6 py-2.5 text-center sm:text-left'
+          }`}>
             View Details
           </div>
         )}

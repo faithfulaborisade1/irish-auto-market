@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Admin response saved for contact: ${contactMessage.id}`)
 
-    // ✅ SAFE: Send email response using dynamic import
+    // ✅ FIXED: Send email response using correct function signature
     let emailResult: { success: boolean; error?: string; emailId?: string } = { 
       success: false, 
       error: 'Email service not available' 
@@ -215,15 +215,16 @@ export async function POST(request: NextRequest) {
       if (process.env.RESEND_API_KEY) {
         const { sendSupportResponse } = await import('@/lib/email')
         
-        // Using your exact function signature
+        // ✅ FIXED: Using exact function signature from email service
+        // { to, name, subject, message, referenceId, adminName, originalMessage? }
         emailResult = await sendSupportResponse({
           to: contactMessage.email,
           name: contactMessage.name,
-          originalSubject: contactMessage.subject,
+          subject: contactMessage.subject,  // ✅ FIXED: Use 'subject' not 'originalSubject'
+          message: validatedData.responseMessage,  // ✅ FIXED: Use 'message' not 'responseMessage'
           referenceId: `IAM-${contactMessage.id.slice(-8).toUpperCase()}`,
-          responseMessage: validatedData.responseMessage,
           adminName: `${currentAdmin.firstName} ${currentAdmin.lastName}`,
-          status: validatedData.status || 'In Progress'
+          originalMessage: contactMessage.message  // ✅ Optional: Include original message
         })
       }
     } catch (emailError: any) {
