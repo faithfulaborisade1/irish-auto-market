@@ -22,8 +22,9 @@ async function sendSupportResponseSafely(emailData: any): Promise<{ success: boo
   }
 }
 
+// ✅ FIXED: Reduced minimum length from 10 to 5 characters
 const ReplySchema = z.object({
-  message: z.string().min(10, 'Reply message must be at least 10 characters'),
+  message: z.string().min(5, 'Reply message must be at least 5 characters'),
   status: z.enum(['IN_PROGRESS', 'RESOLVED', 'CLOSED']).optional()
 })
 
@@ -56,7 +57,10 @@ export async function POST(
 
     // Parse and validate request body
     const body = await request.json()
+    console.log('📨 Request body received:', body) // Debug log
+    
     const validatedData = ReplySchema.parse(body)
+    console.log('✅ Validation passed:', validatedData) // Debug log
 
     // Fetch the contact message
     const contact = await prisma.contactMessage.findUnique({
@@ -100,12 +104,12 @@ export async function POST(
         await prisma.adminAuditLog.create({
           data: {
             adminId: admin.adminProfile.id,
-            action: 'CONTACT_RESPONDED', // Using more specific action
+            action: 'CONTACT_RESPONDED',
             resourceType: 'CONTACT_MESSAGE',
             resourceId: contact.id,
             description: `Replied to contact message from ${contact.name}`,
-            oldValues: undefined, // Use undefined instead of object for optional JSON
-            newValues: undefined, // Use undefined instead of object for optional JSON
+            oldValues: undefined,
+            newValues: undefined,
             ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
             userAgent: request.headers.get('user-agent') || undefined,
             endpoint: `/api/admin/support/contact/${params.id}/reply`,
@@ -117,6 +121,11 @@ export async function POST(
         // Don't fail the entire operation if audit logging fails
       }
     }
+
+    console.log('✅ Reply sent successfully:', {
+      contactId: updatedContact.id,
+      emailSent: emailResult.success
+    })
 
     return NextResponse.json({
       success: true,
@@ -134,19 +143,24 @@ export async function POST(
     console.error('❌ Error sending reply:', error)
 
     if (error instanceof z.ZodError) {
+      console.error('🔍 Validation errors:', error.issues)
       return NextResponse.json(
-        { success: false, message: 'Invalid input data', errors: error.issues },
+        { 
+          success: false, 
+          message: 'Invalid input data', 
+          errors: error.issues,
+          details: error.issues.map(issue => `${issue.path.join('.')}: ${issue.message}`)
+        },
         { status: 400 }
       )
     }
 
     return NextResponse.json(
-      { success: false, message: 'Failed to send reply' },
+      { success: false, message: 'Failed to send reply', error: error.message },
       { status: 500 }
     )
   }
 }
 
-// ✅ FIXED: Add dynamic runtime to prevent build-time execution
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

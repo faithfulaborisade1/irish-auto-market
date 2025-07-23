@@ -1,8 +1,10 @@
-// 🔧 FIXED IMAGE UPLOAD COMPONENT - NO MORE CROPPING!
+// 🔧 FIXED IMAGE UPLOAD COMPONENT - USES YOUR CLOUDINARY CONFIG!
 'use client';
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { Camera, Upload, X, Plus, Image as ImageIcon } from 'lucide-react';
+// ✅ REMOVED: Don't import server-side Cloudinary in client components
+// import { generateCarImageVariants } from '@/lib/cloudinary';
 
 interface UploadedImage {
   id: string;
@@ -27,7 +29,6 @@ interface ImageUploadProps {
   className?: string;
 }
 
-// 🚀 FIX: Memoized upload component
 const ImageUpload = React.memo(({
   maxImages = 10,
   existingImages = [],
@@ -46,27 +47,15 @@ const ImageUpload = React.memo(({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  // 🔧 FIXED: Upload to Cloudinary with PROPER SIZING (no forced cropping)
+  // 🔧 FIXED: Upload using your existing Cloudinary setup
   const uploadToCloudinary = useCallback(async (file: File): Promise<UploadedImage> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', 'irish_auto_market');
     formData.append('folder', 'cars');
-    
-    // 🔧 CRITICAL FIX: Add transformation parameters for FULL IMAGE preservation
-    formData.append('transformation', JSON.stringify([
-      {
-        quality: 'auto:good',
-        format: 'auto',
-        // Use 'fit' instead of 'crop' to preserve full image
-        crop: 'fit', 
-        width: 1200,
-        height: 800
-      }
-    ]));
 
     const response = await fetch(
-      `https://api.cloudinary.com/v1_1/dmynffe63/image/upload`,
+      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
       {
         method: 'POST',
         body: formData,
@@ -79,24 +68,23 @@ const ImageUpload = React.memo(({
 
     const result = await response.json();
     
-    // 🔧 FIXED: Generate different sizes WITHOUT forced cropping
-    const baseUrl = `https://res.cloudinary.com/dmynffe63/image/upload`;
+    // ✅ FIXED: Generate variants directly (client-safe)
+    const baseUrl = `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
     
     return {
       id: result.public_id,
       url: result.secure_url,
       originalUrl: result.secure_url,
-      // 🔧 CRITICAL: Use 'fit' instead of 'fill' to preserve aspect ratio
-      thumbnailUrl: `${baseUrl}/c_fit,w_150,h_150,q_auto/${result.public_id}`,
-      mediumUrl: `${baseUrl}/c_fit,w_400,h_300,q_auto/${result.public_id}`,
-      largeUrl: `${baseUrl}/c_fit,w_800,h_600,q_auto/${result.public_id}`,
+      // Use your exact transformations from cloudinary.ts
+      thumbnailUrl: `${baseUrl}/c_thumb,w_150,h_150,g_auto/${result.public_id}`,
+      mediumUrl: `${baseUrl}/c_limit,w_500,h_400,q_auto,f_auto/${result.public_id}`,
+      largeUrl: `${baseUrl}/c_limit,w_800,h_600,q_auto,f_auto/${result.public_id}`,
       publicId: result.public_id,
       fileName: file.name,
       size: file.size,
     };
   }, []);
 
-  // 🚀 PERFORMANCE FIX: Memoized file handling
   const handleFiles = useCallback(async (files: FileList) => {
     if (images.length + files.length > maxImages) {
       setError(`Maximum ${maxImages} images allowed`);
@@ -133,14 +121,12 @@ const ImageUpload = React.memo(({
     }
   }, [images, maxImages, acceptedTypes, maxSizeBytes, onImagesChange, uploadToCloudinary]);
 
-  // 🚀 PERFORMANCE FIX: Memoized remove function
   const removeImage = useCallback((imageId: string) => {
     const newImages = images.filter(img => img.id !== imageId);
     setImages(newImages);
     onImagesChange(newImages);
   }, [images, onImagesChange]);
 
-  // 🚀 PERFORMANCE FIX: Memoized drag handlers
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -167,7 +153,6 @@ const ImageUpload = React.memo(({
     }
   }, [handleFiles]);
 
-  // 🚀 PERFORMANCE FIX: Memoized grid classes
   const gridColsClass = useMemo(() => {
     const gridOptions: Record<number, string> = {
       1: 'grid-cols-1',
@@ -230,7 +215,7 @@ const ImageUpload = React.memo(({
               Max {maxImages} images • {maxSizeBytes / 1024 / 1024}MB each • JPG, PNG, WebP
             </p>
             <p className="text-xs text-green-600 mt-1">
-              📸 Images will preserve their original aspect ratio (no cropping!)
+              📸 Full car images preserved - no cropping!
             </p>
             
             {uploading && (
@@ -273,13 +258,13 @@ const ImageUpload = React.memo(({
         <div className={`mt-6 grid gap-4 ${gridColsClass}`}>
           {images.map((image, index) => (
             <div key={image.id} className="relative group">
-              {/* 🔧 FIXED: Image container with proper aspect ratio preservation */}
+              {/* ✅ FIXED: Image container preserving car proportions */}
               <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
                 <img
                   src={image.mediumUrl}
-                  alt={`Upload ${index + 1}`}
-                  className="w-full h-full object-contain" // 🔧 CHANGED: object-contain instead of object-cover
-                  loading="lazy" // 🚀 PERFORMANCE: Lazy loading
+                  alt={`Car photo ${index + 1}`}
+                  className="w-full h-full object-contain" // Shows full car
+                  loading="lazy"
                   onError={(e) => {
                     // Fallback to original URL on error
                     e.currentTarget.src = image.originalUrl;
@@ -325,7 +310,7 @@ const ImageUpload = React.memo(({
         {images.length} of {maxImages} images
         {images.length > 0 && (
           <span className="text-green-600 ml-2">
-            ✓ Full resolution preserved
+            ✓ Full car visible, no cropping
           </span>
         )}
       </div>
