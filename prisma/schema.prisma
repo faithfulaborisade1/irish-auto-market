@@ -19,6 +19,10 @@ model User {
   status              UserStatus     @default(ACTIVE)
   password            String?
   emailVerified       DateTime?
+  // 🆕 ADD THESE 3 FIELDS FOR PASSWORD RESET:
+  resetToken          String?        // Hashed password reset token
+  resetTokenExpiry    DateTime?      // When the reset token expires
+  lastPasswordReset   DateTime?      // Track when password was last reset
   bio                 String?
   location            Json?
   preferences         Json?

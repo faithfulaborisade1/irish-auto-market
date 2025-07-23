@@ -708,5 +708,178 @@ export function validateEmailAddress(email: string): boolean {
   return emailRegex.test(email);
 }
 
+// ============================================================================
+// PASSWORD RESET EMAIL - Add this to your src/lib/email.ts file
+// ============================================================================
+
+export async function sendPasswordResetEmail(reset: {
+  email: string;
+  firstName: string;
+  lastName: string;
+  resetToken: string;
+  resetUrl: string;
+}) {
+  try {
+    if (!resend) {
+      console.warn('⚠️ Email service not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const name = `${reset.firstName} ${reset.lastName}`.trim();
+
+    const content = `
+      <h2>Password Reset Request 🔐</h2>
+      
+      <p>Hi ${reset.firstName},</p>
+      
+      <p>We received a request to reset your password for your Irish Auto Market account. If you didn't make this request, you can safely ignore this email and your password will remain unchanged.</p>
+      
+      <div class="warning-card">
+        <h3>🔒 Security Notice</h3>
+        <p><strong>Important:</strong> This password reset link will expire in <strong>1 hour</strong> for your security. If you need to reset your password after this time, you'll need to request a new reset link.</p>
+      </div>
+      
+      <div class="info-card">
+        <h3>🔐 Reset Your Password</h3>
+        <p>To create a new password for your account, click the button below. You'll be taken to a secure page where you can enter your new password.</p>
+        
+        <div class="button-container">
+          <a href="${reset.resetUrl}" class="button" style="background: #dc2626; font-size: 16px; padding: 16px 32px;">
+            Reset My Password
+          </a>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3>🔗 Alternative Link</h3>
+        <p><strong>If the button doesn't work, copy and paste this link:</strong></p>
+        <div style="background: #f3f4f6; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 14px; word-break: break-all; color: #374151;">
+          ${reset.resetUrl}
+        </div>
+      </div>
+      
+      <div class="warning-card">
+        <h3>🛡️ Security Tips</h3>
+        <ul>
+          <li><strong>Create a strong password:</strong> Use at least 8 characters with a mix of letters, numbers, and symbols</li>
+          <li><strong>Keep it unique:</strong> Don't reuse passwords from other websites</li>
+          <li><strong>Stay secure:</strong> Never share your password with anyone</li>
+        </ul>
+      </div>
+      
+      <div class="card">
+        <h3>❓ Need Help?</h3>
+        <p>If you didn't request this password reset or have any security concerns, please contact our support team immediately:</p>
+        <p>
+          📧 <a href="mailto:support@irishautomarket.ie">support@irishautomarket.ie</a><br>
+          📞 <strong>Urgent Security Issues:</strong> Reply to this email with "SECURITY ALERT"
+        </p>
+      </div>
+      
+      <p style="text-align: center; margin-top: 20px; color: #6b7280;">
+        This password reset was requested from IP address: <code>${reset.resetUrl.includes('localhost') ? '127.0.0.1' : 'your-ip'}</code><br>
+        <small>If this wasn't you, please contact support immediately.</small>
+      </p>
+    `;
+
+    const result = await resend.emails.send({
+      from: EMAIL_CONFIG.from,
+      to: reset.email,
+      subject: `🔐 Reset Your Password - Irish Auto Market`,
+      html: getEmailTemplate(content, 'Password Reset Request', 'user')
+    });
+
+    console.log(`✅ Password reset email sent to ${reset.email}:`, result.data?.id);
+    return { success: true, emailId: result.data?.id };
+
+  } catch (error: any) {
+    console.error('❌ Failed to send password reset email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================================================
+// PASSWORD RESET SUCCESS EMAIL - Add this too
+// ============================================================================
+
+export async function sendPasswordResetSuccessEmail(user: {
+  email: string;
+  firstName: string;
+  lastName: string;
+}) {
+  try {
+    if (!resend) {
+      console.warn('⚠️ Email service not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const content = `
+      <h2>Password Successfully Reset ✅</h2>
+      
+      <p>Hi ${user.firstName},</p>
+      
+      <p>Your password has been successfully reset for your Irish Auto Market account. You can now log in using your new password.</p>
+      
+      <div class="success-card">
+        <h3>🎉 Password Updated</h3>
+        <p>Your account security has been updated. Here are the details:</p>
+        <p><strong>Account:</strong> ${user.email}</p>
+        <p><strong>Reset Date:</strong> ${new Date().toLocaleDateString('en-IE', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}</p>
+      </div>
+      
+      <div class="info-card">
+        <h3>🔐 Next Steps</h3>
+        <ul>
+          <li>✅ Log in with your new password</li>
+          <li>🔄 Update your saved passwords in your browser</li>
+          <li>📱 Update your password in any mobile apps</li>
+          <li>🛡️ Consider enabling additional security features</li>
+        </ul>
+      </div>
+      
+      <div class="button-container">
+        <a href="https://irishautomarket.ie/login" class="button">Log In Now</a>
+      </div>
+      
+      <div class="warning-card">
+        <h3>🚨 Security Alert</h3>
+        <p><strong>If you didn't reset your password,</strong> your account may have been compromised. Please:</p>
+        <ul>
+          <li>Contact our support team immediately</li>
+          <li>Check your account for any unauthorized activity</li>
+          <li>Consider changing passwords on other accounts that use the same password</li>
+        </ul>
+        <p>📧 <strong>Emergency Contact:</strong> <a href="mailto:support@irishautomarket.ie">support@irishautomarket.ie</a></p>
+      </div>
+      
+      <p style="text-align: center; margin-top: 20px;">
+        Best regards,<br>
+        <strong>Irish Auto Market Security Team</strong> 🇮🇪🔐
+      </p>
+    `;
+
+    const result = await resend.emails.send({
+      from: EMAIL_CONFIG.from,
+      to: user.email,
+      subject: `✅ Password Successfully Reset - Irish Auto Market`,
+      html: getEmailTemplate(content, 'Password Reset Successful', 'user')
+    });
+
+    console.log(`✅ Password reset success email sent to ${user.email}:`, result.data?.id);
+    return { success: true, emailId: result.data?.id };
+
+  } catch (error: any) {
+    console.error('❌ Failed to send password reset success email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // Export email configuration for use in other modules
 export { EMAIL_CONFIG };
