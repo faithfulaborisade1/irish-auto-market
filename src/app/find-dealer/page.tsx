@@ -1,7 +1,7 @@
 // src/app/find-dealer/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Search, MapPin, Phone, Globe, Car, Star, ChevronRight, Filter, Grid, List, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import Header from '@/components/Header';
@@ -39,16 +39,51 @@ const counties = [
 export default function FindDealerPage() {
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // Separate state for input
   const [selectedCounty, setSelectedCounty] = useState('All Counties');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 12,
     total: 0,
     pages: 0
   });
+
+  // Debounced search function
+  const debouncedSearch = useCallback((term: string) => {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    const timeout = setTimeout(() => {
+      setSearchTerm(term);
+      setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
+    }, 500);
+    
+    setSearchTimeout(timeout);
+  }, [searchTimeout]);
+
+  // Handle search input change
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSearch(value);
+  };
+
+  // Handle search button click
+  const handleSearchSubmit = () => {
+    setSearchTerm(searchInput);
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  // Handle Enter key press
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearchSubmit();
+    }
+  };
 
   // Fetch dealers when filters change
   useEffect(() => {
@@ -60,16 +95,33 @@ export default function FindDealerPage() {
           limit: pagination.limit.toString()
         });
 
-        if (searchTerm) params.append('search', searchTerm);
-        if (selectedCounty !== 'All Counties') params.append('county', selectedCounty);
+        // Add search parameter if exists
+        if (searchTerm && searchTerm.trim()) {
+          params.append('search', searchTerm.trim());
+        }
+        
+        // Add county filter if not "All Counties"
+        if (selectedCounty !== 'All Counties') {
+          params.append('county', selectedCounty);
+        }
+
+        console.log('Fetching dealers with params:', params.toString());
 
         const response = await fetch(`/api/dealers?${params}`);
         if (response.ok) {
           const data = await response.json();
-          setDealers(data.dealers);
-          setPagination(data.pagination);
+          console.log('Dealers response:', data);
+          setDealers(data.dealers || []);
+          setPagination(data.pagination || {
+            page: 1,
+            limit: 12,
+            total: 0,
+            pages: 0
+          });
         } else {
-          console.error('Failed to fetch dealers');
+          console.error('Failed to fetch dealers, status:', response.status);
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
           setDealers([]);
         }
       } catch (error) {
@@ -82,6 +134,15 @@ export default function FindDealerPage() {
 
     fetchDealers();
   }, [searchTerm, selectedCounty, pagination.page]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
+  }, [searchTimeout]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-IE', {
@@ -99,6 +160,13 @@ export default function FindDealerPage() {
       ENTERPRISE: { text: 'Enterprise', class: 'bg-green-100 text-green-800' }
     };
     return badges[subscription as keyof typeof badges] || badges.BASIC;
+  };
+
+  const clearAllFilters = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    setSelectedCounty('All Counties');
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const DealerCard = ({ dealer }: { dealer: Dealer }) => (
@@ -178,7 +246,7 @@ export default function FindDealerPage() {
         </div>
 
         {/* Specialties */}
-        {dealer.specialties.length > 0 && (
+        {dealer.specialties && dealer.specialties.length > 0 && (
           <div className="mb-4">
             <p className="text-sm font-medium text-gray-900 mb-2">Specializes in:</p>
             <div className="flex flex-wrap gap-2">
@@ -243,11 +311,15 @@ export default function FindDealerPage() {
                 <input
                   type="text"
                   placeholder="Search by dealer name, location, or car brand..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyPress={handleKeyPress}
                   className="flex-1 px-4 py-3 text-gray-900 placeholder-gray-500 focus:outline-none"
                 />
-                <button className="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 transition-colors">
+                <button 
+                  onClick={handleSearchSubmit}
+                  className="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 transition-colors"
+                >
                   Search
                 </button>
               </div>
@@ -284,7 +356,7 @@ export default function FindDealerPage() {
 
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">
-                {dealers.length} dealer{dealers.length !== 1 ? 's' : ''} found
+                {pagination.total} dealer{pagination.total !== 1 ? 's' : ''} found
               </span>
               <div className="flex border border-gray-300 rounded-lg overflow-hidden">
                 <button
@@ -347,16 +419,20 @@ export default function FindDealerPage() {
           <div className="text-center py-12">
             <Car className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No dealers found</h3>
-            <p className="text-gray-600 mb-4">Try adjusting your search criteria or filters</p>
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedCounty('All Counties');
-              }}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Clear Filters
-            </button>
+            <p className="text-gray-600 mb-4">
+              {searchTerm || selectedCounty !== 'All Counties' 
+                ? 'Try adjusting your search criteria or filters' 
+                : 'No dealers are currently available'
+              }
+            </p>
+            {(searchTerm || selectedCounty !== 'All Counties') && (
+              <button
+                onClick={clearAllFilters}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
           </div>
         ) : (
           <>
