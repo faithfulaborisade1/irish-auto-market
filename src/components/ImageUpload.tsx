@@ -1,10 +1,7 @@
-// 🔧 FIXED IMAGE UPLOAD COMPONENT - USES YOUR CLOUDINARY CONFIG!
 'use client';
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { Camera, Upload, X, Plus, Image as ImageIcon } from 'lucide-react';
-// ✅ REMOVED: Don't import server-side Cloudinary in client components
-// import { generateCarImageVariants } from '@/lib/cloudinary';
+import { Camera, Upload, X, Plus } from 'lucide-react';
 
 interface UploadedImage {
   id: string;
@@ -34,7 +31,7 @@ const ImageUpload = React.memo(({
   existingImages = [],
   onImagesChange,
   acceptedTypes = ['image/jpeg', 'image/png', 'image/webp'],
-  maxSizeBytes = 10 * 1024 * 1024, // 10MB
+  maxSizeBytes = 10 * 1024 * 1024,
   showCamera = true,
   gridCols = 3,
   className = ""
@@ -47,15 +44,15 @@ const ImageUpload = React.memo(({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  // 🔧 FIXED: Upload using your existing Cloudinary setup
   const uploadToCloudinary = useCallback(async (file: File): Promise<UploadedImage> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_preset', 'irish_auto_market');
-    formData.append('folder', 'cars');
+    formData.append('upload_preset', 'ml_default');
+    formData.append('folder', 'irish-auto-market/cars');
 
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dmynffe63';
     const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
       {
         method: 'POST',
         body: formData,
@@ -63,20 +60,19 @@ const ImageUpload = React.memo(({
     );
 
     if (!response.ok) {
-      throw new Error('Upload failed');
+      const errorText = await response.text();
+      console.error('Cloudinary upload error:', errorText);
+      throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
     }
 
     const result = await response.json();
-    
-    // ✅ FIXED: Generate variants directly (client-safe)
-    const baseUrl = `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
+    const baseUrl = `https://res.cloudinary.com/${cloudName}/image/upload`;
     
     return {
       id: result.public_id,
       url: result.secure_url,
       originalUrl: result.secure_url,
-      // Use your exact transformations from cloudinary.ts
-      thumbnailUrl: `${baseUrl}/c_thumb,w_150,h_150,g_auto/${result.public_id}`,
+      thumbnailUrl: `${baseUrl}/c_limit,w_150,h_150,q_auto,f_auto/${result.public_id}`,
       mediumUrl: `${baseUrl}/c_limit,w_500,h_400,q_auto,f_auto/${result.public_id}`,
       largeUrl: `${baseUrl}/c_limit,w_800,h_600,q_auto,f_auto/${result.public_id}`,
       publicId: result.public_id,
@@ -96,12 +92,10 @@ const ImageUpload = React.memo(({
 
     try {
       const uploadPromises = Array.from(files).map(async (file) => {
-        // Validate file type
         if (!acceptedTypes.includes(file.type)) {
           throw new Error(`File type ${file.type} not supported`);
         }
 
-        // Validate file size
         if (file.size > maxSizeBytes) {
           throw new Error(`File size must be less than ${maxSizeBytes / 1024 / 1024}MB`);
         }
@@ -115,6 +109,7 @@ const ImageUpload = React.memo(({
       setImages(newImages);
       onImagesChange(newImages);
     } catch (err) {
+      console.error('Upload error:', err);
       setError(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
@@ -166,16 +161,13 @@ const ImageUpload = React.memo(({
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Upload Area */}
       {images.length < maxImages && (
         <div
-          className={`relative border-2 border-dashed rounded-lg p-6 transition-colors
-            ${dragActive 
+          className={`relative border-2 border-dashed rounded-lg p-6 transition-colors ${
+            dragActive 
               ? 'border-green-500 bg-green-50' 
               : 'border-gray-300 hover:border-gray-400'
-            }
-            ${uploading ? 'opacity-50 pointer-events-none' : ''}
-          `}
+          } ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
@@ -183,7 +175,6 @@ const ImageUpload = React.memo(({
         >
           <div className="text-center">
             <div className="flex justify-center space-x-4 mb-4">
-              {/* Camera Button */}
               {showCamera && (
                 <button
                   type="button"
@@ -196,7 +187,6 @@ const ImageUpload = React.memo(({
                 </button>
               )}
               
-              {/* Upload Button */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
@@ -226,7 +216,6 @@ const ImageUpload = React.memo(({
             )}
           </div>
 
-          {/* Hidden file inputs */}
           <input
             ref={fileInputRef}
             type="file"
@@ -246,33 +235,31 @@ const ImageUpload = React.memo(({
         </div>
       )}
 
-      {/* Error Display */}
       {error && (
         <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-red-700 text-sm">{error}</p>
+          <p className="text-red-600 text-xs mt-1">
+            If this continues, check your Cloudinary upload preset settings.
+          </p>
         </div>
       )}
 
-      {/* Image Grid */}
       {images.length > 0 && (
         <div className={`mt-6 grid gap-4 ${gridColsClass}`}>
           {images.map((image, index) => (
             <div key={image.id} className="relative group">
-              {/* ✅ FIXED: Image container preserving car proportions */}
               <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
                 <img
                   src={image.mediumUrl}
                   alt={`Car photo ${index + 1}`}
-                  className="w-full h-full object-contain" // Shows full car
+                  className="w-full h-full object-contain"
                   loading="lazy"
                   onError={(e) => {
-                    // Fallback to original URL on error
                     e.currentTarget.src = image.originalUrl;
                   }}
                 />
               </div>
               
-              {/* Remove button */}
               <button
                 type="button"
                 onClick={() => removeImage(image.id)}
@@ -282,7 +269,6 @@ const ImageUpload = React.memo(({
                 <X size={16} />
               </button>
               
-              {/* Image info */}
               <div className="mt-2 text-xs text-gray-500">
                 <p className="truncate" title={image.fileName}>{image.fileName}</p>
                 <p>{(image.size / 1024 / 1024).toFixed(1)}MB</p>
@@ -290,7 +276,6 @@ const ImageUpload = React.memo(({
             </div>
           ))}
           
-          {/* Add more button */}
           {images.length < maxImages && (
             <button
               type="button"
@@ -305,7 +290,6 @@ const ImageUpload = React.memo(({
         </div>
       )}
 
-      {/* Image count */}
       <div className="mt-4 text-sm text-gray-500 text-center">
         {images.length} of {maxImages} images
         {images.length > 0 && (
