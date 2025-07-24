@@ -47,8 +47,8 @@ const ImageUpload = React.memo(({
   const uploadToCloudinary = useCallback(async (file: File): Promise<UploadedImage> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_preset', 'ml_default');
-    formData.append('folder', 'irish-auto-market/cars');
+    formData.append('upload_preset', 'irish_auto_market'); // ✅ Your existing preset
+    formData.append('folder', 'cars');
 
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dmynffe63';
     const response = await fetch(
