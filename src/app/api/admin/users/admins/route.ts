@@ -4,6 +4,9 @@ import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 
+// Add this line after your imports:
+export const dynamic = 'force-dynamic';
+
 const prisma = new PrismaClient();
 
 // Validation schema for getting admins
@@ -236,3 +239,4 @@ export async function GET(request: NextRequest) {
     await prisma.$disconnect();
   }
 }
+

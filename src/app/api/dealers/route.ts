@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/database';
 import { User, DealerProfile } from '@prisma/client';
 
+// ✅ FIX: Force dynamic rendering for request.url access
+export const dynamic = 'force-dynamic';
+
 // Define the type for dealer with profile
 type DealerWithProfile = User & {
   dealerProfile: DealerProfile | null;

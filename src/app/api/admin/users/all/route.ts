@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+// Add this line after your imports:
+export const dynamic = 'force-dynamic';
 
 const prisma = new PrismaClient();
 

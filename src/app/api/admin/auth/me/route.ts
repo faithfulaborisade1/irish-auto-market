@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/database';
 
+// ✅ FIX: Force dynamic rendering for cookie access
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // Get token from cookies with multiple fallback methods
