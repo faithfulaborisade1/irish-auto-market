@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
       bodyType: car.bodyType,
       color: car.color,
       description: car.description,
-      location: car.location,
+      location: car.location,  // ✅ This stays the same
       featured: car.featured,
       views: car.viewsCount,
       inquiries: car.inquiriesCount,
@@ -327,10 +327,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const {
+      const {
       make, model, year, price, mileage, fuelType, transmission, engineSize,
       bodyType, doors, seats, color, condition, previousOwners, nctExpiry,
-      serviceHistory, accidentHistory, title, description, features, county, images
+      serviceHistory, accidentHistory, title, description, features, county, area, images  // ✅ ADD area
     } = body
 
     // Check user's daily listing limit
@@ -352,7 +352,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Sanitize text inputs
+   // Sanitize text inputs
     const sanitizedData = {
       make: sanitizeText(make),
       model: sanitizeText(model),
@@ -360,6 +360,7 @@ export async function POST(request: NextRequest) {
       description: sanitizeText(description),
       color: color ? sanitizeText(color) : null,
       county: sanitizeText(county),
+      area: body.area ? sanitizeText(body.area) : null,  // ✅ ADD THIS LINE
     }
 
     // Generate SEO-friendly slug with collision handling
@@ -417,9 +418,10 @@ export async function POST(request: NextRequest) {
           description: sanitizedData.description,
           features: Array.isArray(features) ? features.slice(0, 20) : [], // Limit features
           location: {
-            county: sanitizedData.county,
-            display_location: sanitizedData.county,
-          },
+          county: sanitizedData.county,
+          area: sanitizedData.area,
+          display_location: sanitizedData.area ? `${sanitizedData.area}, ${sanitizedData.county}` : sanitizedData.county,
+        },
           slug,
           status: 'ACTIVE',
           viewsCount: 0,

@@ -19,7 +19,7 @@ model User {
   status              UserStatus     @default(ACTIVE)
   password            String?
   emailVerified       DateTime?
-  // 🆕 ADD THESE 3 FIELDS FOR PASSWORD RESET:
+  // PASSWORD RESET FIELDS:
   resetToken          String?        // Hashed password reset token
   resetTokenExpiry    DateTime?      // When the reset token expires
   lastPasswordReset   DateTime?      // Track when password was last reset
@@ -46,11 +46,14 @@ model User {
   adminProfile        AdminProfile?
   revenueRecords      RevenueRecord[]
   
-  // NEW SUPPORT RELATIONS
+  // SUPPORT RELATIONS
   contactMessages     ContactMessage[]
   feedback            Feedback[]
   issueReports        IssueReport[]
   dealerReports       IssueReport[]    @relation("DealerReports")
+  
+  // 🆕 NEW DEALER INVITATION RELATION
+  receivedInvitation  DealerInvitation?
 
   @@map("users")
 }
@@ -140,7 +143,7 @@ model Car {
   featuredListings FeaturedListing[]
   revenueRecords   RevenueRecord[]
   
-  // NEW SUPPORT RELATION
+  // SUPPORT RELATION
   issueReports    IssueReport[]
 
   @@map("cars")
@@ -308,7 +311,50 @@ model Message {
 }
 
 // ============================================================================
-// NEW SUPPORT MODELS
+// 🆕 NEW DEALER INVITATION MODEL
+// ============================================================================
+
+model DealerInvitation {
+  id              String   @id @default(cuid())
+  
+  // Basic Information
+  email           String
+  businessName    String?
+  contactName     String?
+  phone           String?
+  location        String?  // County/city
+  
+  // Status Tracking
+  status          InvitationStatus @default(SENT)
+  sentAt          DateTime @default(now())
+  viewedAt        DateTime?
+  registeredAt    DateTime?
+  
+  // Admin Who Sent Invitation
+  invitedBy       String   // AdminProfile ID
+  admin           AdminProfile @relation(fields: [invitedBy], references: [id])
+  
+  // If Dealer Registers
+  dealerUserId    String?  @unique
+  dealerUser      User?    @relation(fields: [dealerUserId], references: [id])
+  
+  // Tracking Data
+  ipAddress       String?
+  userAgent       String?
+  source          String?  // 'admin_dashboard', 'bulk_import'
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([email])
+  @@index([status, sentAt])
+  @@index([invitedBy])
+  @@map("dealer_invitations")
+}
+
+// ============================================================================
+// SUPPORT MODELS
 // ============================================================================
 
 model ContactMessage {
@@ -508,10 +554,13 @@ model AdminProfile {
   sessions        AdminSession[]
   featuredListings FeaturedListing[]
   
-  // NEW SUPPORT RELATIONS
+  // SUPPORT RELATIONS
   assignedContacts  ContactMessage[] @relation("AssignedContacts")
   assignedFeedback  Feedback[]       @relation("AssignedFeedback")
   assignedReports   IssueReport[]    @relation("AssignedReports")
+  
+  // 🆕 NEW DEALER INVITATION RELATION
+  dealerInvitations DealerInvitation[]
   
   @@map("admin_profiles")
 }
@@ -799,6 +848,7 @@ enum NotificationType {
   CONTACT_RECEIVED
   FEEDBACK_RECEIVED
   ISSUE_REPORTED
+  DEALER_INVITED      // 🆕 NEW
 }
 
 enum ConversationStatus {
@@ -847,6 +897,8 @@ enum AdminAction {
   CONTACT_RESPONDED
   FEEDBACK_REVIEWED
   ISSUE_RESOLVED
+  DEALER_INVITED      // 🆕 NEW
+  BULK_INVITES_SENT   // 🆕 NEW
 }
 
 enum ResourceType {
@@ -861,6 +913,7 @@ enum ResourceType {
   CONTACT_MESSAGE
   FEEDBACK
   ISSUE_REPORT
+  DEALER_INVITATION   // 🆕 NEW
 }
 
 enum LogSeverity {
@@ -954,10 +1007,6 @@ enum RevenueSource {
   OTHER
 }
 
-// ============================================================================
-// NEW SUPPORT ENUMS
-// ============================================================================
-
 enum ContactCategory {
   GENERAL
   TECHNICAL_SUPPORT
@@ -1049,4 +1098,15 @@ enum ReportStatus {
   CLOSED
   DUPLICATE
   INVALID
+}
+
+// ============================================================================
+// 🆕 NEW DEALER INVITATION ENUM
+// ============================================================================
+
+enum InvitationStatus {
+  SENT           // Email sent successfully
+  VIEWED         // Email opened by recipient
+  REGISTERED     // Dealer completed registration
+  ALREADY_MEMBER // Email belongs to existing user
 }

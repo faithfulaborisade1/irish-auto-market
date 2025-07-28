@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Users, 
   Car, 
@@ -63,33 +63,58 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'cars' | 'users' | 'revenue' | 'security'>('overview');
   const [refreshing, setRefreshing] = useState(false);
+  
+  // 🔥 FIX: Add refs to prevent infinite loops
+  const fetchInProgress = useRef(false);
+  const mounted = useRef(true);
+  const lastFetch = useRef(0);
+  const autoRefreshInterval = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    fetchDashboardData();
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchDashboardData, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // 🔥 FIX: Memoized fetch function with rate limiting
+  const fetchDashboardData = useCallback(async () => {
+    // Prevent multiple simultaneous calls
+    if (fetchInProgress.current) {
+      console.log('🛑 Dashboard fetch already in progress, skipping...');
+      return;
+    }
 
-  const fetchDashboardData = async () => {
+    // Rate limiting: Don't fetch more than once per 30 seconds (except manual refresh)
+    const now = Date.now();
+    const timeSinceLastFetch = now - lastFetch.current;
+    if (timeSinceLastFetch < 30000 && !refreshing) {
+      console.log(`🛑 Rate limit: ${Math.ceil((30000 - timeSinceLastFetch) / 1000)}s remaining`);
+      return;
+    }
+
+    fetchInProgress.current = true;
+    if (!refreshing) setLoading(true);
+    setError(null);
+
     try {
-      setRefreshing(true);
-      setError(null);
-
+      console.log('📊 Fetching dashboard data (controlled)...');
+      
       const response = await fetch('/api/admin/dashboard/stats', {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
+        // Prevent caching issues
+        cache: 'no-cache'
       });
+
+      if (!mounted.current) return; // Component unmounted
 
       if (response.ok) {
         const data = await response.json();
         setStats(data);
+        lastFetch.current = now;
+        console.log('✅ Dashboard data loaded successfully');
       } else {
+        console.warn(`⚠️ Dashboard API error: ${response.status}`);
         setError(`Failed to load dashboard data (${response.status})`);
-        // Mock data for development
+        
+        // Mock data for development - your existing fallback
         setStats({
           totalUsers: 247,
           totalCars: 1834,
@@ -110,13 +135,55 @@ export default function AdminDashboardPage() {
         });
       }
     } catch (error: any) {
-      setError('Network error loading dashboard');
-      setStats({});
+      console.error('❌ Dashboard fetch error:', error);
+      if (mounted.current) {
+        setError('Network error loading dashboard');
+        setStats({});
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (mounted.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+      fetchInProgress.current = false;
     }
-  };
+  }, [refreshing]); // Only depend on refreshing
+
+  // 🔥 FIX: Controlled useEffect - runs once only
+  useEffect(() => {
+    console.log('🔄 Admin Dashboard mounted');
+    mounted.current = true;
+    
+    // Initial fetch
+    fetchDashboardData();
+
+    // 🔥 FIX: Controlled auto-refresh with cleanup
+    autoRefreshInterval.current = setInterval(() => {
+      if (mounted.current && !fetchInProgress.current) {
+        console.log('⏰ Auto-refresh: 5 minutes elapsed');
+        fetchDashboardData();
+      }
+    }, 300000); // 🔥 CHANGED: 5 minutes instead of 30 seconds
+
+    // Cleanup function
+    return () => {
+      console.log('🧹 Admin Dashboard unmounting');
+      mounted.current = false;
+      fetchInProgress.current = false;
+      if (autoRefreshInterval.current) {
+        clearInterval(autoRefreshInterval.current);
+        autoRefreshInterval.current = null;
+      }
+    };
+  }, []); // 🔥 EMPTY DEPENDENCY ARRAY - RUNS ONCE ONLY
+
+  // 🔥 FIX: Manual refresh function
+  const handleManualRefresh = useCallback(async () => {
+    console.log('🔄 Manual refresh triggered');
+    setRefreshing(true);
+    lastFetch.current = 0; // Reset rate limit for manual refresh
+    await fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const safeNumber = (value: number | undefined): number => value ?? 0;
   const safeArray = (value: any[] | undefined): any[] => value ?? [];
@@ -170,7 +237,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  if (loading) {
+  if (loading && !stats.totalUsers) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -195,17 +262,20 @@ export default function AdminDashboardPage() {
               <p className="text-gray-600 text-sm">Irish Auto Market Management Dashboard</p>
             </div>
             <div className="flex items-center gap-4">
+              {/* 🔥 FIX: Updated refresh button */}
               <button
-                onClick={fetchDashboardData}
-                disabled={refreshing}
+                onClick={handleManualRefresh}
+                disabled={refreshing || fetchInProgress.current}
                 className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh
+                {refreshing ? 'Refreshing...' : 'Refresh'}
               </button>
               <div className="text-right">
                 <p className="text-xs text-gray-500">Last updated</p>
-                <p className="text-sm font-medium">{new Date().toLocaleTimeString()}</p>
+                <p className="text-sm font-medium">
+                  {lastFetch.current ? new Date(lastFetch.current).toLocaleTimeString() : 'Never'}
+                </p>
               </div>
             </div>
           </div>
@@ -213,6 +283,19 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* 🔥 ADDED: Error display */}
+        {error && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-600" />
+              <div>
+                <p className="text-yellow-800 font-medium">Dashboard Warning</p>
+                <p className="text-yellow-700 text-sm">{error} - Showing cached/mock data</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Critical Actions Alert Bar */}
         {urgentActions.filter(a => a.priority === 'critical').length > 0 && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
@@ -478,9 +561,18 @@ export default function AdminDashboardPage() {
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-8 bg-gray-900 rounded-lg p-4">
             <h3 className="text-sm font-semibold text-gray-300 mb-2">🔧 Debug Info (Development Only)</h3>
-            <pre className="text-xs text-gray-400 overflow-auto">
-              {JSON.stringify(stats, null, 2)}
-            </pre>
+            <div className="text-xs text-gray-400 space-y-1">
+              <p>🔄 Fetch in progress: {fetchInProgress.current ? 'Yes' : 'No'}</p>
+              <p>⏰ Last fetch: {lastFetch.current ? new Date(lastFetch.current).toLocaleString() : 'Never'}</p>
+              <p>📊 Stats loaded: {Object.keys(stats).length > 0 ? 'Yes' : 'No'}</p>
+              <p>❌ Current error: {error || 'None'}</p>
+            </div>
+            <details className="mt-2">
+              <summary className="text-xs text-gray-400 cursor-pointer">View raw stats data</summary>
+              <pre className="text-xs text-gray-400 overflow-auto mt-2 max-h-40">
+                {JSON.stringify(stats, null, 2)}
+              </pre>
+            </details>
           </div>
         )}
       </div>

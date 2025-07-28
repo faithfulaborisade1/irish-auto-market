@@ -152,3 +152,39 @@ export function deepClone<T>(obj: T): T {
   }
   return obj
 }
+
+/**
+ * Standardized location formatter for Irish Auto Market
+ * Returns: "Area, County" or "County" format
+ */
+export function formatLocation(locationData: any): string {
+  // Handle null/undefined
+  if (!locationData) return 'Ireland';
+  
+  // Handle simple string
+  if (typeof locationData === 'string') {
+    return locationData;
+  }
+
+  if (locationData && typeof locationData === 'object') {
+    // Handle different field names
+    const area = locationData.area || locationData.city || locationData.town || '';
+    let county = locationData.county || '';
+    
+    // Clean up county name (remove "Co. " prefix if present)
+    if (county.startsWith('Co. ')) {
+      county = county.substring(4);
+    }
+    
+    // Return formatted location
+    if (area && county) {
+      return `${area}, ${county}`;
+    } else if (county) {
+      return county;
+    } else if (area) {
+      return area;
+    }
+  }
+
+  return 'Ireland'; // Fallback
+}

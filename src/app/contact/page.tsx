@@ -19,6 +19,7 @@ export default function ContactPage() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({})
 
   const categories = [
     { value: 'GENERAL', label: 'General Inquiry' },
@@ -31,10 +32,45 @@ export default function ContactPage() {
     { value: 'SUGGESTION', label: 'Suggestion' }
   ]
 
+  // Client-side validation
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {}
+    
+    if (!formData.name.trim()) {
+      errors.name = 'Name is required'
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address'
+    }
+    
+    if (!formData.subject.trim()) {
+      errors.subject = 'Subject is required'
+    }
+    
+    if (!formData.message.trim()) {
+      errors.message = 'Message is required'
+    } else if (formData.message.trim().length < 10) {
+      errors.message = 'Message must be at least 10 characters long'
+    }
+    
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setFieldErrors({})
+
+    // Validate form before submission
+    if (!validateForm()) {
+      setLoading(false)
+      return
+    }
 
     try {
       const response = await fetch('/api/contact', {
@@ -57,22 +93,50 @@ export default function ContactPage() {
           category: 'GENERAL',
           message: ''
         })
+        
+        // Scroll to success message
+        window.scrollTo({ top: 0, behavior: 'smooth' })
       } else {
-        setError(data.message || 'Failed to send message. Please try again.')
+        // Handle validation errors from server
+        if (data.details) {
+          const serverErrors: {[key: string]: string} = {}
+          data.details.forEach((detail: any) => {
+            if (detail.path && detail.path.length > 0) {
+              serverErrors[detail.path[0]] = detail.message
+            }
+          })
+          setFieldErrors(serverErrors)
+        } else {
+          setError(data.message || 'Failed to send message. Please try again.')
+        }
       }
     } catch (error) {
-      setError('Failed to send message. Please try again.')
+      console.error('Contact form error:', error)
+      setError('Failed to send message. Please check your connection and try again.')
     } finally {
       setLoading(false)
     }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     })
+    
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors({
+        ...fieldErrors,
+        [name]: ''
+      })
+    }
   }
+
+  // Character count for message
+  const messageCharCount = formData.message.length
+  const messageMinLength = 10
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -160,6 +224,16 @@ export default function ContactPage() {
                 </div>
               </div>
             </div>
+
+            {/* Response Time Info */}
+            <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+              <h3 className="text-sm font-semibold text-green-800 mb-2">Response Times</h3>
+              <div className="space-y-1 text-sm text-green-700">
+                <div>• General inquiries: Within 24 hours</div>
+                <div>• Technical support: Within 4-8 hours</div>
+                <div>• Urgent issues: Within 2 hours</div>
+              </div>
+            </div>
           </div>
 
           {/* Contact Form */}
@@ -170,22 +244,22 @@ export default function ContactPage() {
 
             {success && (
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-3">
-                <CheckCircle className="w-5 h-5 text-green-600" />
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
                 <div>
                   <p className="text-green-800 font-medium">Message sent successfully!</p>
-                  <p className="text-green-600 text-sm">We'll get back to you within 24 hours.</p>
+                  <p className="text-green-600 text-sm">We'll get back to you within 24 hours. Check your email for confirmation.</p>
                 </div>
               </div>
             )}
 
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-3">
-                <AlertCircle className="w-5 h-5 text-red-600" />
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
                 <p className="text-red-800">{error}</p>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6" noValidate>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -198,9 +272,14 @@ export default function ContactPage() {
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${
+                      fieldErrors.name ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
                     placeholder="Your full name"
                   />
+                  {fieldErrors.name && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.name}</p>
+                  )}
                 </div>
 
                 <div>
@@ -214,9 +293,14 @@ export default function ContactPage() {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${
+                      fieldErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
                     placeholder="your@email.com"
                   />
+                  {fieldErrors.email && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+                  )}
                 </div>
               </div>
 
@@ -231,7 +315,7 @@ export default function ContactPage() {
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
                     placeholder="+353 1 234 5678"
                   />
                 </div>
@@ -246,7 +330,7 @@ export default function ContactPage() {
                     value={formData.category}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
                   >
                     {categories.map((category) => (
                       <option key={category.value} value={category.value}>
@@ -268,14 +352,24 @@ export default function ContactPage() {
                   value={formData.subject}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors ${
+                    fieldErrors.subject ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                   placeholder="Brief description of your inquiry"
                 />
+                {fieldErrors.subject && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.subject}</p>
+                )}
               </div>
 
               <div>
                 <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">
                   Message *
+                  <span className={`ml-2 text-xs ${
+                    messageCharCount < messageMinLength ? 'text-red-500' : 'text-gray-500'
+                  }`}>
+                    ({messageCharCount}/{messageMinLength} minimum)
+                  </span>
                 </label>
                 <textarea
                   id="message"
@@ -284,14 +378,19 @@ export default function ContactPage() {
                   onChange={handleChange}
                   required
                   rows={6}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-                  placeholder="Please provide details about your inquiry..."
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none transition-colors ${
+                    fieldErrors.message ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                  placeholder="Please provide details about your inquiry... (minimum 10 characters)"
                 />
+                {fieldErrors.message && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.message}</p>
+                )}
               </div>
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || messageCharCount < messageMinLength}
                 className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
               >
                 {loading ? (
@@ -303,6 +402,12 @@ export default function ContactPage() {
                   </>
                 )}
               </button>
+              
+              {messageCharCount < messageMinLength && (
+                <p className="text-sm text-gray-500 text-center">
+                  Please write at least {messageMinLength - messageCharCount} more characters to send your message.
+                </p>
+              )}
             </form>
           </div>
         </div>

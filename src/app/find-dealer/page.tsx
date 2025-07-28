@@ -6,6 +6,7 @@ import { Search, MapPin, Phone, Globe, Car, Star, ChevronRight, Filter, Grid, Li
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { formatLocation } from '@/lib/utils';
 
 interface Dealer {
   id: string;
@@ -227,7 +228,7 @@ export default function FindDealerPage() {
         <div className="space-y-2 mb-4">
           <div className="flex items-center text-sm text-gray-600">
             <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-            <span>{dealer.location.address}, {dealer.location.city}, {dealer.location.county}</span>
+            <span>{formatLocation(dealer.location)}</span>
           </div>
           {dealer.phoneNumber && (
             <div className="flex items-center text-sm text-gray-600">

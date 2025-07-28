@@ -8,9 +8,12 @@ import {
   ChevronLeft, Heart, MessageCircle, Share2, CheckCircle 
 } from 'lucide-react';
 import Link from 'next/link';
+import { formatLocation } from '@/lib/utils';
+import CarCard from '@/components/CarCard'; // ✅ Import your main CarCard component
 
 interface Car {
   id: string;
+  title: string; // ✅ ADD THIS REQUIRED FIELD
   make: string;
   model: string;
   year: number;
@@ -21,6 +24,7 @@ interface Car {
   bodyType: string;
   color: string;
   imageUrl: string;
+  images?: Array<{ id: string; url: string; alt: string }>; // ✅ Add images array
   status: 'ACTIVE' | 'SOLD' | 'PENDING';
   featured: boolean;
   views: number;
@@ -28,6 +32,18 @@ interface Car {
   likes: number;
   createdAt: string;
   location: string;
+  // ✅ Add seller info for CarCard compatibility
+  seller?: {
+    name: string;
+    type: string;
+    businessName?: string;
+    verified?: boolean;
+    phone?: string;
+  };
+  // ✅ Add additional fields that CarCard expects
+  viewsCount?: number;
+  inquiriesCount?: number;
+  likesCount?: number;
 }
 
 interface Dealer {
@@ -73,15 +89,50 @@ export default function DealerDetailPage() {
   const [selectedMake, setSelectedMake] = useState('All Makes');
   const [loading, setLoading] = useState(true);
 
+  const [hasInitialized, setHasInitialized] = useState(false); // ✅ Track if we've loaded data
+
+  // ✅ Proper React pattern with useEffect
   useEffect(() => {
+    // Only run if we have an ID and haven't initialized yet
+    if (!params.id || hasInitialized) return;
+
     const fetchDealer = async () => {
       setLoading(true);
       try {
         const response = await fetch(`/api/dealers/${params.id}`);
         if (response.ok) {
           const dealerData = await response.json();
-          setDealer(dealerData);
-          setFilteredCars(dealerData.cars);
+          
+          // ✅ Transform car data to be compatible with CarCard component
+          const transformedCars = dealerData.cars.map((car: any) => ({
+            ...car,
+            // ✅ ADD REQUIRED TITLE FIELD
+            title: `${car.year} ${car.make} ${car.model}`,
+            
+            // Convert single imageUrl to images array for CarCard compatibility
+            images: car.images || (car.imageUrl ? [{ 
+              id: '1', 
+              url: car.imageUrl, 
+              alt: `${car.make} ${car.model}` 
+            }] : []),
+            
+            // Add seller info from dealer data
+            seller: {
+              name: dealerData.businessName,
+              type: 'dealer', // ✅ This will trigger "Verified Dealer" display
+              businessName: dealerData.businessName,
+              verified: dealerData.verified,
+              phone: dealerData.phoneNumber
+            },
+            
+            // Ensure all required fields exist
+            viewsCount: car.views || 0,
+            inquiriesCount: car.inquiries || 0,
+            likesCount: car.likes || 0
+          }));
+
+          setDealer({ ...dealerData, cars: transformedCars });
+          setFilteredCars(transformedCars);
         } else if (response.status === 404) {
           setDealer(null);
         } else {
@@ -91,13 +142,12 @@ export default function DealerDetailPage() {
         console.error('Error fetching dealer:', error);
       } finally {
         setLoading(false);
+        setHasInitialized(true); // ✅ Mark as done regardless of success/failure
       }
     };
 
-    if (params.id) {
-      fetchDealer();
-    }
-  }, [params.id]);
+    fetchDealer();
+  }, [params.id]); // ✅ Only depends on params.id, not hasInitialized
 
   useEffect(() => {
     if (!dealer) return;
@@ -172,61 +222,6 @@ export default function DealerDetailPage() {
       return 'Closed';
     }
   };
-
-  const CarCard = ({ car }: { car: Car }) => (
-    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden">
-      <div className="relative">
-        <img src={car.imageUrl} alt={`${car.make} ${car.model}`} className="w-full h-48 object-cover" />
-        {car.featured && (
-          <div className="absolute top-2 left-2 bg-orange-500 text-white px-2 py-1 rounded text-xs font-medium">
-            Featured
-          </div>
-        )}
-        {car.status === 'SOLD' && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <span className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold">SOLD</span>
-          </div>
-        )}
-        <button className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-50">
-          <Heart className="w-4 h-4 text-gray-600" />
-        </button>
-      </div>
-      
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-lg font-semibold text-gray-900">
-            {car.year} {car.make} {car.model}
-          </h3>
-          <span className="text-lg font-bold text-green-600">{formatPrice(car.price)}</span>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
-          <div>{formatMileage(car.mileage)} km</div>
-          <div>{car.fuelType}</div>
-          <div>{car.transmission}</div>
-          <div>{car.color}</div>
-        </div>
-        
-        <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-          <span>{car.views} views</span>
-          <span>{car.inquiries} inquiries</span>
-          <span>{car.likes} likes</span>
-        </div>
-        
-        <div className="flex space-x-2">
-          <Link
-            href={`/cars/${car.id}`}
-            className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors text-center text-sm"
-          >
-            View Details
-          </Link>
-          <button className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-            <MessageCircle className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 
   if (loading) {
     return (
@@ -328,7 +323,7 @@ export default function DealerDetailPage() {
               <div className="flex items-center space-x-4">
                 <div className="flex items-center text-sm text-gray-600">
                   <MapPin className="w-4 h-4 mr-1 text-gray-400" />
-                  <span>{dealer.location.address}, {dealer.location.city}, {dealer.location.county}</span>
+                 <span>{formatLocation(dealer.location)}</span>
                 </div>
                 {dealer.phoneNumber && (
                   <div className="flex items-center text-sm text-gray-600">
@@ -473,10 +468,16 @@ export default function DealerDetailPage() {
           <div className={`grid gap-6 ${
             viewMode === 'grid' 
               ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
-              : 'grid-cols-1'
+              : 'grid-cols-1 max-w-4xl mx-auto'
           }`}>
             {filteredCars.map((car) => (
-              <CarCard key={car.id} car={car} />
+              // ✅ Use your main CarCard component instead of the basic one
+              <CarCard 
+                key={car.id} 
+                car={car} 
+                variant={viewMode === 'list' ? 'list' : 'grid'}
+                showPerformance={true}
+              />
             ))}
           </div>
         )}

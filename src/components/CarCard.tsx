@@ -1,521 +1,474 @@
-// 🚀 COMPLETE CARCARD COMPONENT - GRID FIX + LOCATION DISPLAY FIX
+// 🚀 ENHANCED CARCARD - BETTER LOCATION DISPLAY
 'use client'
 
-import React from 'react'
+import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { MapPin, ChevronLeft, ChevronRight, Calendar, Gauge, Fuel, Settings, User, Heart, Shield } from 'lucide-react'
-import { useState, useCallback, useMemo } from 'react'
-import dynamic from 'next/dynamic'
+import { Heart, Calendar, Gauge, Fuel, Settings, MapPin, Eye, MessageCircle, Star, Shield, User, CheckCircle } from 'lucide-react'
 
-// 🚀 FIX #1: Lazy load LikeButton component
-const LikeButton = dynamic(() => import('@/components/LikeButton'), {
-  loading: () => <div className="w-8 h-8 bg-gray-200 rounded animate-pulse"></div>,
-  ssr: false
-})
+// 🔥 YOUR ENHANCED LIKEBUTTON - EXACT API INTEGRATION
+const LikeButton = ({ carId }: { carId: string }) => {
+  const [isLiked, setIsLiked] = useState(false)
+  const [likesCount, setLikesCount] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [initialized, setInitialized] = useState(false)
 
-interface Car {
-  id: string
-  title: string
-  make: string
-  model: string
-  year: number
-  price: number
-  mileage: number
-  fuelType: string
-  transmission: string
-  bodyType: string
-  color: string
-  description: string
-  location: { city: string; county: string; area?: string; town?: string } // 🔥 ENHANCED: Added area and town
-  featured: boolean
-  views: number
-  inquiries: number
-  likesCount: number
-  isLiked: boolean
-  images: Array<{ id: string; url: string; alt: string }>
-  seller: {
-    name: string
-    type: string
-    phone: string
-    verified: boolean
+  // Get initial like status when component mounts
+  React.useEffect(() => {
+    const fetchLikeStatus = async () => {
+      try {
+        const response = await fetch(`/api/cars/${carId}/like`)
+        const data = await response.json()
+        if (data.success) {
+          setIsLiked(data.liked)
+          setLikesCount(data.likesCount)
+        }
+      } catch (error) {
+        console.error('Error fetching like status:', error)
+      } finally {
+        setInitialized(true)
+      }
+    }
+
+    fetchLikeStatus()
+  }, [carId])
+
+  const handleLike = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    if (loading || !initialized) return
+    
+    try {
+      setLoading(true)
+      
+      // ✅ FIXED: Use POST for liking, DELETE for unliking (matches your API exactly)
+      const method = isLiked ? 'DELETE' : 'POST'
+      const response = await fetch(`/api/cars/${carId}/like`, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' }
+      })
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        setIsLiked(data.liked)
+        setLikesCount(data.likesCount)
+      } else {
+        // Handle specific errors from your API
+        if (response.status === 401) {
+          alert('Please log in to like cars')
+        } else if (response.status === 400) {
+          alert(data.error) // "Cannot like your own car" etc.
+        }
+      }
+    } catch (error) {
+      console.error('Like error:', error)
+      alert('Failed to update like. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
-  createdAt?: string
-  savedAt?: string
+
+  if (!initialized) {
+    return (
+      <div className="p-1.5 sm:p-2 rounded-full bg-white/90 shadow-lg backdrop-blur-sm">
+        <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gray-200 rounded animate-pulse"></div>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={handleLike}
+      disabled={loading}
+      className={`relative p-1.5 sm:p-2 rounded-full transition-all duration-200 touch-manipulation ${
+        isLiked 
+          ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+          : 'bg-white/90 text-gray-600 hover:bg-white hover:text-red-600'
+      } shadow-lg backdrop-blur-sm ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+      title={isLiked ? 'Unlike this car' : 'Like this car'}
+    >
+      <Heart className={`w-3 h-3 sm:w-4 sm:h-4 ${isLiked ? 'fill-current' : ''} ${loading ? 'animate-pulse' : ''}`} />
+      {likesCount > 0 && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1 min-w-[16px] h-4 flex items-center justify-center">
+          {likesCount > 99 ? '99+' : likesCount}
+        </span>
+      )}
+    </button>
+  )
 }
 
 interface CarCardProps {
-  car: Car
-  variant?: 'grid' | 'list' | 'compact'
-  showSavedDate?: boolean
+  car: {
+    id: string
+    title: string
+    make: string
+    model: string
+    year: number
+    price: number
+    mileage?: number
+    fuelType?: string
+    transmission?: string
+    bodyType?: string
+    color?: string
+    description?: string
+    location?: any
+    featured?: boolean
+    views?: number
+    inquiries?: number
+    likesCount?: number
+    isLiked?: boolean
+    images?: Array<{ id: string; url: string; alt: string }>
+    seller?: {
+      name?: string
+      type?: string
+      phone?: string
+      verified?: boolean
+      businessName?: string
+    }
+    savedAt?: string
+  }
+  variant?: 'grid' | 'list'
   showPerformance?: boolean
-  showActions?: ('edit' | 'delete' | 'promote')[]
-  onEdit?: (carId: string) => void
-  onDelete?: (carId: string) => void
-  onPromote?: (carId: string) => void
+  showSavedDate?: boolean
   className?: string
 }
 
-// 🚀 ENHANCED Image Carousel Component
-const CarImageCarousel = React.memo(({ 
-  images, 
-  title, 
-  featured, 
-  price, 
-  carId, 
-  likesCount, 
-  isLiked,
-  savedDate,
-  className = '',
-  variant = 'grid'
-}: {
-  images: Array<{ id: string; url: string; alt: string }>
+// ✅ YOUR ENHANCED CarImageCarousel - WITH MOBILE OPTIMIZATIONS
+const CarImageCarousel = React.memo(({ images, title, featured, price, carId }: {
+  images?: Array<{ id: string; url: string; alt: string }>
   title: string
-  featured: boolean
+  featured?: boolean
   price: number
   carId: string
-  likesCount: number
-  isLiked: boolean
-  savedDate?: string
-  className?: string
-  variant?: 'grid' | 'list' | 'compact'
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [isHovered, setIsHovered] = useState(false)
   
   const hasMultipleImages = images && images.length > 1
-  const currentImage = images?.[currentImageIndex] || null
+  const currentImage = images?.[currentImageIndex]
 
-  const nextImage = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (hasMultipleImages) {
-      setCurrentImageIndex((prev) => (prev + 1) % images.length)
-    }
-  }, [hasMultipleImages, images.length])
-
-  const prevImage = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (hasMultipleImages) {
-      setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)
-    }
-  }, [hasMultipleImages, images.length])
-
-  const optimizedImageUrl = useMemo(() => {
-    if (!currentImage?.url) return '/placeholder-car.jpg'
-    
-    return currentImage.url
+  // ✅ YOUR PROFESSIONAL getOptimizedImageUrl - PRESERVED
+  const getOptimizedImageUrl = (url?: string) => {
+    if (!url) return '/placeholder-car.jpg'
+    return url
       .replace(/\/c_fill,w_\d+,h_\d+,g_auto\//, '/')
       .replace(/\/c_thumb,w_\d+,h_\d+,g_auto\//, '/')
       + '?w=600&h=400&fit=cover&auto=format,compress&q=85'
-  }, [currentImage?.url])
+  }
+
+  const nextImage = () => {
+    if (hasMultipleImages) {
+      setCurrentImageIndex((prev) => (prev + 1) % images.length)
+    }
+  }
+
+  const prevImage = () => {
+    if (hasMultipleImages) {
+      setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length)
+    }
+  }
 
   return (
-    <div 
-      className={`relative overflow-hidden bg-gray-100 ${className}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <img  
-        src={optimizedImageUrl}
+    <div className="relative aspect-[4/3] bg-gray-100 rounded-t-xl overflow-hidden group">
+      <img
+        src={getOptimizedImageUrl(currentImage?.url)}
         alt={currentImage?.alt || title}
-        className="w-full h-full object-cover"
+        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         loading="lazy"
         onError={(e) => {
           e.currentTarget.src = '/placeholder-car.jpg'
         }}
       />
+      
+      {/* Image overlay badges - MOBILE OPTIMIZED */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Featured badge */}
+        {featured && (
+          <div className="absolute top-2 left-2 sm:top-3 sm:left-3">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-2 py-1 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium flex items-center shadow-lg">
+              <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1 fill-current" />
+              Featured
+            </div>
+          </div>
+        )}
 
-      {/* Featured Badge */}
-      {featured && (
-        <div className="absolute top-3 left-3">
-          <div className="bg-green-600 text-white px-3 py-1.5 rounded-md text-sm font-semibold shadow-lg flex items-center">
-            <Shield className="w-3 h-3 mr-1" />
-            Featured
+        {/* Image counter - MOBILE RESPONSIVE */}
+        {hasMultipleImages && (
+          <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
+            <div className="bg-black/70 backdrop-blur-sm text-white px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-xs font-medium">
+              {currentImageIndex + 1} / {images.length}
+            </div>
+          </div>
+        )}
+
+        {/* Price overlay - MOBILE RESPONSIVE */}
+        <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3">
+          <div className="bg-black/80 backdrop-blur-sm text-white px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg">
+            <div className="text-base sm:text-lg font-bold">€{price.toLocaleString()}</div>
           </div>
         </div>
-      )}
 
-      {/* Saved Date Badge */}
-      {savedDate && (
-        <div className="absolute bottom-3 left-3">
-          <span className="bg-orange-600 text-white px-2.5 py-1 rounded-md text-xs font-medium shadow-lg">
-            Saved {savedDate}
-          </span>
-        </div>
-      )}
-
-      {/* Price Tag - Adjusted size based on variant */}
-      <div className="absolute top-3 right-3">
-        <div className={`bg-white text-gray-900 rounded font-bold shadow-md ${
-          variant === 'grid' ? 'px-4 py-2 text-lg' : 'px-3 py-1.5 text-base'
-        }`}>
-          €{price.toLocaleString()}
+        {/* Like button - MOBILE OPTIMIZED */}
+        <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 pointer-events-auto">
+          <LikeButton carId={carId} />
         </div>
       </div>
 
-      {/* Like Button */}
-      <div className="absolute bottom-3 right-3">
-        <LikeButton 
-          carId={carId}
-          initialLikesCount={likesCount}
-          initialIsLiked={isLiked}
-          size={variant === 'grid' ? 'md' : 'sm'}
-          showCount={true}
-          className="bg-white shadow-md rounded px-3 py-2"
-        />
-      </div>
-
-      {/* Navigation arrows */}
-      {hasMultipleImages && isHovered && (
+      {/* Navigation arrows - MOBILE FRIENDLY */}
+      {hasMultipleImages && (
         <>
           <button
-            onClick={prevImage}
-            className="absolute left-3 top-1/2 -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-700 p-2 rounded-full shadow-lg transition-all duration-200 z-10"
-            aria-label="Previous image"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); prevImage(); }}
+            className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 w-7 h-7 sm:w-8 sm:h-8 bg-white/90 hover:bg-white rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 touch-manipulation"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
           
           <button
-            onClick={nextImage}
-            className="absolute right-3 top-1/2 -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-gray-700 p-2 rounded-full shadow-lg transition-all duration-200 z-10"
-            aria-label="Next image"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); nextImage(); }}
+            className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 w-7 h-7 sm:w-8 sm:h-8 bg-white/90 hover:bg-white rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 touch-manipulation"
           >
-            <ChevronRight className="w-4 h-4" />
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </button>
         </>
       )}
-
-      {/* Image count indicator */}
-      {hasMultipleImages && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-black bg-opacity-60 text-white px-3 py-1 rounded-full text-sm">
-          {currentImageIndex + 1} / {images.length}
-        </div>
-      )}
     </div>
   )
 })
 
-CarImageCarousel.displayName = 'CarImageCarousel'
-
-export default function CarCard({
-  car,
-  variant = 'grid',
-  showSavedDate = false,
-  showPerformance = false,
-  showActions = [],
-  onEdit,
-  onDelete,
-  onPromote,
-  className = ''
-}: CarCardProps) {
-  
-  if (!car || !car.id) {
-    console.warn('CarCard: car object is undefined or missing id:', car)
-    return null
-  }
-  
+// ✅ ENHANCED CarContent - WITH IMPROVED LOCATION DISPLAY
+const CarContent = React.memo(({ car, variant, showPerformance, showSavedDate }: {
+  car: CarCardProps['car']
+  variant?: 'grid' | 'list'
+  showPerformance?: boolean
+  showSavedDate?: boolean
+}) => {
+  // ✅ YOUR PROFESSIONAL date formatting - PRESERVED
   const formattedDate = useMemo(() => {
     if (!showSavedDate || !car.savedAt) return undefined
-    
-    const date = new Date(car.savedAt)
-    const now = new Date()
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
-    
-    if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)}h ago`
-    } else if (diffInHours < 24 * 7) {
-      return `${Math.floor(diffInHours / 24)}d ago`
-    } else {
+    try {
+      const date = new Date(car.savedAt)
       return date.toLocaleDateString('en-IE', { 
         day: 'numeric', 
-        month: 'short' 
+        month: 'short',
+        year: 'numeric'
       })
+    } catch {
+      return undefined
     }
   }, [showSavedDate, car.savedAt])
 
-  // 🔥 COMPLETELY REDESIGNED: Professional layout classes
-  const containerClasses = useMemo(() => {
-    const base = "bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-200"
+  // 🚀 ENHANCED getLocationDisplay - BETTER LOGIC FOR IRISH AREAS
+  const getLocationDisplay = (location: any) => {
+    if (!location) return 'Ireland'
     
-    switch (variant) {
-      case 'list':
-        return `${base} flex cursor-pointer overflow-hidden` // Horizontal layout
-      case 'compact':
-        return `${base} cursor-pointer overflow-hidden`
-      default: // 'grid'
-        return `${base} cursor-pointer overflow-hidden flex flex-col` // 🔥 NEW: Vertical flex layout
+    // Handle simple string (already formatted)
+    if (typeof location === 'string') {
+      return location
     }
-  }, [variant])
+    
+    if (typeof location === 'object') {
+      // Check for pre-formatted display location
+      if (location.display_location) {
+        return location.display_location
+      }
+      
+      // Extract area and county information
+      const area = location.area || location.city || location.town
+      let county = location.county || location.region
+      
+      // Clean up county name (remove "Co. " prefix if present)
+      if (county && county.startsWith('Co. ')) {
+        county = county.substring(4)
+      }
+      
+      // 🎯 ENHANCED: Return "Area, County" format when both available
+      if (area && county) {
+        return `${area}, ${county}`
+      } else if (county) {
+        return county
+      } else if (area) {
+        return area
+      }
+      
+      // 🚀 NEW: Try to extract from address field if available
+      if (location.address && typeof location.address === 'string') {
+        // Parse address like "Tullamore, Co. Offaly" or "Athlone, Westmeath"
+        const parts = location.address.split(',').map((part: string) => part.trim())
+        if (parts.length >= 2) {
+          const lastPart = parts[parts.length - 1].replace(/^Co\.\s*/, '')
+          const secondLastPart = parts[parts.length - 2]
+          return `${secondLastPart}, ${lastPart}`
+        }
+        return location.address
+      }
+    }
+    
+    return 'Ireland'
+  }
 
-  const imageContainerClasses = useMemo(() => {
-    switch (variant) {
-      case 'list':
-        return 'w-80 h-56 flex-shrink-0' // List: Fixed width
-      case 'compact':
-        return 'h-44'
-      default: // 'grid'
-        return 'h-72 w-full' // 🔥 INCREASED: Bigger image for grid (288px height)
-    }
-  }, [variant])
+  // ✅ YOUR PROFESSIONAL SellerStatus component - PRESERVED
+  const SellerStatus = () => {
+    if (!car.seller) return null
 
-  const contentClasses = useMemo(() => {
-    switch (variant) {
-      case 'list':
-        return 'flex-1 p-6 flex flex-col justify-between' // List: Flex content
-      case 'compact':
-        return 'p-4'
-      default: // 'grid'
-        return 'p-7 flex-1 flex flex-col' // 🔥 INCREASED: More padding for larger cards
+    const isDealer = car.seller.type === 'dealer' || car.seller.type === 'DEALER'
+    const isVerified = car.seller.verified
+
+    if (isDealer) {
+      return (
+        <div className="flex items-center space-x-1">
+          <Shield className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-blue-600" />
+          <span className="text-xs font-medium text-blue-600">
+            {isVerified ? 'Verified Dealer' : 'Dealer'}
+          </span>
+          {isVerified && <CheckCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-500" />}
+        </div>
+      )
+    } else {
+      return (
+        <div className="flex items-center space-x-1">
+          <User className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-500" />
+          <span className="text-xs text-gray-600">Private Seller</span>
+        </div>
+      )
     }
-  }, [variant])
+  }
 
   return (
-    <div className={`${containerClasses} ${className}`}>
-      {/* Conditional Link wrapper */}
-      {showActions.length === 0 ? (
-        <Link href={`/cars/${car.id}`} className={variant === 'list' ? 'flex w-full' : 'flex flex-col h-full w-full'}>
-          <CarImageCarousel
-            images={car.images}
-            title={car.title}
-            featured={car.featured}
-            price={car.price}
-            carId={car.id}
-            likesCount={car.likesCount}
-            isLiked={car.isLiked}
-            savedDate={formattedDate}
-            className={imageContainerClasses}
-            variant={variant}
-          />
-          
-          <div className={contentClasses}>
-            <CarContent 
-              car={car} 
-              variant={variant} 
-              showPerformance={showPerformance}
-              showActions={showActions}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onPromote={onPromote}
-            />
+    <div className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+      {/* Header: Title + Seller Status - MOBILE OPTIMIZED */}
+      <div className="space-y-1 sm:space-y-2">
+        <div className="flex items-start justify-between">
+          <h3 className="font-semibold text-gray-900 text-base sm:text-lg leading-tight flex-1 mr-2">
+            {car.title}
+          </h3>
+          <SellerStatus />
+        </div>
+        
+        <div className="flex items-center text-xs sm:text-sm text-gray-600">
+          <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
+          <span className="truncate">{getLocationDisplay(car.location)}</span>
+          {showSavedDate && formattedDate && (
+            <>
+              <span className="mx-2">•</span>
+              <span>Saved {formattedDate}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Key specs - MOBILE RESPONSIVE GRID */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
+        <div className="flex items-center text-gray-600">
+          <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 text-gray-400" />
+          <span>{car.year}</span>
+        </div>
+        <div className="flex items-center text-gray-600">
+          <Gauge className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 text-gray-400" />
+          <span>{car.mileage?.toLocaleString() || 'N/A'} km</span>
+        </div>
+        <div className="flex items-center text-gray-600">
+          <Fuel className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 text-gray-400" />
+          <span className="capitalize">{car.fuelType?.toLowerCase() || 'N/A'}</span>
+        </div>
+        <div className="flex items-center text-gray-600">
+          <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 text-gray-400" />
+          <span className="capitalize">{car.transmission?.toLowerCase() || 'N/A'}</span>
+        </div>
+      </div>
+
+      {/* ✅ YOUR PROFESSIONAL Performance stats - PRESERVED WITH MOBILE */}
+      {showPerformance && (
+        <div className="flex items-center justify-between text-xs text-gray-500 py-2 border-t border-gray-100">
+          <div className="flex items-center">
+            <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
+            <span>{car.views || 0} views</span>
           </div>
-        </Link>
-      ) : (
-        <div className={variant === 'list' ? 'flex w-full' : 'flex flex-col h-full w-full'}>
-          <CarImageCarousel
-            images={car.images}
-            title={car.title}
-            featured={car.featured}
-            price={car.price}
-            carId={car.id}
-            likesCount={car.likesCount}
-            isLiked={car.isLiked}
-            savedDate={formattedDate}
-            className={imageContainerClasses}
-            variant={variant}
-          />
-          
-          <div className={contentClasses}>
-            <CarContent 
-              car={car} 
-              variant={variant} 
-              showPerformance={showPerformance}
-              showActions={showActions}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onPromote={onPromote}
-            />
+          <div className="flex items-center">
+            <MessageCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
+            <span>{car.inquiries || 0} inquiries</span>
+          </div>
+          <div className="flex items-center">
+            <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
+            <span>{car.likesCount || 0} likes</span>
           </div>
         </div>
       )}
+
+      {/* View Details Button - MOBILE RESPONSIVE */}
+      <div className="pt-1 sm:pt-2">
+        <Link
+          href={`/cars/${car.id}`}
+          className="block w-full bg-green-600 text-white text-center py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg hover:bg-green-700 transition-colors font-medium text-sm sm:text-base touch-manipulation"
+        >
+          View Details
+        </Link>
+      </div>
     </div>
-  )
-}
-
-// 🔥 ENHANCED: Content Component with better grid layout + FIXED LOCATION
-const CarContent = React.memo(({ 
-  car, 
-  variant, 
-  showPerformance, 
-  showActions,
-  onEdit,
-  onDelete,
-  onPromote 
-}: {
-  car: Car
-  variant: 'grid' | 'list' | 'compact'
-  showPerformance: boolean
-  showActions: ('edit' | 'delete' | 'promote')[]
-  onEdit?: (carId: string) => void
-  onDelete?: (carId: string) => void
-  onPromote?: (carId: string) => void
-}) => {
-  
-  // 🔥 NEW: Smart location display function
-  const getLocationDisplay = () => {
-    const area = car.location.area || car.location.city || car.location.town;
-    const county = car.location.county;
-    
-    if (area && county) {
-      return `${area}, Co. ${county}`;
-    } else if (county) {
-      return `Co. ${county}`;
-    } else {
-      return 'Location not specified';
-    }
-  };
-  
-  return (
-    <>
-      {/* Main Content - Grows to fill space */}
-      <div className="flex-1">
-        {/* Car Title */}
-        <h3 className={`font-bold text-gray-900 leading-tight mb-3 ${
-          variant === 'grid' ? 'text-xl' :  // 🔥 NEW: Larger title for grid
-          variant === 'list' ? 'text-xl' : 'text-lg'
-        }`}>
-          {car.title}
-        </h3>
-        
-        {/* Location - 🔥 FIXED: Now shows area + county */}
-        <div className="flex items-center text-gray-600 mb-4">
-          <MapPin className="w-4 h-4 mr-2 text-green-600" />
-          <span className={`font-medium ${
-            variant === 'grid' ? 'text-sm' : 'text-sm'
-          }`}>
-            {getLocationDisplay()}
-          </span>
-        </div>
-
-        {/* Car Specifications */}
-        <div className={`grid gap-3 mb-4 ${
-          variant === 'list' ? 'grid-cols-4' :      // List: 4 columns
-          variant === 'grid' ? 'grid-cols-2' :      // 🔥 NEW: Grid 2 columns for better spacing
-          'grid-cols-2'                              // Compact: 2 columns
-        }`}>
-          <div className="flex flex-col">
-            <div className="flex items-center text-gray-500 text-xs mb-1">
-              <Calendar className="w-3 h-3 mr-1" />
-              Year
-            </div>
-            <span className={`font-semibold text-gray-900 ${
-              variant === 'grid' ? 'text-base' : 'text-sm'
-            }`}>
-              {car.year}
-            </span>
-          </div>
-          
-          <div className="flex flex-col">
-            <div className="flex items-center text-gray-500 text-xs mb-1">
-              <Gauge className="w-3 h-3 mr-1" />
-              Mileage
-            </div>
-            <span className={`font-semibold text-gray-900 ${
-              variant === 'grid' ? 'text-base' : 'text-sm'
-            }`}>
-              {car.mileage?.toLocaleString()} km
-            </span>
-          </div>
-          
-          <div className="flex flex-col">
-            <div className="flex items-center text-gray-500 text-xs mb-1">
-              <Fuel className="w-3 h-3 mr-1" />
-              Fuel
-            </div>
-            <span className={`font-semibold text-gray-900 capitalize ${
-              variant === 'grid' ? 'text-base' : 'text-sm'
-            }`}>
-              {car.fuelType?.toLowerCase()}
-            </span>
-          </div>
-          
-          <div className="flex flex-col">
-            <div className="flex items-center text-gray-500 text-xs mb-1">
-              <Settings className="w-3 h-3 mr-1" />
-              Trans
-            </div>
-            <span className={`font-semibold text-gray-900 capitalize ${
-              variant === 'grid' ? 'text-base' : 'text-sm'
-            }`}>
-              {car.transmission?.toLowerCase()}
-            </span>
-          </div>
-        </div>
-
-        {/* Performance Stats */}
-        {showPerformance && (
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="text-center p-3 bg-green-50 border border-green-200 rounded-lg">
-              <div className="font-bold text-green-700 text-lg">{car.views}</div>
-              <div className="text-xs text-green-600">Views</div>
-            </div>
-            <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="font-bold text-blue-700 text-lg">{car.inquiries}</div>
-              <div className="text-xs text-blue-600">Inquiries</div>
-            </div>
-            <div className="text-center p-3 bg-orange-50 border border-orange-200 rounded-lg">
-              <div className="font-bold text-orange-700 text-lg">{car.likesCount}</div>
-              <div className="text-xs text-orange-600">Likes</div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Footer - Always at bottom */}
-      <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 pt-6 border-t border-gray-100 ${
-        variant === 'grid' ? 'mt-6' : 'mt-auto'
-      }`}>
-        {/* Seller Info */}
-        <div className="flex items-center">
-          <div className="flex items-center text-sm text-gray-600">
-            <User className="w-4 h-4 mr-1.5 text-gray-400" />
-            <span className="flex items-center">
-              {car.seller.verified && <Shield className="w-3 h-3 mr-1 text-green-600" />}
-              {car.seller.verified ? '✓ Verified' : ''} {car.seller.type}
-            </span>
-          </div>
-        </div>
-
-        {/* Action Buttons or View Details */}
-        {showActions.length > 0 ? (
-          <div className="flex space-x-2">
-            {showActions.includes('edit') && onEdit && (
-              <button
-                onClick={() => onEdit(car.id)}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Edit
-              </button>
-            )}
-            {showActions.includes('promote') && onPromote && (
-              <button
-                onClick={() => onPromote(car.id)}
-                className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Promote
-              </button>
-            )}
-            {showActions.includes('delete') && onDelete && (
-              <button
-                onClick={() => onDelete(car.id)}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Delete
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className={`bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 font-medium shadow-md ${
-            variant === 'grid' ? 'px-6 py-3 text-center w-full' :  // 🔥 NEW: Full width button for grid
-            'px-6 py-2.5 text-center sm:text-left'
-          }`}>
-            View Details
-          </div>
-        )}
-      </div>
-    </>
   )
 })
 
-CarContent.displayName = 'CarContent'
+export default function CarCard({ 
+  car, 
+  variant = 'grid', 
+  showPerformance = false, 
+  showSavedDate = false,
+  className = '' 
+}: CarCardProps) {
+  // ✅ YOUR PROFESSIONAL memoized container classes - ENHANCED WITH MOBILE
+  const containerClasses = useMemo(() => {
+    const baseClasses = 'bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group border border-gray-200'
+    
+    if (variant === 'list') {
+      return `${baseClasses} flex flex-col sm:flex-row ${className}`
+    } else {
+      return `${baseClasses} flex flex-col ${className}`
+    }
+  }, [variant, className])
+
+  if (variant === 'list') {
+    return (
+      <div className={containerClasses}>
+        <div className="w-full sm:w-80 flex-shrink-0">
+          <CarImageCarousel
+            images={car.images}
+            title={car.title}
+            featured={car.featured}
+            price={car.price}
+            carId={car.id}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <CarContent 
+            car={car}
+            variant={variant}
+            showPerformance={showPerformance}
+            showSavedDate={showSavedDate}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={containerClasses}>
+      <CarImageCarousel
+        images={car.images}
+        title={car.title}
+        featured={car.featured}
+        price={car.price}
+        carId={car.id}
+      />
+      <CarContent 
+        car={car}
+        variant={variant}
+        showPerformance={showPerformance}
+        showSavedDate={showSavedDate}
+      />
+    </div>
+  )
+}
