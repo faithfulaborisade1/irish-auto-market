@@ -1,8 +1,10 @@
-// src/app/api/cars/route.ts - Enhanced Production Version
+// src/app/api/cars/route.ts - Enhanced Production Version with Admin Notifications
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/database'
 import jwt from 'jsonwebtoken'
 import { rateLimiters, withRateLimit } from '@/lib/rate-limit'
+// 🔔 NEW: Import notification functions
+import { createNewCarNotification, broadcastAdminNotification } from '@/lib/admin-notifications';
 
 // Force dynamic rendering for this API route
 export const dynamic = 'force-dynamic'
@@ -218,7 +220,7 @@ export async function GET(request: NextRequest) {
       bodyType: car.bodyType,
       color: car.color,
       description: car.description,
-      location: car.location,  // ✅ This stays the same
+      location: car.location,
       featured: car.featured,
       views: car.viewsCount,
       inquiries: car.inquiriesCount,
@@ -274,7 +276,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST method - Create new car listing with enhanced security
+// POST method - Create new car listing with enhanced security and admin notifications
 export async function POST(request: NextRequest) {
   try {
     // Apply car creation rate limiting
@@ -327,10 +329,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-      const {
+    const {
       make, model, year, price, mileage, fuelType, transmission, engineSize,
       bodyType, doors, seats, color, condition, previousOwners, nctExpiry,
-      serviceHistory, accidentHistory, title, description, features, county, area, images  // ✅ ADD area
+      serviceHistory, accidentHistory, title, description, features, county, area, images
     } = body
 
     // Check user's daily listing limit
@@ -352,7 +354,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-   // Sanitize text inputs
+    // Sanitize text inputs
     const sanitizedData = {
       make: sanitizeText(make),
       model: sanitizeText(model),
@@ -360,7 +362,7 @@ export async function POST(request: NextRequest) {
       description: sanitizeText(description),
       color: color ? sanitizeText(color) : null,
       county: sanitizeText(county),
-      area: body.area ? sanitizeText(body.area) : null,  // ✅ ADD THIS LINE
+      area: body.area ? sanitizeText(body.area) : null,
     }
 
     // Generate SEO-friendly slug with collision handling
@@ -418,10 +420,10 @@ export async function POST(request: NextRequest) {
           description: sanitizedData.description,
           features: Array.isArray(features) ? features.slice(0, 20) : [], // Limit features
           location: {
-          county: sanitizedData.county,
-          area: sanitizedData.area,
-          display_location: sanitizedData.area ? `${sanitizedData.area}, ${sanitizedData.county}` : sanitizedData.county,
-        },
+            county: sanitizedData.county,
+            area: sanitizedData.area,
+            display_location: sanitizedData.area ? `${sanitizedData.area}, ${sanitizedData.county}` : sanitizedData.county,
+          },
           slug,
           status: 'ACTIVE',
           viewsCount: 0,
@@ -457,7 +459,7 @@ export async function POST(request: NextRequest) {
     // Log successful creation (for monitoring)
     console.log(`Car listing created: ${result.id} by user ${userId} at ${new Date().toISOString()}`)
 
-    // Fetch complete car data for response
+    // 🔔 NEW: Fetch complete car data for response AND notification
     const completeCarData = await db.car.findUnique({
       where: { id: result.id },
       include: {
@@ -469,10 +471,28 @@ export async function POST(request: NextRequest) {
             lastName: true,
             email: true,
             role: true,
+            dealerProfile: {
+              select: {
+                businessName: true,
+                verified: true
+              }
+            }
           },
         },
       },
     })
+
+    // 🚗🔔 NEW: BROADCAST NOTIFICATION TO ALL ADMINS
+    try {
+      if (completeCarData) {
+        const notification = createNewCarNotification(completeCarData, completeCarData.user);
+        await broadcastAdminNotification(notification);
+        console.log('📡 Admin notification sent for new car:', completeCarData.id);
+      }
+    } catch (notificationError) {
+      // Don't fail the car creation if notification fails
+      console.error('❌ Failed to send admin notification:', notificationError);
+    }
 
     return NextResponse.json({
       success: true,

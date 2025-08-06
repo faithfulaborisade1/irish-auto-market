@@ -1,7 +1,7 @@
-// src/app/admin/layout.tsx - UPDATED WITH SUPPORT NAVIGATION
+// src/app/admin/layout.tsx - UPDATED WITH NOTIFICATION SYSTEM
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { 
   BarChart3, 
@@ -14,8 +14,13 @@ import {
   ChevronDown,
   MessageCircle,
   Headphones,
-  AlertTriangle
+  AlertTriangle,
+  X
 } from 'lucide-react';
+
+// 🔔 NEW IMPORTS FOR NOTIFICATION SYSTEM
+import { useAdminNotifications } from '@/hooks/useAdminNotifications';
+import { NotificationContainer } from '@/components/admin/NotificationToast';
 
 interface AdminUser {
   id: string;
@@ -46,6 +51,20 @@ export default function AdminLayout({
     criticalReports: 0, 
     totalPending: 0 
   });
+
+  // 🔔 NEW: Notification system integration
+  const {
+    connected: notificationConnected,
+    notifications,
+    connectionError: notificationError,
+    removeNotification,
+    requestAudioPermission,
+    soundManager
+  } = useAdminNotifications();
+
+  // 🔔 NEW: Audio permission state
+  const [audioPermissionRequested, setAudioPermissionRequested] = useState(false);
+
   const pathname = usePathname();
   const isLoginPage = pathname === '/admin/login';
 
@@ -57,6 +76,24 @@ export default function AdminLayout({
       setLoading(false);
     }
   }, [isLoginPage]);
+
+  // 🔔 NEW: Audio permission handler
+  useEffect(() => {
+    if (!audioPermissionRequested && soundManager.needsPermission()) {
+      // Request permission on any click (user interaction)
+      const handleFirstClick = async () => {
+        const granted = await requestAudioPermission();
+        if (granted) {
+          setAudioPermissionRequested(true);
+        }
+        document.removeEventListener('click', handleFirstClick);
+      };
+      
+      document.addEventListener('click', handleFirstClick);
+      
+      return () => document.removeEventListener('click', handleFirstClick);
+    }
+  }, [audioPermissionRequested, soundManager, requestAudioPermission]);
 
   const checkAuth = async () => {
     try {
@@ -121,6 +158,11 @@ export default function AdminLayout({
       window.location.href = '/admin/login';
     }
   };
+
+  // 🔔 NEW: Notification action handler
+  const handleNotificationAction = useCallback((url: string) => {
+    window.location.href = url;
+  }, []);
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -280,9 +322,19 @@ export default function AdminLayout({
 
             {/* User Menu */}
             <div className="flex items-center space-x-4">
-              {/* Notifications with Support Alerts */}
+              {/* 🔔 UPDATED: Enhanced Notifications with Connection Status */}
               <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors relative">
                 <Bell className="w-5 h-5" />
+                {/* Connection status indicator */}
+                <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full ${
+                  notificationConnected ? 'bg-green-500' : 'bg-red-500'
+                }`} title={notificationConnected ? 'Connected to notifications' : 'Notification connection lost'} />
+                {/* Notification count */}
+                {notifications.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                    {notifications.length > 9 ? '9+' : notifications.length}
+                  </span>
+                )}
                 {/* Enhanced notification badge for support */}
                 {supportStats.criticalReports > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
@@ -430,6 +482,47 @@ export default function AdminLayout({
       <main>
         {children}
       </main>
+
+      {/* 🔔 NEW: Notification Container */}
+      <NotificationContainer
+        notifications={notifications}
+        onClose={removeNotification}
+        onAction={handleNotificationAction}
+      />
+
+      {/* 🔔 NEW: Audio Permission Prompt */}
+      {soundManager.needsPermission() && !audioPermissionRequested && (
+        <div className="fixed bottom-4 right-4 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 max-w-sm">
+          <div className="flex items-start gap-3">
+            <Bell className="w-5 h-5 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-medium text-sm">Enable Notification Sounds</h4>
+              <p className="text-xs text-blue-100 mt-1">
+                Click to allow notification sounds for new car listings
+              </p>
+              <button
+                onClick={async () => {
+                  const granted = await requestAudioPermission();
+                  setAudioPermissionRequested(true);
+                  if (granted) {
+                    // Test sound on permission grant
+                    soundManager.testSound();
+                  }
+                }}
+                className="mt-2 bg-blue-500 hover:bg-blue-400 px-3 py-1 rounded text-xs transition-colors"
+              >
+                Enable Sound
+              </button>
+            </div>
+            <button
+              onClick={() => setAudioPermissionRequested(true)}
+              className="text-blue-200 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Click outside to close user menu */}
       {showUserMenu && (
