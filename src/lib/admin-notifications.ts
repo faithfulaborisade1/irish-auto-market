@@ -92,7 +92,8 @@ export async function broadcastAdminNotification(notification: AdminNotification
     console.log(`📡 Broadcasting notification: ${notification.type} - ${notification.title}`);
     
     // Import the broadcast function dynamically to avoid circular imports
-    const { broadcastToAdmins } = await import('@/app/api/admin/notifications/stream/route');
+   // ✅ NEW (correct path):
+    const { broadcastToAdmins } = await import('@/lib/admin-notification-broadcaster');
     
     // ✅ FIXED: Send notification in the correct format that broadcastToAdmins expects
     broadcastToAdmins({
