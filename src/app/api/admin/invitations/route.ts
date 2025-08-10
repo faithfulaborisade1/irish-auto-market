@@ -127,7 +127,7 @@ async function sendInvitationEmail(invitation: any, adminName: string) {
       businessName: invitation.businessName,
       contactName: invitation.contactName,
       location: invitation.location,
-      registrationToken: invitation.registrationToken, // Use existing token
+      registrationToken: invitation.registrationToken,
       adminName
     });
 
@@ -372,17 +372,17 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // 🔧 FIX: Generate token BEFORE creating invitation
+        // ✅ FIX: Generate token BEFORE creating invitation
         const registrationToken = generateInvitationToken();
 
         // Create invitation record with token
         const invitation = await prisma.dealerInvitation.create({
           data: {
             email,
-            businessName: invitationData.businessName,
-            contactName: invitationData.contactName,
-            phone: invitationData.phone,
-            location: invitationData.location,
+            businessName: invitationData.businessName || null,
+            contactName: invitationData.contactName || null,
+            phone: invitationData.phone || null,
+            location: invitationData.location || null,
             registrationToken, // ✅ Include token in creation
             invitedBy: currentAdmin.adminProfile!.id,
             ipAddress: clientIP,
