@@ -1,4 +1,4 @@
-// src/app/api/invitations/validate/route.ts
+// src/app/api/admin/invitations/validate/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
@@ -12,29 +12,41 @@ const ValidateTokenSchema = z.object({
   token: z.string().min(1, 'Token is required')
 });
 
-// GET /api/invitations/validate?token=xxx - Validate invitation token
+// GET /api/admin/invitations/validate?token=xxx - Validate invitation token
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 GET /api/invitations/validate - Validating invitation token');
+    console.log('🔍 GET /api/admin/invitations/validate - Validating invitation token');
 
     const url = new URL(request.url);
     const token = url.searchParams.get('token');
+
+    // ✅ FIX: Check if token is null before using it
+    if (!token) {
+      return NextResponse.json(
+        { 
+          error: 'Missing invitation token',
+          valid: false
+        },
+        { status: 400 }
+      );
+    }
 
     const validation = ValidateTokenSchema.safeParse({ token });
     if (!validation.success) {
       return NextResponse.json(
         { 
           error: 'Invalid token format',
-          details: validation.error.issues
+          details: validation.error.issues,
+          valid: false
         },
         { status: 400 }
       );
     }
 
-    // Find invitation by token
+    // Find invitation by token - now token is guaranteed to be string
     const invitation = await prisma.dealerInvitation.findFirst({
       where: { 
-        registrationToken: token,
+        registrationToken: token, // ✅ TypeScript happy now
         status: {
           in: ['SENT', 'VIEWED'] // Only allow pending invitations
         }
@@ -141,10 +153,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/invitations/validate - Update invitation status after registration
+// POST /api/admin/invitations/validate - Update invitation status after registration
 export async function POST(request: NextRequest) {
   try {
-    console.log('✅ POST /api/invitations/validate - Marking invitation as registered');
+    console.log('✅ POST /api/admin/invitations/validate - Marking invitation as registered');
 
     const body = await request.json();
     const { token, userId } = body;
