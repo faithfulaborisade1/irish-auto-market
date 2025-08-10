@@ -324,6 +324,9 @@ model DealerInvitation {
   phone           String?
   location        String?  // County/city
   
+  // 🆕 ADD THIS MISSING FIELD:
+  registrationToken String @unique  // Secure token for registration link
+  
   // Status Tracking
   status          InvitationStatus @default(SENT)
   sentAt          DateTime @default(now())
@@ -350,6 +353,7 @@ model DealerInvitation {
   @@index([email])
   @@index([status, sentAt])
   @@index([invitedBy])
+  @@index([registrationToken])  // This index was there but field was missing!
   @@map("dealer_invitations")
 }
 

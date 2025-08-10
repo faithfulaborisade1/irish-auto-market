@@ -15,7 +15,7 @@ import {
   MessageCircle,
   Headphones,
   AlertTriangle,
-  X
+  X,Mail
 } from 'lucide-react';
 
 // 🔔 NEW IMPORTS FOR NOTIFICATION SYSTEM
@@ -188,39 +188,48 @@ export default function AdminLayout({
 
   // Navigation items with icons (UPDATED WITH SUPPORT)
   const navigationItems = [
-    {
-      name: 'Dashboard',
-      href: '/admin',
-      icon: LayoutDashboard,
-      active: pathname === '/admin'
-    },
-    {
-      name: 'Support',
-      href: '/admin/support',
-      icon: MessageCircle,
-      active: pathname.startsWith('/admin/support'),
-      badge: supportStats.totalPending > 0 ? supportStats.totalPending : null,
-      badgeColor: supportStats.criticalReports > 0 ? 'bg-red-500' : 'bg-orange-500'
-    },
-    {
-      name: 'Users',
-      href: '/admin/users',
-      icon: Users,
-      active: pathname.startsWith('/admin/users')
-    },
-    {
-      name: 'Cars',
-      href: '/admin/cars',
-      icon: Car,
-      active: pathname.startsWith('/admin/cars')
-    },
-    {
-      name: 'Analytics',
-      href: '/admin/analytics',
-      icon: BarChart3,
-      active: pathname.startsWith('/admin/analytics')
-    }
-  ];
+   {
+    name: 'Dashboard',
+    href: '/admin',
+    icon: LayoutDashboard,
+    active: pathname === '/admin'
+  },
+  {
+    name: 'Support',
+    href: '/admin/support',
+    icon: MessageCircle,
+    active: pathname.startsWith('/admin/support'),
+    badge: supportStats.totalPending > 0 ? supportStats.totalPending : null,
+    badgeColor: supportStats.criticalReports > 0 ? 'bg-red-500' : 'bg-orange-500'
+  },
+  // 🆕 NEW: Dealer Invitations (SUPER_ADMIN only)
+  ...(user?.role === 'SUPER_ADMIN' ? [{
+    name: 'Dealer Invitations',
+    href: '/admin/invitations',
+    icon: Mail,
+    active: pathname.startsWith('/admin/invitations'),
+    badge: null, // TODO: Add pending invitations count
+    badgeColor: 'bg-blue-500'
+  }] : []),
+  {
+    name: 'Users',
+    href: '/admin/users',
+    icon: Users,
+    active: pathname.startsWith('/admin/users')
+  },
+  {
+    name: 'Cars',
+    href: '/admin/cars',
+    icon: Car,
+    active: pathname.startsWith('/admin/cars')
+  },
+  {
+    name: 'Analytics',
+    href: '/admin/analytics',
+    icon: BarChart3,
+    active: pathname.startsWith('/admin/analytics')
+  }
+];
 
   // Only show Settings to SUPER_ADMIN
   if (user?.role === 'SUPER_ADMIN') {

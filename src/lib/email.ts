@@ -1,4 +1,4 @@
-// src/lib/email.ts - Complete Error-Free Email Service
+// src/lib/email.ts - Complete Error-Free Email Service with Spam Prevention
 import { Resend } from 'resend';
 
 // Initialize Resend with API key check
@@ -12,11 +12,12 @@ try {
   console.warn('⚠️ Resend initialization failed:', error);
 }
 
-// Email configuration
+// Enhanced Email configuration with new dealer email
 const EMAIL_CONFIG = {
   from: process.env.EMAIL_FROM || 'Irish Auto Market <noreply@irishautomarket.ie>',
   adminEmail: process.env.ADMIN_EMAIL || 'info@irishautomarket.ie',
-  supportEmail: process.env.SUPPORT_EMAIL || 'support@irishautomarket.ie'
+  supportEmail: process.env.SUPPORT_EMAIL || 'support@irishautomarket.ie',
+  dealerEmail: process.env.DEALER_EMAIL || 'dealers@irishautomarket.ie' // 🆕 NEW
 };
 
 // Type definitions that match your database schema
@@ -25,7 +26,8 @@ export type EmailType =
   | 'admin_notification'
   | 'support_response'
   | 'support_confirmation'
-  | 'admin_alert';
+  | 'admin_alert'
+  | 'dealer_invitation'; // 🆕 NEW
 
 // User type from your database schema
 export type UserRole = 'USER' | 'DEALER' | 'ADMIN' | 'SUPER_ADMIN' | 'CONTENT_MOD' | 'FINANCE_ADMIN' | 'SUPPORT_ADMIN';
@@ -33,8 +35,37 @@ export type UserRole = 'USER' | 'DEALER' | 'ADMIN' | 'SUPER_ADMIN' | 'CONTENT_MO
 // Contact category from your database schema
 export type ContactCategory = 'GENERAL' | 'TECHNICAL_SUPPORT' | 'BILLING' | 'DEALER_INQUIRY' | 'PARTNERSHIP' | 'MEDIA_INQUIRY' | 'LEGAL' | 'COMPLAINT' | 'SUGGESTION';
 
-// Modern Email Template with Irish Branding
-const getEmailTemplate = (content: string, title: string, type: 'user' | 'dealer' | 'admin' = 'user') => {
+// 🆕 SPAM PREVENTION HEADERS - Applied to all emails
+const getSpamPreventionHeaders = (type: 'transactional' | 'marketing' = 'transactional') => {
+  const headers: Record<string, string> = {
+    // Unsubscribe headers (required for bulk emails)
+    'List-Unsubscribe': `<mailto:unsubscribe@irishautomarket.ie>, <https://irishautomarket.ie/unsubscribe>`,
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    
+    // Email client headers
+    'X-Entity-Ref-ID': 'irish-auto-market',
+    'X-Auto-Response-Suppress': 'All',
+    
+    // Prevent auto-replies
+    'Precedence': type === 'marketing' ? 'bulk' : 'list',
+  };
+
+  // For marketing emails (like dealer invitations)
+  if (type === 'marketing') {
+    headers['List-ID'] = '<dealer-invitations.irishautomarket.ie>';
+    headers['X-Mailer'] = 'Irish Auto Market Dealer Outreach';
+  }
+
+  return headers;
+};
+
+// Enhanced Email Template with Irish Branding + Spam Prevention
+const getEmailTemplate = (
+  content: string, 
+  title: string, 
+  type: 'user' | 'dealer' | 'admin' = 'user',
+  emailType: 'transactional' | 'marketing' = 'transactional'
+) => {
   const colors = {
     user: { primary: '#059669', secondary: '#ea580c' },
     dealer: { primary: '#1e40af', secondary: '#059669' },
@@ -42,6 +73,15 @@ const getEmailTemplate = (content: string, title: string, type: 'user' | 'dealer
   };
   
   const color = colors[type];
+  
+  // Plain text version for better deliverability
+  const plainTextVersion = content
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .trim();
   
   return `
 <!DOCTYPE html>
@@ -51,13 +91,20 @@ const getEmailTemplate = (content: string, title: string, type: 'user' | 'dealer
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
   <style>
+    /* Reset styles for email clients */
+    body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    
     body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
       line-height: 1.6; 
       color: #1f2937; 
       background: #f9fafb;
       margin: 0; 
       padding: 20px; 
+      width: 100% !important;
+      min-width: 100%;
     }
     .container { 
       max-width: 600px; 
@@ -100,6 +147,7 @@ const getEmailTemplate = (content: string, title: string, type: 'user' | 'dealer
       color: #4b5563;
       font-size: 16px;
       margin-bottom: 16px;
+      line-height: 1.6;
     }
     .card {
       background: #f8fafc;
@@ -127,11 +175,12 @@ const getEmailTemplate = (content: string, title: string, type: 'user' | 'dealer
       display: inline-block;
       background: ${color.primary};
       color: white !important;
-      padding: 12px 24px;
+      padding: 14px 28px;
       text-decoration: none;
       border-radius: 8px;
       font-weight: 600;
       margin: 16px 0;
+      font-size: 16px;
     }
     .button-container {
       text-align: center;
@@ -142,6 +191,7 @@ const getEmailTemplate = (content: string, title: string, type: 'user' | 'dealer
     }
     li {
       margin-bottom: 8px;
+      color: #4b5563;
     }
     .footer { 
       background: #1f2937;
@@ -154,10 +204,22 @@ const getEmailTemplate = (content: string, title: string, type: 'user' | 'dealer
       color: #60a5fa;
       text-decoration: none;
     }
+    .unsubscribe {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-top: 16px;
+    }
+    .unsubscribe a {
+      color: #9ca3af;
+      text-decoration: underline;
+    }
+    
+    /* Mobile responsive */
     @media (max-width: 600px) {
       .container { margin: 0; border-radius: 0; }
       .header, .content { padding: 20px; }
       .header h1 { font-size: 20px; }
+      .button { padding: 12px 24px; font-size: 14px; }
     }
   </style>
 </head>
@@ -185,6 +247,16 @@ const getEmailTemplate = (content: string, title: string, type: 'user' | 'dealer
         Irish Auto Market, Dublin, Ireland<br>
         <a href="mailto:support@irishautomarket.ie">support@irishautomarket.ie</a>
       </p>
+      
+      ${emailType === 'marketing' ? `
+      <div class="unsubscribe">
+        <p>You received this email because we believe you may be interested in Irish Auto Market's dealer services.</p>
+        <p>
+          <a href="https://irishautomarket.ie/unsubscribe">Unsubscribe</a> | 
+          <a href="mailto:unsubscribe@irishautomarket.ie">Email Unsubscribe</a>
+        </p>
+      </div>
+      ` : ''}
     </div>
   </div>
 </body>
@@ -193,7 +265,160 @@ const getEmailTemplate = (content: string, title: string, type: 'user' | 'dealer
 };
 
 // ============================================================================
-// WELCOME EMAIL (Matches your database User schema)
+// 🆕 DEALER INVITATION EMAIL - Professional & Spam-Safe
+// ============================================================================
+
+export async function sendDealerInvitation(invitation: {
+  email: string;
+  businessName?: string;
+  contactName?: string;
+  location?: string;
+  registrationToken: string;
+  adminName: string;
+}) {
+  try {
+    if (!resend) {
+      console.warn('⚠️ Email service not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    // Personalized greeting
+    const greeting = invitation.contactName 
+      ? `Hello ${invitation.contactName}` 
+      : invitation.businessName 
+        ? `Hello from ${invitation.businessName}` 
+        : 'Hello';
+
+    // Registration URL with token
+    const registrationUrl = `https://irishautomarket.ie/register/dealer?token=${invitation.registrationToken}`;
+
+    // Professional, spam-safe subject line (avoiding "FREE", "LIMITED TIME")
+    const subject = `Partner with Irish Auto Market - Professional Car Listings Platform`;
+
+    const content = `
+      <h2>Partner with Ireland's Growing Car Marketplace 🚗</h2>
+      
+      <p>${greeting},</p>
+      
+      <p>We would like to invite you to join <strong>IrishAutoMarket.ie</strong> — Ireland's newest and fastest-growing car sales platform, built specifically for trusted auto traders like you.</p>
+      
+      ${invitation.businessName ? `
+      <div class="info-card">
+        <h3>🏢 Business Invitation</h3>
+        <p><strong>Business:</strong> ${invitation.businessName}</p>
+        ${invitation.location ? `<p><strong>Location:</strong> ${invitation.location}</p>` : ''}
+        <p>This invitation is specifically for your dealership to join our professional network.</p>
+      </div>
+      ` : ''}
+      
+      <div class="success-card">
+        <h3>🎯 Professional Listing Platform</h3>
+        <p>For a <strong>limited period</strong>, you can list your vehicles at <strong>no cost for 2-3 months</strong> — no setup fees, no hidden costs.</p>
+      </div>
+      
+      <div class="info-card">
+        <h3>Why Join Irish Auto Market?</h3>
+        <ul>
+          <li><strong>Cost-effective listings</strong> for dealers during launch period</li>
+          <li><strong>Enhanced visibility</strong> from buyers across Ireland</li>
+          <li><strong>Professional platform</strong> built specifically for Irish buyers</li>
+          <li><strong>Mobile-optimized</strong> experience for modern car shopping</li>
+          <li><strong>SEO and marketing support</strong> to boost your inventory visibility</li>
+          <li><strong>No obligations</strong> - try our platform risk-free</li>
+        </ul>
+      </div>
+      
+      <div class="warning-card">
+        <h3>🚀 Get Ahead of Your Competition</h3>
+        <p>Start listing today and establish your presence while we're still in our growth phase. Early dealers benefit from increased visibility and priority support.</p>
+      </div>
+      
+      <div class="button-container">
+        <a href="${registrationUrl}" class="button">Register Your Dealership</a>
+      </div>
+      
+      <div class="card">
+        <h3>📞 Questions or Need Assistance?</h3>
+        <p>Our team is here to help you get started:</p>
+        <p>
+          📧 <strong>Email:</strong> <a href="mailto:dealers@irishautomarket.ie">dealers@irishautomarket.ie</a><br>
+          💬 <strong>WhatsApp:</strong> Reply to this email for WhatsApp contact<br>
+          🌐 <strong>Website:</strong> <a href="https://irishautomarket.ie">www.irishautomarket.ie</a>
+        </p>
+      </div>
+      
+      <div class="card">
+        <h3>🔗 Alternative Registration</h3>
+        <p><strong>If the button doesn't work, copy this link:</strong></p>
+        <div style="background: #f3f4f6; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; word-break: break-all; color: #374151;">
+          ${registrationUrl}
+        </div>
+      </div>
+      
+      <p style="text-align: center; margin-top: 24px;">
+        Looking forward to welcoming you onboard,<br>
+        <strong>${invitation.adminName}</strong><br>
+        The Irish Auto Market Team 🇮🇪
+      </p>
+    `;
+
+    // Plain text version for better deliverability
+    const plainText = `
+${greeting},
+
+We would like to invite you to join IrishAutoMarket.ie — Ireland's newest and fastest-growing car sales platform, built specifically for trusted auto traders like you.
+
+${invitation.businessName ? `This invitation is for ${invitation.businessName}${invitation.location ? ` in ${invitation.location}` : ''}.` : ''}
+
+For a limited period, you can list your vehicles at no cost for 2-3 months — no setup fees, no hidden costs.
+
+Why Join Irish Auto Market?
+• Cost-effective listings for dealers during launch period
+• Enhanced visibility from buyers across Ireland  
+• Professional platform built specifically for Irish buyers
+• Mobile-optimized experience for modern car shopping
+• SEO and marketing support to boost your inventory visibility
+• No obligations - try our platform risk-free
+
+Get ahead of your competition - start listing today and establish your presence while we're still in our growth phase.
+
+Register your dealership: ${registrationUrl}
+
+Questions or need assistance?
+Email: dealers@irishautomarket.ie
+WhatsApp: Reply to this email for WhatsApp contact
+Website: www.irishautomarket.ie
+
+Looking forward to welcoming you onboard,
+${invitation.adminName}
+The Irish Auto Market Team
+
+---
+Irish Auto Market, Dublin, Ireland
+You received this email because we believe you may be interested in Irish Auto Market's dealer services.
+Unsubscribe: https://irishautomarket.ie/unsubscribe
+    `;
+
+    const result = await resend.emails.send({
+      from: `Irish Auto Market <${EMAIL_CONFIG.dealerEmail}>`,
+      to: invitation.email,
+      subject: subject,
+      html: getEmailTemplate(content, 'Dealer Partnership Invitation', 'dealer', 'marketing'),
+      text: plainText,
+      headers: getSpamPreventionHeaders('marketing')
+    });
+
+    console.log(`✅ Dealer invitation sent to ${invitation.email}:`, result.data?.id);
+    return { success: true, emailId: result.data?.id };
+
+  } catch (error: any) {
+    console.error('❌ Failed to send dealer invitation:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================================================
+// WELCOME EMAIL (Enhanced with spam prevention)
 // ============================================================================
 
 export async function sendWelcomeEmail(user: {
@@ -215,7 +440,7 @@ export async function sendWelcomeEmail(user: {
     let subject = '';
     
     if (isDealer) {
-      subject = `Welcome ${user.firstName}! 🏢 Complete Your Dealer Setup`;
+      subject = `Welcome ${user.firstName}! Complete Your Dealer Setup`;
       content = `
         <h2>Welcome to Professional Car Sales! 🏢</h2>
         
@@ -254,7 +479,7 @@ export async function sendWelcomeEmail(user: {
         </div>
       `;
     } else {
-      subject = `Welcome ${user.firstName}! 🚗 Find Your Perfect Car`;
+      subject = `Welcome ${user.firstName}! Find Your Perfect Car`;
       content = `
         <h2>Ready to Find Your Perfect Car? 🎉</h2>
         
@@ -268,7 +493,7 @@ export async function sendWelcomeEmail(user: {
             <li><strong>Advanced Search:</strong> Find cars by make, model, price, and location</li>
             <li><strong>Save Favorites:</strong> Bookmark cars and get price alerts</li>
             <li><strong>Direct Messaging:</strong> Chat directly with sellers</li>
-            <li><strong>Sell Your Car:</strong> List your vehicle for free</li>
+            <li><strong>Sell Your Car:</strong> List your vehicle at no cost</li>
             <li><strong>Verified Dealers:</strong> Buy from trusted professionals</li>
           </ul>
         </div>
@@ -303,11 +528,31 @@ export async function sendWelcomeEmail(user: {
       </div>
     `;
 
+    // Create plain text version
+    const plainText = `
+Hi ${user.firstName}!
+
+${isDealer ? 'Thank you for registering as a dealer with Irish Auto Market. You now have access to Ireland\'s most advanced dealer platform.' : 'Welcome to Ireland\'s most trusted car marketplace. We\'re excited to help you find the perfect vehicle or sell your current one.'}
+
+${isDealer ? 'Complete your business verification within 48 hours to unlock all dealer features and start listing vehicles.' : 'Use our advanced search to find your ideal car, save favorites, and message sellers directly.'}
+
+${isDealer ? 'Complete your setup: https://irishautomarket.ie/profile/edit' : 'Start browsing: https://irishautomarket.ie/cars'}
+
+Need help? Contact support@irishautomarket.ie
+
+Welcome to the Irish Auto Market family!
+
+---
+Irish Auto Market, Dublin, Ireland
+    `;
+
     const result = await resend.emails.send({
       from: EMAIL_CONFIG.from,
       to: user.email,
       subject: subject,
-      html: getEmailTemplate(content, subject, isDealer ? 'dealer' : 'user')
+      html: getEmailTemplate(content, subject, isDealer ? 'dealer' : 'user', 'transactional'),
+      text: plainText,
+      headers: getSpamPreventionHeaders('transactional')
     });
 
     console.log(`✅ Welcome email sent to ${user.email}:`, result.data?.id);
@@ -320,7 +565,7 @@ export async function sendWelcomeEmail(user: {
 }
 
 // ============================================================================
-// SUPPORT CONFIRMATION EMAIL
+// SUPPORT CONFIRMATION EMAIL (Enhanced)
 // ============================================================================
 
 export async function sendSupportConfirmation(contact: {
@@ -376,11 +621,39 @@ export async function sendSupportConfirmation(contact: {
       </p>
     `;
 
+    // Plain text version
+    const plainText = `
+Hi ${contact.name},
+
+Thank you for contacting Irish Auto Market support. We've received your message and our team will respond as soon as possible.
+
+Your Request Details:
+Reference ID: IAM-${contact.id.slice(-8).toUpperCase()}
+Subject: ${contact.subject}
+Category: ${contact.category.replace('_', ' ')}
+Submitted: ${new Date().toLocaleDateString('en-IE')}
+
+Expected Response Times:
+• Urgent Issues: Within 2 hours
+• Technical Support: 4-8 hours
+• General Inquiries: Within 24 hours
+
+Visit our help center: https://irishautomarket.ie/help
+
+Best regards,
+Irish Auto Market Support Team
+
+---
+Irish Auto Market, Dublin, Ireland
+    `;
+
     const result = await resend.emails.send({
       from: EMAIL_CONFIG.supportEmail,
       to: contact.email,
       subject: `Support Request Received - ${contact.category.replace('_', ' ')} [IAM-${contact.id.slice(-8).toUpperCase()}]`,
-      html: getEmailTemplate(content, 'Support Request Received', 'user')
+      html: getEmailTemplate(content, 'Support Request Received', 'user', 'transactional'),
+      text: plainText,
+      headers: getSpamPreventionHeaders('transactional')
     });
 
     console.log(`✅ Support confirmation sent to ${contact.email}:`, result.data?.id);
@@ -393,11 +666,11 @@ export async function sendSupportConfirmation(contact: {
 }
 
 // ============================================================================
-// ADMIN NOTIFICATION EMAIL
+// ADMIN NOTIFICATION EMAIL (Enhanced)
 // ============================================================================
 
 export async function sendAdminNotification(notification: {
-  type: 'new_user' | 'new_dealer' | 'support_contact' | 'urgent_report' | 'urgent_feedback';
+  type: 'new_user' | 'new_dealer' | 'support_contact' | 'urgent_report' | 'urgent_feedback' | 'dealer_invited';
   data: any;
 }) {
   try {
@@ -410,6 +683,40 @@ export async function sendAdminNotification(notification: {
     let subject = '';
 
     switch (notification.type) {
+      case 'dealer_invited': // 🆕 NEW
+        const invitation = notification.data;
+        subject = `🏢 Dealer Invitation Sent - ${invitation.businessName || invitation.email}`;
+        content = `
+          <h2>Dealer Invitation Sent 📧</h2>
+          
+          <p>A dealer invitation has been sent successfully.</p>
+          
+          <div class="info-card">
+            <h3>📋 Invitation Details</h3>
+            <p><strong>Email:</strong> ${invitation.email}</p>
+            <p><strong>Business Name:</strong> ${invitation.businessName || 'Not provided'}</p>
+            <p><strong>Contact Name:</strong> ${invitation.contactName || 'Not provided'}</p>
+            <p><strong>Location:</strong> ${invitation.location || 'Not provided'}</p>
+            <p><strong>Sent by:</strong> ${invitation.adminName}</p>
+            <p><strong>Sent at:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
+          </div>
+          
+          <div class="success-card">
+            <h3>📊 Track Results</h3>
+            <p>Monitor this invitation's performance in the admin dashboard:</p>
+            <ul>
+              <li>Email opens and clicks</li>
+              <li>Registration completion</li>
+              <li>Time to activation</li>
+            </ul>
+          </div>
+          
+          <div class="button-container">
+            <a href="https://irishautomarket.ie/admin/invitations" class="button">View Invitation Dashboard</a>
+          </div>
+        `;
+        break;
+
       case 'new_user':
         const user = notification.data;
         subject = `🆕 New User Registration - ${user.firstName} ${user.lastName}`;
@@ -557,11 +864,20 @@ export async function sendAdminNotification(notification: {
         `;
     }
 
+    // Plain text version
+    const plainText = content
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .trim();
+
     const result = await resend.emails.send({
       from: EMAIL_CONFIG.from,
       to: EMAIL_CONFIG.adminEmail,
       subject: subject,
-      html: getEmailTemplate(content, subject, 'admin')
+      html: getEmailTemplate(content, subject, 'admin', 'transactional'),
+      text: plainText,
+      headers: getSpamPreventionHeaders('transactional')
     });
 
     console.log(`✅ Admin notification sent (${notification.type}):`, result.data?.id);
@@ -574,7 +890,7 @@ export async function sendAdminNotification(notification: {
 }
 
 // ============================================================================
-// SUPPORT RESPONSE EMAIL (Admin Reply to User)
+// SUPPORT RESPONSE EMAIL (Enhanced)
 // ============================================================================
 
 export async function sendSupportResponse(response: {
@@ -640,11 +956,42 @@ export async function sendSupportResponse(response: {
       </p>
     `;
 
+    // Plain text version
+    const plainText = `
+Hi ${response.name},
+
+Thank you for contacting Irish Auto Market support. We've reviewed your inquiry and here's our response:
+
+Reference Details:
+Reference ID: ${response.referenceId}
+Subject: ${response.subject}
+Response Date: ${new Date().toLocaleDateString('en-IE')}
+
+Our Response:
+${response.message}
+
+${response.originalMessage ? `Your Original Message: "${response.originalMessage}"` : ''}
+
+Need additional help? Reply to this email with your reference ID (${response.referenceId}) for faster service.
+
+Contact: support@irishautomarket.ie
+Help Center: https://irishautomarket.ie/help
+
+Best regards,
+${response.adminName}
+Irish Auto Market Support Team
+
+---
+Irish Auto Market, Dublin, Ireland
+    `;
+
     const result = await resend.emails.send({
       from: EMAIL_CONFIG.supportEmail,
       to: response.to,
       subject: `Re: ${response.subject} [${response.referenceId}]`,
-      html: getEmailTemplate(content, 'Support Response', 'user')
+      html: getEmailTemplate(content, 'Support Response', 'user', 'transactional'),
+      text: plainText,
+      headers: getSpamPreventionHeaders('transactional')
     });
 
     console.log(`✅ Support response sent to ${response.to}:`, result.data?.id);
@@ -657,59 +1004,7 @@ export async function sendSupportResponse(response: {
 }
 
 // ============================================================================
-// EMAIL SERVICE TEST FUNCTION
-// ============================================================================
-
-export async function testEmailService() {
-  try {
-    if (!resend) {
-      return { success: false, error: 'Email service not configured - missing RESEND_API_KEY' };
-    }
-
-    console.log('🧪 Testing email service...');
-    
-    const testUser = {
-      email: EMAIL_CONFIG.adminEmail,
-      firstName: 'Test',
-      lastName: 'User',
-      role: 'USER'
-    };
-
-    const result = await sendWelcomeEmail(testUser);
-    
-    if (result.success) {
-      console.log('✅ Email service test successful!');
-      return { success: true, message: 'Email service is working correctly' };
-    } else {
-      console.error('❌ Email service test failed:', result.error);
-      return { success: false, error: result.error };
-    }
-
-  } catch (error: any) {
-    console.error('❌ Email service test error:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-export function getEmailConfig() {
-  return {
-    ...EMAIL_CONFIG,
-    hasResendKey: !!process.env.RESEND_API_KEY,
-    environment: process.env.NODE_ENV || 'development'
-  };
-}
-
-export function validateEmailAddress(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-// ============================================================================
-// PASSWORD RESET EMAIL - Add this to your src/lib/email.ts file
+// PASSWORD RESET EMAILS (Enhanced)
 // ============================================================================
 
 export async function sendPasswordResetEmail(reset: {
@@ -782,11 +1077,35 @@ export async function sendPasswordResetEmail(reset: {
       </p>
     `;
 
+    // Plain text version
+    const plainText = `
+Hi ${reset.firstName},
+
+We received a request to reset your password for your Irish Auto Market account. If you didn't make this request, you can safely ignore this email.
+
+SECURITY NOTICE: This password reset link will expire in 1 hour for your security.
+
+Reset your password: ${reset.resetUrl}
+
+Security Tips:
+• Create a strong password with at least 8 characters
+• Use a mix of letters, numbers, and symbols
+• Keep it unique - don't reuse passwords from other websites
+• Never share your password with anyone
+
+Need help or have security concerns? Contact support@irishautomarket.ie
+
+---
+Irish Auto Market, Dublin, Ireland
+    `;
+
     const result = await resend.emails.send({
       from: EMAIL_CONFIG.from,
       to: reset.email,
       subject: `🔐 Reset Your Password - Irish Auto Market`,
-      html: getEmailTemplate(content, 'Password Reset Request', 'user')
+      html: getEmailTemplate(content, 'Password Reset Request', 'user', 'transactional'),
+      text: plainText,
+      headers: getSpamPreventionHeaders('transactional')
     });
 
     console.log(`✅ Password reset email sent to ${reset.email}:`, result.data?.id);
@@ -797,10 +1116,6 @@ export async function sendPasswordResetEmail(reset: {
     return { success: false, error: error.message };
   }
 }
-
-// ============================================================================
-// PASSWORD RESET SUCCESS EMAIL - Add this too
-// ============================================================================
 
 export async function sendPasswordResetSuccessEmail(user: {
   email: string;
@@ -865,11 +1180,39 @@ export async function sendPasswordResetSuccessEmail(user: {
       </p>
     `;
 
+    // Plain text version
+    const plainText = `
+Hi ${user.firstName},
+
+Your password has been successfully reset for your Irish Auto Market account. You can now log in using your new password.
+
+Password Updated:
+Account: ${user.email}
+Reset Date: ${new Date().toLocaleDateString('en-IE')}
+
+Next Steps:
+• Log in with your new password
+• Update your saved passwords in your browser
+• Update your password in any mobile apps
+
+Log in now: https://irishautomarket.ie/login
+
+If you didn't reset your password, contact support@irishautomarket.ie immediately.
+
+Best regards,
+Irish Auto Market Security Team
+
+---
+Irish Auto Market, Dublin, Ireland
+    `;
+
     const result = await resend.emails.send({
       from: EMAIL_CONFIG.from,
       to: user.email,
       subject: `✅ Password Successfully Reset - Irish Auto Market`,
-      html: getEmailTemplate(content, 'Password Reset Successful', 'user')
+      html: getEmailTemplate(content, 'Password Reset Successful', 'user', 'transactional'),
+      text: plainText,
+      headers: getSpamPreventionHeaders('transactional')
     });
 
     console.log(`✅ Password reset success email sent to ${user.email}:`, result.data?.id);
@@ -881,5 +1224,103 @@ export async function sendPasswordResetSuccessEmail(user: {
   }
 }
 
-// Export email configuration for use in other modules
+// ============================================================================
+// EMAIL SERVICE TEST FUNCTION (Enhanced)
+// ============================================================================
+
+export async function testEmailService() {
+  try {
+    if (!resend) {
+      return { success: false, error: 'Email service not configured - missing RESEND_API_KEY' };
+    }
+
+    console.log('🧪 Testing email service with spam prevention...');
+    
+    const testUser = {
+      email: EMAIL_CONFIG.adminEmail,
+      firstName: 'Test',
+      lastName: 'User',
+      role: 'USER'
+    };
+
+    const result = await sendWelcomeEmail(testUser);
+    
+    if (result.success) {
+      console.log('✅ Email service test successful with spam prevention!');
+      return { success: true, message: 'Email service is working correctly with anti-spam features' };
+    } else {
+      console.error('❌ Email service test failed:', result.error);
+      return { success: false, error: result.error };
+    }
+
+  } catch (error: any) {
+    console.error('❌ Email service test error:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================================================
+// UTILITY FUNCTIONS (Enhanced)
+// ============================================================================
+
+export function getEmailConfig() {
+  return {
+    ...EMAIL_CONFIG,
+    hasResendKey: !!process.env.RESEND_API_KEY,
+    environment: process.env.NODE_ENV || 'development',
+    spamPrevention: true, // 🆕 NEW
+    dealerEmail: EMAIL_CONFIG.dealerEmail // 🆕 NEW
+  };
+}
+
+export function validateEmailAddress(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+// 🆕 NEW: Email deliverability check function
+export function checkEmailDeliverability(subject: string, content: string): {
+  score: number;
+  warnings: string[];
+  suggestions: string[];
+} {
+  const warnings: string[] = [];
+  const suggestions: string[] = [];
+  let score = 100;
+
+  // Check for spam trigger words
+  const spamWords = ['free', 'limited time', 'act now', 'congratulations', '!!!', 'urgent', 'click here', 'buy now'];
+  const lowerContent = (subject + ' ' + content).toLowerCase();
+  
+  spamWords.forEach(word => {
+    if (lowerContent.includes(word)) {
+      warnings.push(`Contains potential spam trigger word: "${word}"`);
+      score -= 10;
+    }
+  });
+
+  // Check subject line length
+  if (subject.length > 50) {
+    warnings.push('Subject line is too long (over 50 characters)');
+    score -= 5;
+  }
+
+  // Check for excessive capitalization
+  const capsCount = (subject.match(/[A-Z]/g) || []).length;
+  if (capsCount / subject.length > 0.3) {
+    warnings.push('Too much capitalization in subject line');
+    score -= 10;
+  }
+
+  // Provide suggestions
+  if (score < 90) {
+    suggestions.push('Consider using more professional language');
+    suggestions.push('Reduce use of sales-oriented words');
+    suggestions.push('Focus on value proposition rather than urgency');
+  }
+
+  return { score: Math.max(score, 0), warnings, suggestions };
+}
+
+// Export updated email configuration
 export { EMAIL_CONFIG };
