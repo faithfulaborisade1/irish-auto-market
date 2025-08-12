@@ -1,4 +1,4 @@
-// src/lib/email.ts - Complete Error-Free Email Service with Spam Prevention
+// src/lib/email.ts - Complete Error-Free Email Service with Proper Domain Configuration
 import { Resend } from 'resend';
 
 // Initialize Resend with API key check
@@ -12,12 +12,33 @@ try {
   console.warn('⚠️ Resend initialization failed:', error);
 }
 
-// Enhanced Email configuration with new dealer email
+// 🆕 BASE URL CONFIGURATION - Fixes domain issue
+const getBaseUrl = (): string => {
+  // Priority order for base URL
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  
+  if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+  }
+  
+  // Production domain
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://www.irishautomarket.ie';
+  }
+  
+  // Development fallback
+  return 'http://localhost:3000';
+};
+
+// Enhanced Email configuration with proper domain
 const EMAIL_CONFIG = {
   from: process.env.EMAIL_FROM || 'Irish Auto Market <noreply@irishautomarket.ie>',
   adminEmail: process.env.ADMIN_EMAIL || 'info@irishautomarket.ie',
   supportEmail: process.env.SUPPORT_EMAIL || 'support@irishautomarket.ie',
-  dealerEmail: process.env.DEALER_EMAIL || 'dealers@irishautomarket.ie' // 🆕 NEW
+  dealerEmail: process.env.DEALER_EMAIL || 'dealers@irishautomarket.ie',
+  baseUrl: getBaseUrl() // 🆕 NEW - Dynamic base URL
 };
 
 // Type definitions that match your database schema
@@ -27,7 +48,9 @@ export type EmailType =
   | 'support_response'
   | 'support_confirmation'
   | 'admin_alert'
-  | 'dealer_invitation'; // 🆕 NEW
+  | 'dealer_invitation'
+  | 'password_reset'      // 🆕 NEW
+  | 'password_reset_success'; // 🆕 NEW
 
 // User type from your database schema
 export type UserRole = 'USER' | 'DEALER' | 'ADMIN' | 'SUPER_ADMIN' | 'CONTENT_MOD' | 'FINANCE_ADMIN' | 'SUPPORT_ADMIN';
@@ -39,7 +62,7 @@ export type ContactCategory = 'GENERAL' | 'TECHNICAL_SUPPORT' | 'BILLING' | 'DEA
 const getSpamPreventionHeaders = (type: 'transactional' | 'marketing' = 'transactional') => {
   const headers: Record<string, string> = {
     // Unsubscribe headers (required for bulk emails)
-    'List-Unsubscribe': `<mailto:unsubscribe@irishautomarket.ie>, <https://irishautomarket.ie/unsubscribe>`,
+    'List-Unsubscribe': `<mailto:unsubscribe@irishautomarket.ie>, <${EMAIL_CONFIG.baseUrl}/unsubscribe>`,
     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     
     // Email client headers
@@ -73,15 +96,6 @@ const getEmailTemplate = (
   };
   
   const color = colors[type];
-  
-  // Plain text version for better deliverability
-  const plainTextVersion = content
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .trim();
   
   return `
 <!DOCTYPE html>
@@ -171,6 +185,11 @@ const getEmailTemplate = (
       border: 1px solid #fcd34d;
       border-left: 4px solid #f59e0b;
     }
+    .danger-card {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-left: 4px solid #ef4444;
+    }
     .button {
       display: inline-block;
       background: ${color.primary};
@@ -240,8 +259,8 @@ const getEmailTemplate = (
     <div class="footer">
       <p>© ${new Date().getFullYear()} Irish Auto Market. All rights reserved.</p>
       <p>
-        <a href="https://irishautomarket.ie">Visit Website</a> | 
-        <a href="https://irishautomarket.ie/contact">Contact Support</a>
+        <a href="${EMAIL_CONFIG.baseUrl}">Visit Website</a> | 
+        <a href="${EMAIL_CONFIG.baseUrl}/contact">Contact Support</a>
       </p>
       <p style="margin-top: 16px; font-size: 12px; color: #9ca3af;">
         Irish Auto Market, Dublin, Ireland<br>
@@ -252,7 +271,7 @@ const getEmailTemplate = (
       <div class="unsubscribe">
         <p>You received this email because we believe you may be interested in Irish Auto Market's dealer services.</p>
         <p>
-          <a href="https://irishautomarket.ie/unsubscribe">Unsubscribe</a> | 
+          <a href="${EMAIL_CONFIG.baseUrl}/unsubscribe">Unsubscribe</a> | 
           <a href="mailto:unsubscribe@irishautomarket.ie">Email Unsubscribe</a>
         </p>
       </div>
@@ -289,8 +308,8 @@ export async function sendDealerInvitation(invitation: {
         ? `Hello from ${invitation.businessName}` 
         : 'Hello';
 
-    // Registration URL with token
-    const registrationUrl = `https://irishautomarket.ie/register/dealer?token=${invitation.registrationToken}`;
+    // 🆕 FIXED: Registration URL with proper domain
+    const registrationUrl = `${EMAIL_CONFIG.baseUrl}/register/dealer?token=${invitation.registrationToken}`;
 
     // Professional, spam-safe subject line (avoiding "FREE", "LIMITED TIME")
     const subject = `Partner with Irish Auto Market - Professional Car Listings Platform`;
@@ -343,7 +362,7 @@ export async function sendDealerInvitation(invitation: {
         <p>
           📧 <strong>Email:</strong> <a href="mailto:dealers@irishautomarket.ie">dealers@irishautomarket.ie</a><br>
           💬 <strong>WhatsApp:</strong> Reply to this email for WhatsApp contact<br>
-          🌐 <strong>Website:</strong> <a href="https://irishautomarket.ie">www.irishautomarket.ie</a>
+          🌐 <strong>Website:</strong> <a href="${EMAIL_CONFIG.baseUrl}">www.irishautomarket.ie</a>
         </p>
       </div>
       
@@ -387,7 +406,7 @@ Register your dealership: ${registrationUrl}
 Questions or need assistance?
 Email: dealers@irishautomarket.ie
 WhatsApp: Reply to this email for WhatsApp contact
-Website: www.irishautomarket.ie
+Website: ${EMAIL_CONFIG.baseUrl}
 
 Looking forward to welcoming you onboard,
 ${invitation.adminName}
@@ -396,7 +415,7 @@ The Irish Auto Market Team
 ---
 Irish Auto Market, Dublin, Ireland
 You received this email because we believe you may be interested in Irish Auto Market's dealer services.
-Unsubscribe: https://irishautomarket.ie/unsubscribe
+Unsubscribe: ${EMAIL_CONFIG.baseUrl}/unsubscribe
     `;
 
     const result = await resend.emails.send({
@@ -418,7 +437,7 @@ Unsubscribe: https://irishautomarket.ie/unsubscribe
 }
 
 // ============================================================================
-// WELCOME EMAIL (Enhanced with spam prevention)
+// WELCOME EMAIL (Enhanced with proper domain)
 // ============================================================================
 
 export async function sendWelcomeEmail(user: {
@@ -475,7 +494,7 @@ export async function sendWelcomeEmail(user: {
         </div>
         
         <div class="button-container">
-          <a href="https://irishautomarket.ie/profile/edit" class="button">Complete Dealer Setup</a>
+          <a href="${EMAIL_CONFIG.baseUrl}/profile/edit" class="button">Complete Dealer Setup</a>
         </div>
       `;
     } else {
@@ -509,7 +528,7 @@ export async function sendWelcomeEmail(user: {
         </div>
         
         <div class="button-container">
-          <a href="https://irishautomarket.ie/cars" class="button">Start Browsing Cars</a>
+          <a href="${EMAIL_CONFIG.baseUrl}/cars" class="button">Start Browsing Cars</a>
         </div>
       `;
     }
@@ -520,7 +539,7 @@ export async function sendWelcomeEmail(user: {
         <p>Our Irish support team is here to help:</p>
         <p>
           📧 <a href="mailto:support@irishautomarket.ie">support@irishautomarket.ie</a><br>
-          ❓ <a href="https://irishautomarket.ie/help">Help Center</a>
+          ❓ <a href="${EMAIL_CONFIG.baseUrl}/help">Help Center</a>
         </p>
         <p style="text-align: center; margin-top: 16px;">
           <strong>Welcome to the Irish Auto Market family!</strong> 🇮🇪🚗
@@ -536,7 +555,7 @@ ${isDealer ? 'Thank you for registering as a dealer with Irish Auto Market. You 
 
 ${isDealer ? 'Complete your business verification within 48 hours to unlock all dealer features and start listing vehicles.' : 'Use our advanced search to find your ideal car, save favorites, and message sellers directly.'}
 
-${isDealer ? 'Complete your setup: https://irishautomarket.ie/profile/edit' : 'Start browsing: https://irishautomarket.ie/cars'}
+${isDealer ? `Complete your setup: ${EMAIL_CONFIG.baseUrl}/profile/edit` : `Start browsing: ${EMAIL_CONFIG.baseUrl}/cars`}
 
 Need help? Contact support@irishautomarket.ie
 
@@ -565,446 +584,7 @@ Irish Auto Market, Dublin, Ireland
 }
 
 // ============================================================================
-// SUPPORT CONFIRMATION EMAIL (Enhanced)
-// ============================================================================
-
-export async function sendSupportConfirmation(contact: {
-  email: string;
-  name: string;
-  subject: string;
-  category: string;
-  id: string;
-}) {
-  try {
-    if (!resend) {
-      console.warn('⚠️ Email service not configured');
-      return { success: false, error: 'Email service not configured' };
-    }
-
-    const content = `
-      <h2>Support Request Received ✅</h2>
-      
-      <p>Hi ${contact.name},</p>
-      
-      <p>Thank you for contacting Irish Auto Market support. We've received your message and our team will respond as soon as possible.</p>
-      
-      <div class="success-card">
-        <h3>📝 Your Request Details</h3>
-        <p><strong>Reference ID:</strong> <code>IAM-${contact.id.slice(-8).toUpperCase()}</code></p>
-        <p><strong>Subject:</strong> ${contact.subject}</p>
-        <p><strong>Category:</strong> ${contact.category.replace('_', ' ')}</p>
-        <p><strong>Submitted:</strong> ${new Date().toLocaleDateString('en-IE', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        })}</p>
-      </div>
-      
-      <div class="info-card">
-        <h3>⏱️ Expected Response Times</h3>
-        <ul>
-          <li><strong>Urgent Issues:</strong> Within 2 hours</li>
-          <li><strong>Technical Support:</strong> 4-8 hours</li>
-          <li><strong>General Inquiries:</strong> Within 24 hours</li>
-        </ul>
-        <p>If your issue is urgent, please mention it in your follow-up message.</p>
-      </div>
-      
-      <div class="button-container">
-        <a href="https://irishautomarket.ie/help" class="button">Visit Help Center</a>
-      </div>
-      
-      <p style="text-align: center; margin-top: 20px;">
-        Best regards,<br>
-        <strong>Irish Auto Market Support Team</strong> 🇮🇪
-      </p>
-    `;
-
-    // Plain text version
-    const plainText = `
-Hi ${contact.name},
-
-Thank you for contacting Irish Auto Market support. We've received your message and our team will respond as soon as possible.
-
-Your Request Details:
-Reference ID: IAM-${contact.id.slice(-8).toUpperCase()}
-Subject: ${contact.subject}
-Category: ${contact.category.replace('_', ' ')}
-Submitted: ${new Date().toLocaleDateString('en-IE')}
-
-Expected Response Times:
-• Urgent Issues: Within 2 hours
-• Technical Support: 4-8 hours
-• General Inquiries: Within 24 hours
-
-Visit our help center: https://irishautomarket.ie/help
-
-Best regards,
-Irish Auto Market Support Team
-
----
-Irish Auto Market, Dublin, Ireland
-    `;
-
-    const result = await resend.emails.send({
-      from: EMAIL_CONFIG.supportEmail,
-      to: contact.email,
-      subject: `Support Request Received - ${contact.category.replace('_', ' ')} [IAM-${contact.id.slice(-8).toUpperCase()}]`,
-      html: getEmailTemplate(content, 'Support Request Received', 'user', 'transactional'),
-      text: plainText,
-      headers: getSpamPreventionHeaders('transactional')
-    });
-
-    console.log(`✅ Support confirmation sent to ${contact.email}:`, result.data?.id);
-    return { success: true, emailId: result.data?.id };
-
-  } catch (error: any) {
-    console.error('❌ Failed to send support confirmation:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// ============================================================================
-// ADMIN NOTIFICATION EMAIL (Enhanced)
-// ============================================================================
-
-export async function sendAdminNotification(notification: {
-  type: 'new_user' | 'new_dealer' | 'support_contact' | 'urgent_report' | 'urgent_feedback' | 'dealer_invited';
-  data: any;
-}) {
-  try {
-    if (!resend) {
-      console.warn('⚠️ Email service not configured');
-      return { success: false, error: 'Email service not configured' };
-    }
-
-    let content = '';
-    let subject = '';
-
-    switch (notification.type) {
-      case 'dealer_invited': // 🆕 NEW
-        const invitation = notification.data;
-        subject = `🏢 Dealer Invitation Sent - ${invitation.businessName || invitation.email}`;
-        content = `
-          <h2>Dealer Invitation Sent 📧</h2>
-          
-          <p>A dealer invitation has been sent successfully.</p>
-          
-          <div class="info-card">
-            <h3>📋 Invitation Details</h3>
-            <p><strong>Email:</strong> ${invitation.email}</p>
-            <p><strong>Business Name:</strong> ${invitation.businessName || 'Not provided'}</p>
-            <p><strong>Contact Name:</strong> ${invitation.contactName || 'Not provided'}</p>
-            <p><strong>Location:</strong> ${invitation.location || 'Not provided'}</p>
-            <p><strong>Sent by:</strong> ${invitation.adminName}</p>
-            <p><strong>Sent at:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
-          </div>
-          
-          <div class="success-card">
-            <h3>📊 Track Results</h3>
-            <p>Monitor this invitation's performance in the admin dashboard:</p>
-            <ul>
-              <li>Email opens and clicks</li>
-              <li>Registration completion</li>
-              <li>Time to activation</li>
-            </ul>
-          </div>
-          
-          <div class="button-container">
-            <a href="https://irishautomarket.ie/admin/invitations" class="button">View Invitation Dashboard</a>
-          </div>
-        `;
-        break;
-
-      case 'new_user':
-        const user = notification.data;
-        subject = `🆕 New User Registration - ${user.firstName} ${user.lastName}`;
-        content = `
-          <h2>New User Registration 👋</h2>
-          
-          <p>A new user has registered on Irish Auto Market.</p>
-          
-          <div class="info-card">
-            <h3>📋 User Details</h3>
-            <p><strong>Name:</strong> ${user.firstName} ${user.lastName}</p>
-            <p><strong>Email:</strong> ${user.email}</p>
-            <p><strong>Role:</strong> ${user.role}</p>
-            <p><strong>Phone:</strong> ${user.phone || 'Not provided'}</p>
-            <p><strong>Registered:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
-          </div>
-          
-          <div class="button-container">
-            <a href="https://irishautomarket.ie/admin/users" class="button">View in Admin Dashboard</a>
-          </div>
-        `;
-        break;
-
-      case 'new_dealer':
-        const dealer = notification.data;
-        subject = `🏢 New Dealer Registration - ${dealer.firstName} ${dealer.lastName}`;
-        content = `
-          <h2>New Dealer Registration 🏢</h2>
-          
-          <p><strong>⚠️ Action Required:</strong> A new dealer has registered and requires business verification.</p>
-          
-          <div class="warning-card">
-            <h3>🏢 Dealer Details</h3>
-            <p><strong>Name:</strong> ${dealer.firstName} ${dealer.lastName}</p>
-            <p><strong>Email:</strong> ${dealer.email}</p>
-            <p><strong>Phone:</strong> ${dealer.phone || 'Not provided'}</p>
-            <p><strong>Registered:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
-          </div>
-          
-          <div class="info-card">
-            <h3>📝 Next Steps</h3>
-            <ul>
-              <li>Review business registration details</li>
-              <li>Verify business legitimacy</li>
-              <li>Approve or request additional information</li>
-              <li>Enable dealer features upon approval</li>
-            </ul>
-          </div>
-          
-          <div class="button-container">
-            <a href="https://irishautomarket.ie/admin/dealers" class="button">Review Dealer Application</a>
-          </div>
-        `;
-        break;
-
-      case 'support_contact':
-        const contact = notification.data;
-        subject = `📞 New Support Contact - ${contact.category.replace('_', ' ')} [IAM-${contact.id.slice(-8).toUpperCase()}]`;
-        content = `
-          <h2>New Support Contact 📞</h2>
-          
-          <p>A ${contact.category === 'COMPLAINT' || contact.category === 'LEGAL' ? 'high priority' : ''} support request has been submitted.</p>
-          
-          <div class="${contact.category === 'COMPLAINT' || contact.category === 'LEGAL' ? 'warning-card' : 'info-card'}">
-            <h3>📋 Contact Details</h3>
-            <p><strong>Reference:</strong> IAM-${contact.id.slice(-8).toUpperCase()}</p>
-            <p><strong>From:</strong> ${contact.name} (${contact.email})</p>
-            <p><strong>Category:</strong> ${contact.category.replace('_', ' ')}</p>
-            <p><strong>Priority:</strong> ${contact.priority}</p>
-            <p><strong>Subject:</strong> ${contact.subject}</p>
-            <p><strong>Phone:</strong> ${contact.phone || 'Not provided'}</p>
-            
-            <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #059669;">
-              <h4>Message:</h4>
-              <p>${contact.message}</p>
-            </div>
-          </div>
-          
-          <div class="button-container">
-            <a href="https://irishautomarket.ie/admin/support/contact" class="button">View & Respond</a>
-          </div>
-        `;
-        break;
-
-      case 'urgent_report':
-        const report = notification.data;
-        subject = `🚨 URGENT: ${report.type.replace('_', ' ')} Report [IAM-${report.id.slice(-8).toUpperCase()}]`;
-        content = `
-          <h2>🚨 Urgent Issue Report</h2>
-          
-          <p><strong style="color: #ef4444;">IMMEDIATE ACTION REQUIRED:</strong> A critical issue has been reported.</p>
-          
-          <div class="warning-card">
-            <h3>⚠️ Report Details</h3>
-            <p><strong>Reference:</strong> IAM-${report.id.slice(-8).toUpperCase()}</p>
-            <p><strong>Type:</strong> ${report.type.replace('_', ' ')}</p>
-            <p><strong>Severity:</strong> ${report.severity}</p>
-            <p><strong>Title:</strong> ${report.title}</p>
-            <p><strong>Reporter:</strong> ${report.reporterName || 'Anonymous'}</p>
-            
-            <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #ef4444;">
-              <h4>Description:</h4>
-              <p>${report.description}</p>
-            </div>
-          </div>
-          
-          <div class="button-container">
-            <a href="https://irishautomarket.ie/admin/reports" class="button">Investigate Now</a>
-          </div>
-        `;
-        break;
-
-      case 'urgent_feedback':
-        const feedback = notification.data;
-        subject = `📝 Urgent Feedback: ${feedback.type.replace('_', ' ')} ${feedback.rating ? `(${feedback.rating}/5 stars)` : ''}`;
-        content = `
-          <h2>📝 Urgent Feedback Alert</h2>
-          
-          <p>${feedback.rating && feedback.rating <= 2 ? 'Low rating alert:' : ''} ${feedback.type === 'BUG_REPORT' ? 'Bug report:' : ''} Important feedback requiring attention.</p>
-          
-          <div class="${feedback.rating && feedback.rating <= 2 ? 'warning-card' : 'info-card'}">
-            <h3>📋 Feedback Details</h3>
-            <p><strong>Type:</strong> ${feedback.type.replace('_', ' ')}</p>
-            <p><strong>Rating:</strong> ${feedback.rating ? `${feedback.rating}/5 stars` : 'Not rated'}</p>
-            <p><strong>From:</strong> ${feedback.name || 'Anonymous'}</p>
-            <p><strong>Subject:</strong> ${feedback.subject || 'No subject'}</p>
-            
-            <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #059669;">
-              <h4>Message:</h4>
-              <p>${feedback.message}</p>
-            </div>
-          </div>
-          
-          <div class="button-container">
-            <a href="https://irishautomarket.ie/admin/feedback" class="button">Review Feedback</a>
-          </div>
-        `;
-        break;
-
-      default:
-        subject = '📬 Irish Auto Market Notification';
-        content = `
-          <h2>System Notification 📬</h2>
-          <p>A new notification has been generated.</p>
-        `;
-    }
-
-    // Plain text version
-    const plainText = content
-      .replace(/<[^>]*>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .trim();
-
-    const result = await resend.emails.send({
-      from: EMAIL_CONFIG.from,
-      to: EMAIL_CONFIG.adminEmail,
-      subject: subject,
-      html: getEmailTemplate(content, subject, 'admin', 'transactional'),
-      text: plainText,
-      headers: getSpamPreventionHeaders('transactional')
-    });
-
-    console.log(`✅ Admin notification sent (${notification.type}):`, result.data?.id);
-    return { success: true, emailId: result.data?.id };
-
-  } catch (error: any) {
-    console.error('❌ Failed to send admin notification:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// ============================================================================
-// SUPPORT RESPONSE EMAIL (Enhanced)
-// ============================================================================
-
-export async function sendSupportResponse(response: {
-  to: string;
-  name: string;
-  subject: string;
-  message: string;
-  referenceId: string;
-  adminName: string;
-  originalMessage?: string;
-}) {
-  try {
-    if (!resend) {
-      console.warn('⚠️ Email service not configured');
-      return { success: false, error: 'Email service not configured' };
-    }
-
-    const content = `
-      <h2>Support Response from Irish Auto Market 📧</h2>
-      
-      <p>Hi ${response.name},</p>
-      
-      <p>Thank you for contacting Irish Auto Market support. We've reviewed your inquiry and here's our response:</p>
-      
-      <div class="success-card">
-        <h3>📝 Reference Details</h3>
-        <p><strong>Reference ID:</strong> <code>${response.referenceId}</code></p>
-        <p><strong>Subject:</strong> ${response.subject}</p>
-        <p><strong>Response Date:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
-      </div>
-      
-      <div style="background: #ffffff; padding: 20px; border-radius: 8px; border-left: 4px solid #059669; margin: 20px 0;">
-        <h3 style="margin: 0 0 12px 0; color: #059669;">💬 Our Response:</h3>
-        <div style="white-space: pre-wrap; line-height: 1.6;">${response.message}</div>
-      </div>
-      
-      ${response.originalMessage ? `
-      <div class="info-card">
-        <h4>📄 Your Original Message:</h4>
-        <div style="background: #f8fafc; padding: 12px; border-radius: 6px; color: #6b7280; font-style: italic;">
-          "${response.originalMessage}"
-        </div>
-      </div>
-      ` : ''}
-      
-      <div class="card">
-        <h3>❓ Need Additional Help?</h3>
-        <p>If you have follow-up questions, simply reply to this email with your reference ID (<strong>${response.referenceId}</strong>) for faster service.</p>
-        <p>
-          📧 <a href="mailto:support@irishautomarket.ie">support@irishautomarket.ie</a><br>
-          ❓ <a href="https://irishautomarket.ie/help">Help Center</a>
-        </p>
-      </div>
-      
-      <div class="button-container">
-        <a href="https://irishautomarket.ie" class="button">Return to Irish Auto Market</a>
-      </div>
-      
-      <p style="text-align: center; margin-top: 20px;">
-        Best regards,<br>
-        <strong>${response.adminName}</strong><br>
-        Irish Auto Market Support Team 🇮🇪
-      </p>
-    `;
-
-    // Plain text version
-    const plainText = `
-Hi ${response.name},
-
-Thank you for contacting Irish Auto Market support. We've reviewed your inquiry and here's our response:
-
-Reference Details:
-Reference ID: ${response.referenceId}
-Subject: ${response.subject}
-Response Date: ${new Date().toLocaleDateString('en-IE')}
-
-Our Response:
-${response.message}
-
-${response.originalMessage ? `Your Original Message: "${response.originalMessage}"` : ''}
-
-Need additional help? Reply to this email with your reference ID (${response.referenceId}) for faster service.
-
-Contact: support@irishautomarket.ie
-Help Center: https://irishautomarket.ie/help
-
-Best regards,
-${response.adminName}
-Irish Auto Market Support Team
-
----
-Irish Auto Market, Dublin, Ireland
-    `;
-
-    const result = await resend.emails.send({
-      from: EMAIL_CONFIG.supportEmail,
-      to: response.to,
-      subject: `Re: ${response.subject} [${response.referenceId}]`,
-      html: getEmailTemplate(content, 'Support Response', 'user', 'transactional'),
-      text: plainText,
-      headers: getSpamPreventionHeaders('transactional')
-    });
-
-    console.log(`✅ Support response sent to ${response.to}:`, result.data?.id);
-    return { success: true, emailId: result.data?.id };
-
-  } catch (error: any) {
-    console.error('❌ Failed to send support response:', error);
-    return { success: false, error: error.message };
-  }
-}
-
-// ============================================================================
-// PASSWORD RESET EMAILS (Enhanced)
+// 🆕 PASSWORD RESET EMAILS (Fixed with proper domain)
 // ============================================================================
 
 export async function sendPasswordResetEmail(reset: {
@@ -1012,7 +592,6 @@ export async function sendPasswordResetEmail(reset: {
   firstName: string;
   lastName: string;
   resetToken: string;
-  resetUrl: string;
 }) {
   try {
     if (!resend) {
@@ -1021,6 +600,9 @@ export async function sendPasswordResetEmail(reset: {
     }
 
     const name = `${reset.firstName} ${reset.lastName}`.trim();
+
+    // 🆕 FIXED: Reset URL with proper domain configuration
+    const resetUrl = `${EMAIL_CONFIG.baseUrl}/reset-password?token=${reset.resetToken}`;
 
     const content = `
       <h2>Password Reset Request 🔐</h2>
@@ -1039,7 +621,7 @@ export async function sendPasswordResetEmail(reset: {
         <p>To create a new password for your account, click the button below. You'll be taken to a secure page where you can enter your new password.</p>
         
         <div class="button-container">
-          <a href="${reset.resetUrl}" class="button" style="background: #dc2626; font-size: 16px; padding: 16px 32px;">
+          <a href="${resetUrl}" class="button" style="background: #dc2626; font-size: 16px; padding: 16px 32px;">
             Reset My Password
           </a>
         </div>
@@ -1049,7 +631,7 @@ export async function sendPasswordResetEmail(reset: {
         <h3>🔗 Alternative Link</h3>
         <p><strong>If the button doesn't work, copy and paste this link:</strong></p>
         <div style="background: #f3f4f6; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 14px; word-break: break-all; color: #374151;">
-          ${reset.resetUrl}
+          ${resetUrl}
         </div>
       </div>
       
@@ -1072,7 +654,7 @@ export async function sendPasswordResetEmail(reset: {
       </div>
       
       <p style="text-align: center; margin-top: 20px; color: #6b7280;">
-        This password reset was requested from IP address: <code>${reset.resetUrl.includes('localhost') ? '127.0.0.1' : 'your-ip'}</code><br>
+        This password reset was requested on ${new Date().toLocaleDateString('en-IE')}<br>
         <small>If this wasn't you, please contact support immediately.</small>
       </p>
     `;
@@ -1085,7 +667,7 @@ We received a request to reset your password for your Irish Auto Market account.
 
 SECURITY NOTICE: This password reset link will expire in 1 hour for your security.
 
-Reset your password: ${reset.resetUrl}
+Reset your password: ${resetUrl}
 
 Security Tips:
 • Create a strong password with at least 8 characters
@@ -1160,10 +742,10 @@ export async function sendPasswordResetSuccessEmail(user: {
       </div>
       
       <div class="button-container">
-        <a href="https://irishautomarket.ie/login" class="button">Log In Now</a>
+        <a href="${EMAIL_CONFIG.baseUrl}/login" class="button">Log In Now</a>
       </div>
       
-      <div class="warning-card">
+      <div class="danger-card">
         <h3>🚨 Security Alert</h3>
         <p><strong>If you didn't reset your password,</strong> your account may have been compromised. Please:</p>
         <ul>
@@ -1195,7 +777,7 @@ Next Steps:
 • Update your saved passwords in your browser
 • Update your password in any mobile apps
 
-Log in now: https://irishautomarket.ie/login
+Log in now: ${EMAIL_CONFIG.baseUrl}/login
 
 If you didn't reset your password, contact support@irishautomarket.ie immediately.
 
@@ -1225,6 +807,445 @@ Irish Auto Market, Dublin, Ireland
 }
 
 // ============================================================================
+// SUPPORT CONFIRMATION EMAIL (Enhanced with proper domain)
+// ============================================================================
+
+export async function sendSupportConfirmation(contact: {
+  email: string;
+  name: string;
+  subject: string;
+  category: string;
+  id: string;
+}) {
+  try {
+    if (!resend) {
+      console.warn('⚠️ Email service not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const content = `
+      <h2>Support Request Received ✅</h2>
+      
+      <p>Hi ${contact.name},</p>
+      
+      <p>Thank you for contacting Irish Auto Market support. We've received your message and our team will respond as soon as possible.</p>
+      
+      <div class="success-card">
+        <h3>📝 Your Request Details</h3>
+        <p><strong>Reference ID:</strong> <code>IAM-${contact.id.slice(-8).toUpperCase()}</code></p>
+        <p><strong>Subject:</strong> ${contact.subject}</p>
+        <p><strong>Category:</strong> ${contact.category.replace('_', ' ')}</p>
+        <p><strong>Submitted:</strong> ${new Date().toLocaleDateString('en-IE', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        })}</p>
+      </div>
+      
+      <div class="info-card">
+        <h3>⏱️ Expected Response Times</h3>
+        <ul>
+          <li><strong>Urgent Issues:</strong> Within 2 hours</li>
+          <li><strong>Technical Support:</strong> 4-8 hours</li>
+          <li><strong>General Inquiries:</strong> Within 24 hours</li>
+        </ul>
+        <p>If your issue is urgent, please mention it in your follow-up message.</p>
+      </div>
+      
+      <div class="button-container">
+        <a href="${EMAIL_CONFIG.baseUrl}/help" class="button">Visit Help Center</a>
+      </div>
+      
+      <p style="text-align: center; margin-top: 20px;">
+        Best regards,<br>
+        <strong>Irish Auto Market Support Team</strong> 🇮🇪
+      </p>
+    `;
+
+    // Plain text version
+    const plainText = `
+Hi ${contact.name},
+
+Thank you for contacting Irish Auto Market support. We've received your message and our team will respond as soon as possible.
+
+Your Request Details:
+Reference ID: IAM-${contact.id.slice(-8).toUpperCase()}
+Subject: ${contact.subject}
+Category: ${contact.category.replace('_', ' ')}
+Submitted: ${new Date().toLocaleDateString('en-IE')}
+
+Expected Response Times:
+• Urgent Issues: Within 2 hours
+• Technical Support: 4-8 hours
+• General Inquiries: Within 24 hours
+
+Visit our help center: ${EMAIL_CONFIG.baseUrl}/help
+
+Best regards,
+Irish Auto Market Support Team
+
+---
+Irish Auto Market, Dublin, Ireland
+    `;
+
+    const result = await resend.emails.send({
+      from: EMAIL_CONFIG.supportEmail,
+      to: contact.email,
+      subject: `Support Request Received - ${contact.category.replace('_', ' ')} [IAM-${contact.id.slice(-8).toUpperCase()}]`,
+      html: getEmailTemplate(content, 'Support Request Received', 'user', 'transactional'),
+      text: plainText,
+      headers: getSpamPreventionHeaders('transactional')
+    });
+
+    console.log(`✅ Support confirmation sent to ${contact.email}:`, result.data?.id);
+    return { success: true, emailId: result.data?.id };
+
+  } catch (error: any) {
+    console.error('❌ Failed to send support confirmation:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================================================
+// ADMIN NOTIFICATION EMAIL (Enhanced with proper domain)
+// ============================================================================
+
+export async function sendAdminNotification(notification: {
+  type: 'new_user' | 'new_dealer' | 'support_contact' | 'urgent_report' | 'urgent_feedback' | 'dealer_invited';
+  data: any;
+}) {
+  try {
+    if (!resend) {
+      console.warn('⚠️ Email service not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    let content = '';
+    let subject = '';
+
+    switch (notification.type) {
+      case 'dealer_invited':
+        const invitation = notification.data;
+        subject = `🏢 Dealer Invitation Sent - ${invitation.businessName || invitation.email}`;
+        content = `
+          <h2>Dealer Invitation Sent 📧</h2>
+          
+          <p>A dealer invitation has been sent successfully.</p>
+          
+          <div class="info-card">
+            <h3>📋 Invitation Details</h3>
+            <p><strong>Email:</strong> ${invitation.email}</p>
+            <p><strong>Business Name:</strong> ${invitation.businessName || 'Not provided'}</p>
+            <p><strong>Contact Name:</strong> ${invitation.contactName || 'Not provided'}</p>
+            <p><strong>Location:</strong> ${invitation.location || 'Not provided'}</p>
+            <p><strong>Sent by:</strong> ${invitation.adminName}</p>
+            <p><strong>Sent at:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
+          </div>
+          
+          <div class="success-card">
+            <h3>📊 Track Results</h3>
+            <p>Monitor this invitation's performance in the admin dashboard:</p>
+            <ul>
+              <li>Email opens and clicks</li>
+              <li>Registration completion</li>
+              <li>Time to activation</li>
+            </ul>
+          </div>
+          
+          <div class="button-container">
+            <a href="${EMAIL_CONFIG.baseUrl}/admin/invitations" class="button">View Invitation Dashboard</a>
+          </div>
+        `;
+        break;
+
+      case 'new_user':
+        const user = notification.data;
+        subject = `🆕 New User Registration - ${user.firstName} ${user.lastName}`;
+        content = `
+          <h2>New User Registration 👋</h2>
+          
+          <p>A new user has registered on Irish Auto Market.</p>
+          
+          <div class="info-card">
+            <h3>📋 User Details</h3>
+            <p><strong>Name:</strong> ${user.firstName} ${user.lastName}</p>
+            <p><strong>Email:</strong> ${user.email}</p>
+            <p><strong>Role:</strong> ${user.role}</p>
+            <p><strong>Phone:</strong> ${user.phone || 'Not provided'}</p>
+            <p><strong>Registered:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
+          </div>
+          
+          <div class="button-container">
+            <a href="${EMAIL_CONFIG.baseUrl}/admin/users" class="button">View in Admin Dashboard</a>
+          </div>
+        `;
+        break;
+
+      case 'new_dealer':
+        const dealer = notification.data;
+        subject = `🏢 New Dealer Registration - ${dealer.firstName} ${dealer.lastName}`;
+        content = `
+          <h2>New Dealer Registration 🏢</h2>
+          
+          <p><strong>⚠️ Action Required:</strong> A new dealer has registered and requires business verification.</p>
+          
+          <div class="warning-card">
+            <h3>🏢 Dealer Details</h3>
+            <p><strong>Name:</strong> ${dealer.firstName} ${dealer.lastName}</p>
+            <p><strong>Email:</strong> ${dealer.email}</p>
+            <p><strong>Phone:</strong> ${dealer.phone || 'Not provided'}</p>
+            <p><strong>Registered:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
+          </div>
+          
+          <div class="info-card">
+            <h3>📝 Next Steps</h3>
+            <ul>
+              <li>Review business registration details</li>
+              <li>Verify business legitimacy</li>
+              <li>Approve or request additional information</li>
+              <li>Enable dealer features upon approval</li>
+            </ul>
+          </div>
+          
+          <div class="button-container">
+            <a href="${EMAIL_CONFIG.baseUrl}/admin/dealers" class="button">Review Dealer Application</a>
+          </div>
+        `;
+        break;
+
+      case 'support_contact':
+        const contact = notification.data;
+        subject = `📞 New Support Contact - ${contact.category.replace('_', ' ')} [IAM-${contact.id.slice(-8).toUpperCase()}]`;
+        content = `
+          <h2>New Support Contact 📞</h2>
+          
+          <p>A ${contact.category === 'COMPLAINT' || contact.category === 'LEGAL' ? 'high priority' : ''} support request has been submitted.</p>
+          
+          <div class="${contact.category === 'COMPLAINT' || contact.category === 'LEGAL' ? 'warning-card' : 'info-card'}">
+            <h3>📋 Contact Details</h3>
+            <p><strong>Reference:</strong> IAM-${contact.id.slice(-8).toUpperCase()}</p>
+            <p><strong>From:</strong> ${contact.name} (${contact.email})</p>
+            <p><strong>Category:</strong> ${contact.category.replace('_', ' ')}</p>
+            <p><strong>Priority:</strong> ${contact.priority}</p>
+            <p><strong>Subject:</strong> ${contact.subject}</p>
+            <p><strong>Phone:</strong> ${contact.phone || 'Not provided'}</p>
+            
+            <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #059669;">
+              <h4>Message:</h4>
+              <p>${contact.message}</p>
+            </div>
+          </div>
+          
+          <div class="button-container">
+            <a href="${EMAIL_CONFIG.baseUrl}/admin/support/contact" class="button">View & Respond</a>
+          </div>
+        `;
+        break;
+
+      case 'urgent_report':
+        const report = notification.data;
+        subject = `🚨 URGENT: ${report.type.replace('_', ' ')} Report [IAM-${report.id.slice(-8).toUpperCase()}]`;
+        content = `
+          <h2>🚨 Urgent Issue Report</h2>
+          
+          <p><strong style="color: #ef4444;">IMMEDIATE ACTION REQUIRED:</strong> A critical issue has been reported.</p>
+          
+          <div class="danger-card">
+            <h3>⚠️ Report Details</h3>
+            <p><strong>Reference:</strong> IAM-${report.id.slice(-8).toUpperCase()}</p>
+            <p><strong>Type:</strong> ${report.type.replace('_', ' ')}</p>
+            <p><strong>Severity:</strong> ${report.severity}</p>
+            <p><strong>Title:</strong> ${report.title}</p>
+            <p><strong>Reporter:</strong> ${report.reporterName || 'Anonymous'}</p>
+            
+            <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #ef4444;">
+              <h4>Description:</h4>
+              <p>${report.description}</p>
+            </div>
+          </div>
+          
+          <div class="button-container">
+            <a href="${EMAIL_CONFIG.baseUrl}/admin/reports" class="button">Investigate Now</a>
+          </div>
+        `;
+        break;
+
+      case 'urgent_feedback':
+        const feedback = notification.data;
+        subject = `📝 Urgent Feedback: ${feedback.type.replace('_', ' ')} ${feedback.rating ? `(${feedback.rating}/5 stars)` : ''}`;
+        content = `
+          <h2>📝 Urgent Feedback Alert</h2>
+          
+          <p>${feedback.rating && feedback.rating <= 2 ? 'Low rating alert:' : ''} ${feedback.type === 'BUG_REPORT' ? 'Bug report:' : ''} Important feedback requiring attention.</p>
+          
+          <div class="${feedback.rating && feedback.rating <= 2 ? 'warning-card' : 'info-card'}">
+            <h3>📋 Feedback Details</h3>
+            <p><strong>Type:</strong> ${feedback.type.replace('_', ' ')}</p>
+            <p><strong>Rating:</strong> ${feedback.rating ? `${feedback.rating}/5 stars` : 'Not rated'}</p>
+            <p><strong>From:</strong> ${feedback.name || 'Anonymous'}</p>
+            <p><strong>Subject:</strong> ${feedback.subject || 'No subject'}</p>
+            
+            <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin-top: 16px; border-left: 4px solid #059669;">
+              <h4>Message:</h4>
+              <p>${feedback.message}</p>
+            </div>
+          </div>
+          
+          <div class="button-container">
+            <a href="${EMAIL_CONFIG.baseUrl}/admin/feedback" class="button">Review Feedback</a>
+          </div>
+        `;
+        break;
+
+      default:
+        subject = '📬 Irish Auto Market Notification';
+        content = `
+          <h2>System Notification 📬</h2>
+          <p>A new notification has been generated.</p>
+        `;
+    }
+
+    // Plain text version
+    const plainText = content
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .trim();
+
+    const result = await resend.emails.send({
+      from: EMAIL_CONFIG.from,
+      to: EMAIL_CONFIG.adminEmail,
+      subject: subject,
+      html: getEmailTemplate(content, subject, 'admin', 'transactional'),
+      text: plainText,
+      headers: getSpamPreventionHeaders('transactional')
+    });
+
+    console.log(`✅ Admin notification sent (${notification.type}):`, result.data?.id);
+    return { success: true, emailId: result.data?.id };
+
+  } catch (error: any) {
+    console.error('❌ Failed to send admin notification:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================================================
+// SUPPORT RESPONSE EMAIL (Enhanced with proper domain)
+// ============================================================================
+
+export async function sendSupportResponse(response: {
+  to: string;
+  name: string;
+  subject: string;
+  message: string;
+  referenceId: string;
+  adminName: string;
+  originalMessage?: string;
+}) {
+  try {
+    if (!resend) {
+      console.warn('⚠️ Email service not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const content = `
+      <h2>Support Response from Irish Auto Market 📧</h2>
+      
+      <p>Hi ${response.name},</p>
+      
+      <p>Thank you for contacting Irish Auto Market support. We've reviewed your inquiry and here's our response:</p>
+      
+      <div class="success-card">
+        <h3>📝 Reference Details</h3>
+        <p><strong>Reference ID:</strong> <code>${response.referenceId}</code></p>
+        <p><strong>Subject:</strong> ${response.subject}</p>
+        <p><strong>Response Date:</strong> ${new Date().toLocaleDateString('en-IE')}</p>
+      </div>
+      
+      <div style="background: #ffffff; padding: 20px; border-radius: 8px; border-left: 4px solid #059669; margin: 20px 0;">
+        <h3 style="margin: 0 0 12px 0; color: #059669;">💬 Our Response:</h3>
+        <div style="white-space: pre-wrap; line-height: 1.6;">${response.message}</div>
+      </div>
+      
+      ${response.originalMessage ? `
+      <div class="info-card">
+        <h4>📄 Your Original Message:</h4>
+        <div style="background: #f8fafc; padding: 12px; border-radius: 6px; color: #6b7280; font-style: italic;">
+          "${response.originalMessage}"
+        </div>
+      </div>
+      ` : ''}
+      
+      <div class="card">
+        <h3>❓ Need Additional Help?</h3>
+        <p>If you have follow-up questions, simply reply to this email with your reference ID (<strong>${response.referenceId}</strong>) for faster service.</p>
+        <p>
+          📧 <a href="mailto:support@irishautomarket.ie">support@irishautomarket.ie</a><br>
+          ❓ <a href="${EMAIL_CONFIG.baseUrl}/help">Help Center</a>
+        </p>
+      </div>
+      
+      <div class="button-container">
+        <a href="${EMAIL_CONFIG.baseUrl}" class="button">Return to Irish Auto Market</a>
+      </div>
+      
+      <p style="text-align: center; margin-top: 20px;">
+        Best regards,<br>
+        <strong>${response.adminName}</strong><br>
+        Irish Auto Market Support Team 🇮🇪
+      </p>
+    `;
+
+    // Plain text version
+    const plainText = `
+Hi ${response.name},
+
+Thank you for contacting Irish Auto Market support. We've reviewed your inquiry and here's our response:
+
+Reference Details:
+Reference ID: ${response.referenceId}
+Subject: ${response.subject}
+Response Date: ${new Date().toLocaleDateString('en-IE')}
+
+Our Response:
+${response.message}
+
+${response.originalMessage ? `Your Original Message: "${response.originalMessage}"` : ''}
+
+Need additional help? Reply to this email with your reference ID (${response.referenceId}) for faster service.
+
+Contact: support@irishautomarket.ie
+Help Center: ${EMAIL_CONFIG.baseUrl}/help
+
+Best regards,
+${response.adminName}
+Irish Auto Market Support Team
+
+---
+Irish Auto Market, Dublin, Ireland
+    `;
+
+    const result = await resend.emails.send({
+      from: EMAIL_CONFIG.supportEmail,
+      to: response.to,
+      subject: `Re: ${response.subject} [${response.referenceId}]`,
+      html: getEmailTemplate(content, 'Support Response', 'user', 'transactional'),
+      text: plainText,
+      headers: getSpamPreventionHeaders('transactional')
+    });
+
+    console.log(`✅ Support response sent to ${response.to}:`, result.data?.id);
+    return { success: true, emailId: result.data?.id };
+
+  } catch (error: any) {
+    console.error('❌ Failed to send support response:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ============================================================================
 // EMAIL SERVICE TEST FUNCTION (Enhanced)
 // ============================================================================
 
@@ -1234,7 +1255,8 @@ export async function testEmailService() {
       return { success: false, error: 'Email service not configured - missing RESEND_API_KEY' };
     }
 
-    console.log('🧪 Testing email service with spam prevention...');
+    console.log('🧪 Testing email service with proper domain configuration...');
+    console.log(`📧 Base URL: ${EMAIL_CONFIG.baseUrl}`);
     
     const testUser = {
       email: EMAIL_CONFIG.adminEmail,
@@ -1246,8 +1268,12 @@ export async function testEmailService() {
     const result = await sendWelcomeEmail(testUser);
     
     if (result.success) {
-      console.log('✅ Email service test successful with spam prevention!');
-      return { success: true, message: 'Email service is working correctly with anti-spam features' };
+      console.log('✅ Email service test successful with proper domain configuration!');
+      return { 
+        success: true, 
+        message: 'Email service is working correctly with proper domain configuration',
+        baseUrl: EMAIL_CONFIG.baseUrl
+      };
     } else {
       console.error('❌ Email service test failed:', result.error);
       return { success: false, error: result.error };
@@ -1268,8 +1294,8 @@ export function getEmailConfig() {
     ...EMAIL_CONFIG,
     hasResendKey: !!process.env.RESEND_API_KEY,
     environment: process.env.NODE_ENV || 'development',
-    spamPrevention: true, // 🆕 NEW
-    dealerEmail: EMAIL_CONFIG.dealerEmail // 🆕 NEW
+    spamPrevention: true,
+    baseUrl: EMAIL_CONFIG.baseUrl // 🆕 NEW - Shows current domain
   };
 }
 
