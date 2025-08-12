@@ -76,21 +76,17 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Reset token generated for user: ${user.email}`);
 
-    // Generate reset URL
-    const baseUrl = process.env.NEXTAUTH_URL || 'https://irishautomarket.ie';
-    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
-
-    // Send password reset email using YOUR function
+    // Send password reset email using UPDATED function signature
     try {
       if (process.env.RESEND_API_KEY) {
         const { sendPasswordResetEmail } = await import('@/lib/email');
         
+        // 🆕 FIXED: Updated function call without resetUrl parameter
         const emailResult = await sendPasswordResetEmail({
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          resetToken: resetToken,
-          resetUrl: resetUrl  // ✅ Your function expects this
+          resetToken: resetToken  // ✅ No resetUrl - email service constructs it internally
         });
 
         if (!emailResult.success) {
