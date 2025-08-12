@@ -1,4 +1,4 @@
-// src/app/api/cars/route.ts - Enhanced Production Version with Admin Notifications
+// src/app/api/cars/route.ts - Enhanced Production Version with Complete Filtering
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/database'
 import jwt from 'jsonwebtoken'
@@ -72,7 +72,7 @@ function sanitizeText(text: string): string {
     .trim()
 }
 
-// GET method - Fetch cars with rate limiting
+// 🚀 ENHANCED GET method - Complete filtering support
 export async function GET(request: NextRequest) {
   try {
     // Apply search rate limiting
@@ -80,15 +80,42 @@ export async function GET(request: NextRequest) {
 
     const currentUserId = await getCurrentUser(request)
     const searchParams = request.nextUrl.searchParams
+    
+    // Basic parameters
     const featured = searchParams.get('featured')
     const sortBy = searchParams.get('sort') || 'newest'
     const searchQuery = searchParams.get('q')
+    
+    // 🔧 EXISTING: Basic filters (already working)
     const makeFilter = searchParams.get('make')
     const countyFilter = searchParams.get('county')
     const priceRangeFilter = searchParams.get('priceRange')
     const yearFilter = searchParams.get('year')
+    
+    // 🆕 NEW: Advanced filters that will now work
+    const modelFilter = searchParams.get('model')
+    const areaFilter = searchParams.get('area')
+    const mileageFrom = searchParams.get('mileageFrom')
+    const mileageTo = searchParams.get('mileageTo')
+    const colorFilter = searchParams.get('color')
+    const doorsFilter = searchParams.get('doors')
+    const seatsFilter = searchParams.get('seats')
+    const nctValid = searchParams.get('nctValid') === 'true'
+    
+    // 🆕 NEW: Array filters (comma-separated values)
+    const fuelTypes = searchParams.get('fuelType')?.split(',').filter(Boolean) || []
+    const transmissions = searchParams.get('transmission')?.split(',').filter(Boolean) || []
+    const bodyTypes = searchParams.get('bodyType')?.split(',').filter(Boolean) || []
+    const sellerTypes = searchParams.get('sellerType')?.split(',').filter(Boolean) || []
 
-    // Build where clause
+    console.log('🔍 Received filters:', {
+      basic: { make: makeFilter, model: modelFilter, county: countyFilter, area: areaFilter },
+      ranges: { price: priceRangeFilter, year: yearFilter, mileage: `${mileageFrom}-${mileageTo}` },
+      arrays: { fuelTypes, transmissions, bodyTypes, sellerTypes },
+      other: { color: colorFilter, doors: doorsFilter, seats: seatsFilter, nctValid }
+    })
+
+    // 🚀 ENHANCED: Build comprehensive where clause
     const where: any = {
       status: 'ACTIVE',
     }
@@ -97,8 +124,8 @@ export async function GET(request: NextRequest) {
       where.featured = true
     }
 
+    // Text search (existing logic)
     if (searchQuery) {
-      // Sanitize search query
       const sanitizedQuery = sanitizeText(searchQuery)
       if (sanitizedQuery) {
         where.OR = [
@@ -110,17 +137,56 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 🔧 EXISTING: Make filter (exact match, case-insensitive)
     if (makeFilter) {
       where.make = { equals: makeFilter, mode: 'insensitive' }
     }
 
+    // 🆕 NEW: Model filter (exact match, case-insensitive)
+    if (modelFilter) {
+      where.model = { equals: modelFilter, mode: 'insensitive' }
+    }
+
+    // 🔧 EXISTING: County filter
     if (countyFilter) {
       where.location = {
         path: ['county'],
         equals: countyFilter
       }
     }
+    
+    // 🆕 NEW: Area filter (works with county)
+    if (areaFilter) {
+      if (!where.location) where.location = {}
+      // For area, we need to update the path if county is also set
+      if (countyFilter) {
+        // Both county and area filters
+        where.AND = [
+          { location: { path: ['county'], equals: countyFilter } },
+          { location: { path: ['area'], equals: areaFilter } }
+        ]
+        delete where.location // Remove single location filter
+      } else {
+        // Just area filter
+        where.location = {
+          path: ['area'],
+          equals: areaFilter
+        }
+      }
+    }
 
+    // 🔧 EXISTING: Price range
+    if (priceRangeFilter) {
+      const [minPrice, maxPrice] = priceRangeFilter.split('-').map(Number)
+      if (!isNaN(minPrice) && !isNaN(maxPrice)) {
+        where.price = {
+          gte: minPrice,
+          lte: maxPrice
+        }
+      }
+    }
+
+    // 🔧 EXISTING: Year range
     if (yearFilter) {
       if (yearFilter.includes('-')) {
         const [startYear, endYear] = yearFilter.split('-').map(Number)
@@ -138,17 +204,69 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    if (priceRangeFilter) {
-      const [minPrice, maxPrice] = priceRangeFilter.split('-').map(Number)
-      if (!isNaN(minPrice) && !isNaN(maxPrice)) {
-        where.price = {
-          gte: minPrice,
-          lte: maxPrice
-        }
+    // 🆕 NEW: Mileage range filter
+    if (mileageFrom || mileageTo) {
+      where.mileage = {}
+      if (mileageFrom && !isNaN(parseInt(mileageFrom))) {
+        where.mileage.gte = parseInt(mileageFrom)
+      }
+      if (mileageTo && !isNaN(parseInt(mileageTo))) {
+        where.mileage.lte = parseInt(mileageTo)
       }
     }
 
-    // Build orderBy clause
+    // 🆕 NEW: Fuel type filter (array support)
+    if (fuelTypes.length > 0) {
+      where.fuelType = { in: fuelTypes }
+    }
+
+    // 🆕 NEW: Transmission filter (array support)
+    if (transmissions.length > 0) {
+      where.transmission = { in: transmissions }
+    }
+
+    // 🆕 NEW: Body type filter (array support)
+    if (bodyTypes.length > 0) {
+      where.bodyType = { in: bodyTypes }
+    }
+
+    // 🆕 NEW: Color filter
+    if (colorFilter) {
+      where.color = { equals: colorFilter, mode: 'insensitive' }
+    }
+
+    // 🆕 NEW: Doors filter
+    if (doorsFilter && !isNaN(parseInt(doorsFilter))) {
+      where.doors = parseInt(doorsFilter)
+    }
+
+    // 🆕 NEW: Seats filter
+    if (seatsFilter && !isNaN(parseInt(seatsFilter))) {
+      where.seats = parseInt(seatsFilter)
+    }
+
+    // 🆕 NEW: NCT valid filter (only show cars with valid NCT)
+    if (nctValid) {
+      where.nctExpiry = { gte: new Date() }
+    }
+
+    // 🆕 NEW: Seller type filter (filter by user role)
+    if (sellerTypes.length > 0) {
+      const userConditions = []
+      if (sellerTypes.includes('private')) {
+        userConditions.push({ role: 'USER' })
+      }
+      if (sellerTypes.includes('dealership')) {
+        userConditions.push({ role: 'DEALER' })
+      }
+      if (userConditions.length > 0) {
+        where.user = { OR: userConditions }
+      }
+    }
+
+    console.log('🚀 Final query where clause:', JSON.stringify(where, null, 2))
+
+    // Build orderBy clause (existing logic)
     let orderBy: any = { createdAt: 'desc' } // default
 
     switch (sortBy) {
@@ -179,6 +297,7 @@ export async function GET(request: NextRequest) {
         break
     }
 
+    // Database query (existing structure with enhanced filtering)
     const cars = await db.car.findMany({
       where,
       include: {
@@ -206,7 +325,7 @@ export async function GET(request: NextRequest) {
       take: 50, // Limit results to prevent large responses
     })
 
-    // Transform data for frontend
+    // Transform data for frontend (existing logic)
     const transformedCars = cars.map(car => ({
       id: car.id,
       title: car.title,
@@ -248,10 +367,24 @@ export async function GET(request: NextRequest) {
       },
     }))
 
+    console.log(`✅ Found ${transformedCars.length} cars matching filters`)
+
     return NextResponse.json({
       success: true,
       cars: transformedCars,
       total: transformedCars.length,
+      filters_applied: {
+        make: makeFilter,
+        model: modelFilter,
+        county: countyFilter,
+        area: areaFilter,
+        price_range: priceRangeFilter,
+        year_range: yearFilter,
+        fuel_types: fuelTypes.length,
+        transmissions: transmissions.length,
+        body_types: bodyTypes.length,
+        seller_types: sellerTypes.length
+      },
       timestamp: new Date().toISOString()
     })
 
@@ -276,7 +409,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST method - Create new car listing with enhanced security and admin notifications
+// POST method - Create new car listing (UNCHANGED - your existing logic)
 export async function POST(request: NextRequest) {
   try {
     // Apply car creation rate limiting
@@ -362,7 +495,7 @@ export async function POST(request: NextRequest) {
       description: sanitizeText(description),
       color: color ? sanitizeText(color) : null,
       county: sanitizeText(county),
-      area: body.area ? sanitizeText(body.area) : null,
+      area: area ? sanitizeText(area) : null,
     }
 
     // Generate SEO-friendly slug with collision handling

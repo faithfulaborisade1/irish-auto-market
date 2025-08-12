@@ -127,75 +127,153 @@ function CarsContent() {
     }))
   }, [searchParams])
 
-  // Fetch cars based on filters
-  const fetchCars = async () => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams()
-      
-      // Basic filters
-      if (currentFilters.searchText) params.set('q', currentFilters.searchText)
-      if (currentFilters.make) params.set('make', currentFilters.make)
-      if (currentFilters.model) params.set('model', currentFilters.model)
-      
-      // Price filters
-      if (currentFilters.priceFrom) params.set('minPrice', currentFilters.priceFrom)
-      if (currentFilters.priceTo) params.set('maxPrice', currentFilters.priceTo)
-      
-      // Year filters
-      if (currentFilters.yearFrom) params.set('minYear', currentFilters.yearFrom)
-      if (currentFilters.yearTo) params.set('maxYear', currentFilters.yearTo)
-      
-      // Mileage filters
-      if (currentFilters.mileageFrom) params.set('minMileage', currentFilters.mileageFrom)
-      if (currentFilters.mileageTo) params.set('maxMileage', currentFilters.mileageTo)
-      
-      // Location filters
-      if (currentFilters.county) params.set('county', currentFilters.county)
-      if (currentFilters.area) params.set('area', currentFilters.area)
-      
-      // Array filters
-      if (currentFilters.fuelType.length > 0) params.set('fuelType', currentFilters.fuelType.join(','))
-      if (currentFilters.transmission.length > 0) params.set('transmission', currentFilters.transmission.join(','))
-      if (currentFilters.bodyType.length > 0) params.set('bodyType', currentFilters.bodyType.join(','))
-      if (currentFilters.sellerType.length > 0) params.set('sellerType', currentFilters.sellerType.join(','))
-      
-      // Other filters
-      if (currentFilters.seatCount) params.set('seats', currentFilters.seatCount)
-      if (currentFilters.doors) params.set('doors', currentFilters.doors)
-      if (currentFilters.nctValid) params.set('nctValid', 'true')
-      
-      params.set('sort', sortBy)
-      
-      const response = await fetch(`/api/cars?${params.toString()}`)
-      const data = await response.json()
-      
-      if (data.success) {
-        setCars(data.cars)
-      }
-    } catch (error) {
-      console.error('Error fetching cars:', error)
-    } finally {
-      setLoading(false)
+  // 🚀 SIMPLIFIED: Replace the relevant parts in your cars page component
+// 🔧 FIXED: Replace the relevant parts in your cars page
+
+// Updated fetchCars function that matches your enhanced backend
+const fetchCars = async () => {
+  try {
+    setLoading(true)
+    const params = new URLSearchParams()
+    
+    // Basic filters
+    if (currentFilters.searchText) params.set('q', currentFilters.searchText)
+    if (currentFilters.make) params.set('make', currentFilters.make)
+    if (currentFilters.model) params.set('model', currentFilters.model)
+    if (currentFilters.county) params.set('county', currentFilters.county)
+    if (currentFilters.area) params.set('area', currentFilters.area)
+    
+    // FIXED: Price as range string (matches backend expectation)
+    if (currentFilters.priceFrom || currentFilters.priceTo) {
+      const minPrice = currentFilters.priceFrom || '0'
+      const maxPrice = currentFilters.priceTo || '1000000'
+      params.set('priceRange', `${minPrice}-${maxPrice}`)
     }
+    
+    // FIXED: Year as range string (matches backend expectation)
+    if (currentFilters.yearFrom || currentFilters.yearTo) {
+      const minYear = currentFilters.yearFrom || '1900'
+      const maxYear = currentFilters.yearTo || '2025'
+      params.set('year', `${minYear}-${maxYear}`)
+    }
+    
+    // Mileage range
+    if (currentFilters.mileageFrom) params.set('mileageFrom', currentFilters.mileageFrom)
+    if (currentFilters.mileageTo) params.set('mileageTo', currentFilters.mileageTo)
+    
+    // Other filters
+    if (currentFilters.color) params.set('color', currentFilters.color)
+    if (currentFilters.doors) params.set('doors', currentFilters.doors)
+    if (currentFilters.seatCount) params.set('seats', currentFilters.seatCount)
+    if (currentFilters.nctValid) params.set('nctValid', 'true')
+    
+    // Array filters
+    if (currentFilters.fuelType.length > 0) params.set('fuelType', currentFilters.fuelType.join(','))
+    if (currentFilters.transmission.length > 0) params.set('transmission', currentFilters.transmission.join(','))
+    if (currentFilters.bodyType.length > 0) params.set('bodyType', currentFilters.bodyType.join(','))
+    if (currentFilters.sellerType.length > 0) params.set('sellerType', currentFilters.sellerType.join(','))
+    
+    // Sort parameter
+    params.set('sort', sortBy)
+    
+    console.log('🔍 Fetching cars with params:', params.toString())
+    
+    const response = await fetch(`/api/cars?${params.toString()}`)
+    const data = await response.json()
+    
+    if (data.success) {
+      setCars(data.cars)
+      console.log(`✅ Found ${data.cars.length} cars`)
+      
+      // Log filter application for debugging
+      if (data.filters_applied) {
+        console.log('🎯 Filters applied:', data.filters_applied)
+      }
+    } else {
+      console.error('❌ API error:', data.error)
+      setCars([])
+    }
+  } catch (error) {
+    console.error('❌ Fetch error:', error)
+    setCars([])
+  } finally {
+    setLoading(false)
   }
+}
 
-  // Handle filter changes
-  const handleFiltersChange = (newFilters: FilterState) => {
-    setCurrentFilters(newFilters)
+// 🚀 ENHANCED: Initialize filters from URL params AND auto-search
+useEffect(() => {
+  const params = Object.fromEntries(searchParams.entries())
+  console.log('🔗 URL params received:', params)
+  
+  // Parse price range back to separate min/max for filters UI
+  let priceFrom = ''
+  let priceTo = ''
+  if (params.priceRange) {
+    const [min, max] = params.priceRange.split('-')
+    priceFrom = min && min !== '0' ? min : ''
+    priceTo = max && max !== '1000000' ? max : ''
   }
+  
+  // Parse year range back to separate min/max for filters UI
+  let yearFrom = ''
+  let yearTo = ''
+  if (params.year) {
+    const [min, max] = params.year.split('-')
+    yearFrom = min && min !== '1900' ? min : ''
+    yearTo = max && max !== '2025' ? max : ''
+  }
+  
+  const newFilters = {
+    ...currentFilters,
+    searchText: params.q || '',
+    make: params.make || '',
+    model: params.model || '',
+    priceFrom,
+    priceTo,
+    yearFrom,
+    yearTo,
+    county: params.county || '',
+    area: params.area || ''
+  }
+  
+  console.log('🎯 Setting filters from URL:', newFilters)
+  setCurrentFilters(newFilters)
+  
+  // 🚀 AUTO-SEARCH: If we have filters or autoSearch flag, search immediately
+  const hasFilters = params.q || params.make || params.model || params.county || 
+                     params.priceRange || params.year || params.autoSearch
+  
+  if (hasFilters) {
+    console.log('🚀 Auto-searching because filters detected')
+    // Small delay to ensure state is updated
+    setTimeout(() => {
+      fetchCars()
+    }, 100)
+  }
+}, [searchParams]) // Depend on searchParams, not individual filters
 
-  // Handle search button click
-  const handleSearch = () => {
+// 🚀 SIMPLIFIED: Only refetch when sort changes (not on every filter change)
+useEffect(() => {
+  // Only refetch if we already have cars loaded (sort change)
+  if (cars.length > 0) {
     fetchCars()
-    setFiltersOpen(false) // Close filters on mobile after search
   }
+}, [sortBy])
 
-  // Fetch cars when sort changes
-  useEffect(() => {
-    fetchCars()
-  }, [sortBy])
+// Keep your existing handleFiltersChange (no auto-fetch)
+const handleFiltersChange = (newFilters: FilterState) => {
+  console.log('🔧 Filters changed:', newFilters)
+  setCurrentFilters(newFilters)
+  // Don't auto-fetch - wait for Search button
+}
 
+// Keep your existing handleSearch
+const handleSearch = () => {
+  console.log('🔍 Search button clicked')
+  fetchCars()
+  setFiltersOpen(false) // Close filters on mobile after search
+}
   // Get active filter count for display
   const getActiveFilterCount = () => {
     let count = 0

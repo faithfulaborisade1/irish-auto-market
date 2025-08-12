@@ -105,33 +105,41 @@ export default function HomePage() {
 
   const featuredCars = cars.filter((car: any) => car.featured)
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    const params = new URLSearchParams()
-    if (searchFilters.searchText) params.set('q', searchFilters.searchText)
-    if (searchFilters.make) params.set('make', searchFilters.make)
-    if (searchFilters.model) params.set('model', searchFilters.model)
-    if (searchFilters.minPrice) params.set('minPrice', searchFilters.minPrice)
-    if (searchFilters.maxPrice) params.set('maxPrice', searchFilters.maxPrice)
-    if (searchFilters.minYear) params.set('minYear', searchFilters.minYear)
-    if (searchFilters.maxYear) params.set('maxYear', searchFilters.maxYear)
-    if (searchFilters.county) params.set('county', searchFilters.county)
-    if (searchFilters.area) params.set('area', searchFilters.area)
-    
-    router.push(`/cars?${params.toString()}`)
+// 🔧 FIXED: Replace your handleSearch function in homepage with this:
+
+const handleSearch = (e: React.FormEvent) => {
+  e.preventDefault()
+  
+  const params = new URLSearchParams()
+  
+  // Basic filters
+  if (searchFilters.searchText) params.set('q', searchFilters.searchText)
+  if (searchFilters.make) params.set('make', searchFilters.make)
+  if (searchFilters.model) params.set('model', searchFilters.model)
+  if (searchFilters.county) params.set('county', searchFilters.county)
+  if (searchFilters.area) params.set('area', searchFilters.area)
+  
+  // 🔧 FIXED: Send price as range string instead of separate min/max
+  if (searchFilters.minPrice || searchFilters.maxPrice) {
+    const minPrice = searchFilters.minPrice || '0'
+    const maxPrice = searchFilters.maxPrice || '1000000'
+    params.set('priceRange', `${minPrice}-${maxPrice}`)
+  }
+  
+  // 🔧 FIXED: Send year as range string instead of separate min/max
+  if (searchFilters.minYear || searchFilters.maxYear) {
+    const minYear = searchFilters.minYear || '1900'
+    const maxYear = searchFilters.maxYear || '2025'
+    params.set('year', `${minYear}-${maxYear}`)
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
-  }
+  // 🚀 NEW: Add auto-search parameter so cars page knows to search immediately
+  params.set('autoSearch', 'true')
+  
+  console.log('🔍 Homepage search params:', params.toString())
+  
+  router.push(`/cars?${params.toString()}`)
+}
 
   return (
     <div className="min-h-screen bg-white">
