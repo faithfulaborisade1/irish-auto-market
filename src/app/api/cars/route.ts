@@ -72,7 +72,7 @@ function sanitizeText(text: string): string {
     .trim()
 }
 
-// 🚀 ENHANCED GET method - Complete filtering support
+// 🚀 ENHANCED GET method - Complete filtering support with fixed location logic
 export async function GET(request: NextRequest) {
   try {
     // Apply search rate limiting
@@ -147,32 +147,19 @@ export async function GET(request: NextRequest) {
       where.model = { equals: modelFilter, mode: 'insensitive' }
     }
 
-    // 🔧 EXISTING: County filter
+    // 🔧 FIXED: Location filtering logic - cleaner approach
+    const locationFilters = []
     if (countyFilter) {
-      where.location = {
-        path: ['county'],
-        equals: countyFilter
-      }
+      locationFilters.push({ location: { path: ['county'], equals: countyFilter } })
+    }
+    if (areaFilter) {
+      locationFilters.push({ location: { path: ['area'], equals: areaFilter } })
     }
     
-    // 🆕 NEW: Area filter (works with county)
-    if (areaFilter) {
-      if (!where.location) where.location = {}
-      // For area, we need to update the path if county is also set
-      if (countyFilter) {
-        // Both county and area filters
-        where.AND = [
-          { location: { path: ['county'], equals: countyFilter } },
-          { location: { path: ['area'], equals: areaFilter } }
-        ]
-        delete where.location // Remove single location filter
-      } else {
-        // Just area filter
-        where.location = {
-          path: ['area'],
-          equals: areaFilter
-        }
-      }
+    // Add location filters to AND clause if any exist
+    if (locationFilters.length > 0) {
+      if (!where.AND) where.AND = []
+      where.AND.push(...locationFilters)
     }
 
     // 🔧 EXISTING: Price range
@@ -409,9 +396,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST method - Create new car listing (UNCHANGED - your existing logic)
+// 🔧 ENHANCED POST method - Fixed request size validation and better error handling
 export async function POST(request: NextRequest) {
   try {
+    // 🔧 FIXED: Check content length BEFORE parsing
+    const contentLength = request.headers.get('content-length')
+    if (contentLength && parseInt(contentLength) > 1000000) { // 1MB limit
+      return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+    }
+
     // Apply car creation rate limiting
     await withRateLimit(request, rateLimiters.carCreation)
 
@@ -444,10 +437,10 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json()
       
-      // Check request size (rough estimate)
+      // 🔧 FIXED: Move request size check after parsing but with better logic
       const bodySize = JSON.stringify(body).length
-      if (bodySize > 1000000) { // 1MB limit
-        return NextResponse.json({ error: 'Request too large' }, { status: 413 })
+      if (bodySize > 500000) { // 500KB limit for JSON body
+        return NextResponse.json({ error: 'Request data too large' }, { status: 413 })
       }
     } catch (error) {
       return NextResponse.json({ error: 'Invalid request format' }, { status: 400 })
@@ -615,7 +608,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // 🚗🔔 NEW: BROADCAST NOTIFICATION TO ALL ADMINS
+    // 🚗🔔 NEW: BROADCAST NOTIFICATION TO ALL ADMINS (with error handling)
     try {
       if (completeCarData) {
         const notification = createNewCarNotification(completeCarData, completeCarData.user);

@@ -1,4 +1,3 @@
-// 🚀 OPTIMIZED CARFILTERS COMPONENT - MAJOR PERFORMANCE FIXES
 'use client'
 
 import React from 'react'
@@ -45,7 +44,6 @@ interface CarFiltersProps {
   className?: string
 }
 
-// 🚀 FIX #2: Move constants outside component to prevent re-creation
 const PRICE_OPTIONS = [
   { value: '1000', label: '€1,000' },
   { value: '2000', label: '€2,000' },
@@ -176,7 +174,6 @@ const INITIAL_FILTERS: FilterState = {
   adType: 'for-sale'
 }
 
-// 🚀 FIX #3: Memoized sub-components outside main component
 const FilterSection = React.memo(({ title, isExpanded, onToggle, children }: {
   title: string
   isExpanded: boolean
@@ -263,13 +260,11 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
     verifications: false
   })
 
-  // 🚀 FIX: Properly lazy load data after component mounts
   const [carData, setCarData] = useState<any>(null)
   const [locationData, setLocationData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Lazy load data after component mounts to prevent blocking
     const loadData = async () => {
       try {
         const [carModules, locationModules] = await Promise.all([
@@ -285,13 +280,11 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
       }
     }
     
-    // Only load data when filters are opened
     if (isOpen && !carData && !locationData) {
       loadData()
     }
   }, [isOpen, carData, locationData])
 
-  // 🚀 FIX #5: Memoized computed values
   const availableModels = useMemo(() => {
     if (!carData || !filters.make) return []
     return carData.getModelsForMake(filters.make) || []
@@ -307,24 +300,21 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
     return carData.getAllCarMakes() || []
   }, [carData])
 
-  // 🚀 FIX #6: Debounced filter updates to prevent excessive calls
   const [updateTimer, setUpdateTimer] = useState<NodeJS.Timeout | null>(null)
 
   const updateFilter = useCallback((key: keyof FilterState, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }))
     
-    // Clear existing timer
     if (updateTimer) {
       clearTimeout(updateTimer)
     }
     
-    // Set new timer for debounced update
     const timer = setTimeout(() => {
       setFilters(current => {
         onFiltersChange(current)
         return current
       })
-    }, 300) // 300ms debounce
+    }, 300)
     
     setUpdateTimer(timer)
   }, [onFiltersChange, updateTimer])
@@ -337,7 +327,6 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
         : [...currentArray, value]
       const newFilters = { ...prev, [key]: newArray }
       
-      // Immediate update for UI responsiveness
       setTimeout(() => onFiltersChange(newFilters), 0)
       
       return newFilters
@@ -356,7 +345,6 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
     onFiltersChange(INITIAL_FILTERS)
   }, [onFiltersChange])
 
-  // Clean up timer on unmount
   useEffect(() => {
     return () => {
       if (updateTimer) {
@@ -365,7 +353,6 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
     }
   }, [updateTimer])
 
-  // 🚀 FIX #7: Auto-reset dependent fields
   useEffect(() => {
     if (filters.make && !availableModels.includes(filters.model)) {
       updateFilter('model', '')
@@ -378,19 +365,14 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
     }
   }, [filters.county, filters.area, availableAreas, updateFilter])
 
-  // Don't render until data is loaded or if not open
   if (!isOpen) {
     return null
   }
 
-  // Show loading state while data is being fetched
   if (isLoading || !carData || !locationData) {
     return (
       <>
-        {/* Mobile overlay */}
         <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onToggle} />
-        
-        {/* Loading skeleton */}
         <div className={`
           fixed lg:static inset-y-0 left-0 z-50 lg:z-auto
           w-80 lg:w-full bg-white shadow-xl lg:shadow-none
@@ -409,7 +391,6 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
               </button>
             </div>
           </div>
-          
           <div className="px-4 py-8 text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mb-4"></div>
             <p className="text-gray-600">Loading filters...</p>
@@ -421,10 +402,7 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
 
   return (
     <>
-      {/* Mobile overlay */}
       <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40" onClick={onToggle} />
-      
-      {/* Filter sidebar */}
       <div className={`
         fixed lg:static inset-y-0 left-0 z-50 lg:z-auto
         w-80 lg:w-full bg-white shadow-xl lg:shadow-none
@@ -433,7 +411,6 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
         overflow-y-auto
         ${className}
       `}>
-        {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-4 z-10">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
@@ -455,9 +432,7 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
           </div>
         </div>
 
-        {/* Filter content */}
         <div className="px-4">
-          {/* Search */}
           <div className="py-4 border-b border-gray-200">
             <input
               type="text"
@@ -468,7 +443,6 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
             />
           </div>
 
-          {/* Seller Type */}
           <FilterSection
             title="Seller type"
             isExpanded={expandedSections.seller}
@@ -488,7 +462,6 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
             </div>
           </FilterSection>
 
-          {/* Make / Model */}
           <FilterSection
             title="Make / Model"
             isExpanded={expandedSections.makeModel}
@@ -498,10 +471,7 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
               <Select
                 value={filters.make}
                 onChange={(value) => updateFilter('make', value)}
-                options={allCarMakes.map((make: string) => ({ 
-                  value: make, 
-                  label: `${make} (${carData.getModelsForMake(make).length})` 
-                }))}
+                options={allCarMakes.map((make: string) => ({ value: make, label: `${make} (${carData.getModelsForMake(make).length})` }))}
                 placeholder="All Makes"
               />
               <Select
@@ -518,7 +488,6 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
             </div>
           </FilterSection>
 
-          {/* Year */}
           <FilterSection
             title="Year"
             isExpanded={expandedSections.year}
@@ -540,7 +509,6 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
             </div>
           </FilterSection>
 
-          {/* Price */}
           <FilterSection
             title="Price"
             isExpanded={expandedSections.price}
@@ -562,7 +530,6 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
             </div>
           </FilterSection>
 
-          {/* Location */}
           <FilterSection
             title="Location"
             isExpanded={expandedSections.location}
@@ -572,10 +539,7 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
               <Select
                 value={filters.county}
                 onChange={(value) => updateFilter('county', value)}
-                options={Object.keys(locationData).sort().map((county: string) => ({ 
-                  value: county, 
-                  label: `${county} (${locationData[county]?.length || 0})` 
-                }))}
+                options={Object.keys(locationData).sort().map((county: string) => ({ value: county, label: `${county} (${locationData[county]?.length || 0})` }))}
                 placeholder="All Counties"
               />
               <Select
@@ -586,12 +550,8 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
               />
             </div>
           </FilterSection>
-
-          {/* Remaining sections would follow the same pattern... */}
-          {/* Truncated for brevity - the full component would include all sections */}
         </div>
 
-        {/* Search button */}
         <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4">
           <button
             onClick={onSearch}
