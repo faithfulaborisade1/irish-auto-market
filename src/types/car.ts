@@ -17,7 +17,7 @@ export interface Car {
   views: number
   inquiries: number
   likesCount: number
-  isLiked: boolean
+  isLiked: boolean  // ✅ FIXED: Added required isLiked property
   slug?: string
   images: Array<{ id: string; url: string; alt: string }>
   seller: {

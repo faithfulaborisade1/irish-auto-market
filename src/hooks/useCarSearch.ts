@@ -79,7 +79,7 @@ export const useCarSearch = (filters: CarSearchFilters) => {
     
     const data = await response.json()
     
-    // ✅ FIXED: Transform data to handle null values
+    // ✅ FIXED: Transform data to handle null values and ensure required properties
     if (data.success && data.cars) {
       data.cars = data.cars.map((car: any) => ({
         ...car,
@@ -90,6 +90,20 @@ export const useCarSearch = (filters: CarSearchFilters) => {
         bodyType: car.bodyType === null ? undefined : car.bodyType,
         color: car.color === null ? undefined : car.color,
         description: car.description === null ? undefined : car.description,
+        // Ensure required properties have default values
+        featured: car.featured || false,
+        views: car.views || 0,
+        inquiries: car.inquiries || 0,
+        likesCount: car.likesCount || 0,
+        isLiked: car.isLiked || false,
+        images: car.images || [],
+        seller: car.seller || {
+          name: 'Unknown Seller',
+          type: 'private',
+          phone: '',
+          verified: false
+        },
+        location: car.location || {}
       }))
     }
     
