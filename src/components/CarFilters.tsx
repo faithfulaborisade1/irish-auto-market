@@ -2,7 +2,8 @@
 
 import React from 'react'
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { X, ChevronDown, ChevronUp, Search, RotateCcw } from 'lucide-react'
+import { X, ChevronDown, ChevronUp, RotateCcw } from 'lucide-react'
+import { useDebounce } from '@/hooks/useDebounce'
 
 interface FilterState {
   searchText: string
@@ -38,10 +39,10 @@ interface FilterState {
 
 interface CarFiltersProps {
   onFiltersChange: (filters: FilterState) => void
-  onSearch: () => void
   isOpen: boolean
   onToggle: () => void
   className?: string
+  initialFilters?: Partial<FilterState>
 }
 
 const PRICE_OPTIONS = [
@@ -81,16 +82,16 @@ const MILEAGE_OPTIONS = [
 ] as const
 
 const BODY_TYPES = [
-  { value: 'hatchback', label: 'Hatchback', icon: '🚗' },
-  { value: 'saloon', label: 'Saloon', icon: '🚘' },
-  { value: 'estate', label: 'Estate', icon: '🚐' },
-  { value: 'suv', label: 'SUV', icon: '🚙' },
-  { value: 'coupe', label: 'Coupe', icon: '🏎️' },
-  { value: 'convertible', label: 'Convertible', icon: '🏎️' },
-  { value: 'mpv', label: 'MPV', icon: '🚌' },
-  { value: 'van', label: 'Van', icon: '🚚' },
-  { value: 'pickup', label: 'Pickup', icon: '🛻' },
-  { value: 'other', label: 'Other', icon: '🚗' }
+  { value: 'HATCHBACK', label: 'Hatchback', icon: '🚗' },
+  { value: 'SALOON', label: 'Saloon', icon: '🚘' },
+  { value: 'ESTATE', label: 'Estate', icon: '🚐' },
+  { value: 'SUV', label: 'SUV', icon: '🚙' },
+  { value: 'COUPE', label: 'Coupe', icon: '🏎️' },
+  { value: 'CONVERTIBLE', label: 'Convertible', icon: '🏎️' },
+  { value: 'MPV', label: 'MPV', icon: '🚌' },
+  { value: 'VAN', label: 'Van', icon: '🚚' },
+  { value: 'PICKUP', label: 'Pickup', icon: '🛻' },
+  { value: 'OTHER', label: 'Other', icon: '🚗' }
 ] as const
 
 const COLOR_OPTIONS = [
@@ -106,18 +107,18 @@ const COLOR_OPTIONS = [
   { value: 'brown', label: 'Brown', color: '#8b4513', border: '#8b4513' }
 ] as const
 
-const ENGINE_SIZE_OPTIONS = [
-  { value: '1.0', label: '1.0L' },
-  { value: '1.2', label: '1.2L' },
-  { value: '1.4', label: '1.4L' },
-  { value: '1.6', label: '1.6L' },
-  { value: '1.8', label: '1.8L' },
-  { value: '2.0', label: '2.0L' },
-  { value: '2.5', label: '2.5L' },
-  { value: '3.0', label: '3.0L' },
-  { value: '3.5', label: '3.5L' },
-  { value: '4.0', label: '4.0L' },
-  { value: '5.0', label: '5.0L+' }
+const FUEL_TYPES = [
+  { value: 'PETROL', label: 'Petrol' },
+  { value: 'DIESEL', label: 'Diesel' },
+  { value: 'HYBRID', label: 'Hybrid' },
+  { value: 'ELECTRIC', label: 'Electric' },
+  { value: 'PLUG_IN_HYBRID', label: 'Plug-in Hybrid' }
+] as const
+
+const TRANSMISSION_TYPES = [
+  { value: 'MANUAL', label: 'Manual' },
+  { value: 'AUTOMATIC', label: 'Automatic' },
+  { value: 'SEMI_AUTOMATIC', label: 'Semi-Automatic' }
 ] as const
 
 const SEAT_OPTIONS = [
@@ -133,13 +134,6 @@ const DOOR_OPTIONS = [
   { value: '3', label: '3 doors' },
   { value: '4', label: '4 doors' },
   { value: '5', label: '5 doors' }
-] as const
-
-const OWNER_OPTIONS = [
-  { value: '1', label: '1 owner' },
-  { value: '2', label: '2 owners' },
-  { value: '3', label: '3 owners' },
-  { value: '4', label: '4+ owners' }
 ] as const
 
 const INITIAL_FILTERS: FilterState = {
@@ -242,8 +236,19 @@ const Select = React.memo(({ value, onChange, options, placeholder }: {
 
 Select.displayName = 'Select'
 
-export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle, className }: CarFiltersProps) {
-  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS)
+export default function CarFilters({ 
+  onFiltersChange, 
+  isOpen, 
+  onToggle, 
+  className,
+  initialFilters = {}
+}: CarFiltersProps) {
+  // Initialize filters with initial values
+  const [filters, setFilters] = useState<FilterState>(() => ({
+    ...INITIAL_FILTERS,
+    ...initialFilters
+  }))
+  
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     seller: true,
     makeModel: true,
@@ -264,9 +269,20 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
   const [locationData, setLocationData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // 🚀 PERFORMANCE: Debounce search text for better UX
+  const debouncedSearchText = useDebounce(filters.searchText, 300)
+
+  // 🚀 OPTIMIZATION: Create debounced filters object
+  const debouncedFilters = useMemo(() => ({
+    ...filters,
+    searchText: debouncedSearchText
+  }), [filters, debouncedSearchText])
+
+  // 🚀 SMART CACHING: Load data only when needed
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Load data in parallel for better performance
         const [carModules, locationModules] = await Promise.all([
           import('@/data/car-makes-models'),
           import('@/data/irish-locations')
@@ -285,53 +301,53 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
     }
   }, [isOpen, carData, locationData])
 
+  // 🚀 MEMOIZED: Available models based on selected make
   const availableModels = useMemo(() => {
     if (!carData || !filters.make) return []
     return carData.getModelsForMake(filters.make) || []
   }, [carData, filters.make])
 
+  // 🚀 MEMOIZED: Available areas based on selected county
   const availableAreas = useMemo(() => {
     if (!locationData || !filters.county) return []
     return locationData[filters.county] || []
   }, [locationData, filters.county])
 
+  // 🚀 MEMOIZED: All car makes
   const allCarMakes = useMemo(() => {
     if (!carData) return []
     return carData.getAllCarMakes() || []
   }, [carData])
 
-  const [updateTimer, setUpdateTimer] = useState<NodeJS.Timeout | null>(null)
+  // 🚀 OPTIMIZED: Trigger filter changes only when debounced filters change
+  useEffect(() => {
+    onFiltersChange(debouncedFilters)
+  }, [debouncedFilters, onFiltersChange])
 
+  // 🚀 IMMEDIATE: Update filter function with optimistic updates
   const updateFilter = useCallback((key: keyof FilterState, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
-    
-    if (updateTimer) {
-      clearTimeout(updateTimer)
-    }
-    
-    const timer = setTimeout(() => {
-      setFilters(current => {
-        onFiltersChange(current)
-        return current
-      })
-    }, 300)
-    
-    setUpdateTimer(timer)
-  }, [onFiltersChange, updateTimer])
+    console.log(`🔧 Filter changed: ${key} = ${value}`)
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }, [])
 
+  // 🚀 ARRAY FILTERS: Optimized array toggle function
   const toggleArrayFilter = useCallback((key: keyof FilterState, value: string) => {
+    console.log(`🔧 Array filter toggled: ${key} toggle ${value}`)
     setFilters(prev => {
       const currentArray = prev[key] as string[]
       const newArray = currentArray.includes(value)
         ? currentArray.filter(item => item !== value)
         : [...currentArray, value]
-      const newFilters = { ...prev, [key]: newArray }
       
-      setTimeout(() => onFiltersChange(newFilters), 0)
-      
-      return newFilters
+      return {
+        ...prev,
+        [key]: newArray
+      }
     })
-  }, [onFiltersChange])
+  }, [])
 
   const toggleSection = useCallback((section: string) => {
     setExpandedSections(prev => ({
@@ -341,18 +357,11 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
   }, [])
 
   const resetAllFilters = useCallback(() => {
+    console.log('🔄 Resetting all filters')
     setFilters(INITIAL_FILTERS)
-    onFiltersChange(INITIAL_FILTERS)
-  }, [onFiltersChange])
+  }, [])
 
-  useEffect(() => {
-    return () => {
-      if (updateTimer) {
-        clearTimeout(updateTimer)
-      }
-    }
-  }, [updateTimer])
-
+  // Smart dependency management
   useEffect(() => {
     if (filters.make && !availableModels.includes(filters.model)) {
       updateFilter('model', '')
@@ -433,6 +442,7 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
         </div>
 
         <div className="px-4">
+          {/* 🚀 DEBOUNCED: Search input with performance optimization */}
           <div className="py-4 border-b border-gray-200">
             <input
               type="text"
@@ -441,6 +451,12 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
               onChange={(e) => updateFilter('searchText', e.target.value)}
               className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:ring-1 focus:ring-green-500"
             />
+            {filters.searchText !== debouncedSearchText && (
+              <div className="mt-1 text-xs text-gray-500 flex items-center">
+                <div className="w-3 h-3 border border-green-500 border-t-transparent rounded-full animate-spin mr-1"></div>
+                Searching...
+              </div>
+            )}
           </div>
 
           <FilterSection
@@ -471,7 +487,10 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
               <Select
                 value={filters.make}
                 onChange={(value) => updateFilter('make', value)}
-                options={allCarMakes.map((make: string) => ({ value: make, label: `${make} (${carData.getModelsForMake(make).length})` }))}
+                options={allCarMakes.map((make: string) => ({ 
+                  value: make, 
+                  label: `${make} (${carData.getModelsForMake(make).length})` 
+                }))}
                 placeholder="All Makes"
               />
               <Select
@@ -531,6 +550,27 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
           </FilterSection>
 
           <FilterSection
+            title="Mileage"
+            isExpanded={expandedSections.mileage}
+            onToggle={() => toggleSection('mileage')}
+          >
+            <div className="space-y-3">
+              <Select
+                value={filters.mileageFrom}
+                onChange={(value) => updateFilter('mileageFrom', value)}
+                options={MILEAGE_OPTIONS}
+                placeholder="From"
+              />
+              <Select
+                value={filters.mileageTo}
+                onChange={(value) => updateFilter('mileageTo', value)}
+                options={MILEAGE_OPTIONS}
+                placeholder="To"
+              />
+            </div>
+          </FilterSection>
+
+          <FilterSection
             title="Location"
             isExpanded={expandedSections.location}
             onToggle={() => toggleSection('location')}
@@ -539,7 +579,10 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
               <Select
                 value={filters.county}
                 onChange={(value) => updateFilter('county', value)}
-                options={Object.keys(locationData).sort().map((county: string) => ({ value: county, label: `${county} (${locationData[county]?.length || 0})` }))}
+                options={Object.keys(locationData).sort().map((county: string) => ({ 
+                  value: county, 
+                  label: `${county} (${locationData[county]?.length || 0})` 
+                }))}
                 placeholder="All Counties"
               />
               <Select
@@ -550,16 +593,142 @@ export default function CarFilters({ onFiltersChange, onSearch, isOpen, onToggle
               />
             </div>
           </FilterSection>
+
+          <FilterSection
+            title="Fuel Type"
+            isExpanded={expandedSections.fuel}
+            onToggle={() => toggleSection('fuel')}
+          >
+            <div className="space-y-2">
+              {FUEL_TYPES.map(fuel => (
+                <Checkbox
+                  key={fuel.value}
+                  label={fuel.label}
+                  checked={filters.fuelType.includes(fuel.value)}
+                  onChange={() => toggleArrayFilter('fuelType', fuel.value)}
+                />
+              ))}
+            </div>
+          </FilterSection>
+
+          <FilterSection
+            title="Transmission"
+            isExpanded={expandedSections.transmission}
+            onToggle={() => toggleSection('transmission')}
+          >
+            <div className="space-y-2">
+              {TRANSMISSION_TYPES.map(trans => (
+                <Checkbox
+                  key={trans.value}
+                  label={trans.label}
+                  checked={filters.transmission.includes(trans.value)}
+                  onChange={() => toggleArrayFilter('transmission', trans.value)}
+                />
+              ))}
+            </div>
+          </FilterSection>
+
+          <FilterSection
+            title="Body Type"
+            isExpanded={expandedSections.body}
+            onToggle={() => toggleSection('body')}
+          >
+            <div className="grid grid-cols-2 gap-2">
+              {BODY_TYPES.map(body => (
+                <label
+                  key={body.value}
+                  className={`
+                    flex flex-col items-center p-3 border rounded-lg cursor-pointer transition-all
+                    ${filters.bodyType.includes(body.value)
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-gray-300 hover:border-gray-400'
+                    }
+                  `}
+                >
+                  <input
+                    type="checkbox"
+                    checked={filters.bodyType.includes(body.value)}
+                    onChange={() => toggleArrayFilter('bodyType', body.value)}
+                    className="sr-only"
+                  />
+                  <span className="text-2xl mb-1">{body.icon}</span>
+                  <span className="text-xs text-center">{body.label}</span>
+                </label>
+              ))}
+            </div>
+          </FilterSection>
+
+          <FilterSection
+            title="Color"
+            isExpanded={expandedSections.color}
+            onToggle={() => toggleSection('color')}
+          >
+            <div className="grid grid-cols-5 gap-2">
+              {COLOR_OPTIONS.map(color => (
+                <button
+                  key={color.value}
+                  onClick={() => updateFilter('color', filters.color === color.value ? '' : color.value)}
+                  className={`
+                    w-12 h-12 rounded-full border-2 relative
+                    ${filters.color === color.value 
+                      ? 'ring-2 ring-green-500 ring-offset-2' 
+                      : 'hover:ring-2 hover:ring-gray-300'
+                    }
+                  `}
+                  style={{ 
+                    backgroundColor: color.color,
+                    borderColor: color.border
+                  }}
+                  title={color.label}
+                >
+                  {filters.color === color.value && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className={`w-3 h-3 rounded-full ${color.value === 'white' || color.value === 'yellow' ? 'bg-gray-800' : 'bg-white'}`} />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </FilterSection>
+
+          <FilterSection
+            title="Features"
+            isExpanded={expandedSections.features}
+            onToggle={() => toggleSection('features')}
+          >
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Select
+                  value={filters.seatCount}
+                  onChange={(value) => updateFilter('seatCount', value)}
+                  options={SEAT_OPTIONS}
+                  placeholder="Seats"
+                />
+                <Select
+                  value={filters.doors}
+                  onChange={(value) => updateFilter('doors', value)}
+                  options={DOOR_OPTIONS}
+                  placeholder="Doors"
+                />
+              </div>
+              
+              <Checkbox
+                label="Valid NCT"
+                checked={filters.nctValid}
+                onChange={(checked) => updateFilter('nctValid', checked)}
+              />
+            </div>
+          </FilterSection>
         </div>
 
+        {/* 🚀 REMOVED: No search button needed - auto-search active */}
         <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4">
-          <button
-            onClick={onSearch}
-            className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
-          >
-            <Search className="w-4 h-4" />
-            <span>Search Cars</span>
-          </button>
+          <div className="text-center text-sm text-gray-500">
+            <div className="flex items-center justify-center space-x-1">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span>Auto-search active</span>
+            </div>
+          </div>
         </div>
       </div>
     </>

@@ -1,7 +1,9 @@
+// app/layout.tsx
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { cn } from '@/lib/utils'
+import ReactQueryProvider from '@/components/providers/ReactQueryProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -91,11 +93,14 @@ export default function RootLayout({ children }: RootLayoutProps) {
         'min-h-screen bg-background font-sans antialiased',
         inter.className
       )}>
-        <div className="relative flex min-h-screen flex-col">
-          <div className="flex-1">
-            {children}
+        {/* 🚀 REACT QUERY PROVIDER WRAPPER */}
+        <ReactQueryProvider>
+          <div className="relative flex min-h-screen flex-col">
+            <div className="flex-1">
+              {children}
+            </div>
           </div>
-        </div>
+        </ReactQueryProvider>
       </body>
     </html>
   )

@@ -1,118 +1,26 @@
 'use client'
 
 import Link from 'next/link'
-import { Search, Grid, List, ArrowLeft, Filter, X } from 'lucide-react'
+import { Search, Grid, List, ArrowLeft, Filter, X, Loader2 } from 'lucide-react'
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import CarFilters from '@/components/CarFilters'
 import CarCard from '@/components/CarCard'
-
-interface Car {
-  id: string
-  title: string
-  make: string
-  model: string
-  year: number
-  price: number
-  mileage: number
-  fuelType: string
-  transmission: string
-  bodyType: string
-  color: string
-  description: string
-  location: any
-  featured: boolean
-  views: number
-  inquiries: number
-  likesCount: number
-  isLiked: boolean
-  images: Array<{ id: string; url: string; alt: string }>
-  seller: {
-    name: string
-    type: string
-    phone: string
-    verified: boolean
-  }
-}
-
-interface FilterState {
-  searchText: string
-  make: string
-  model: string
-  sellerType: string[]
-  priceFrom: string
-  priceTo: string
-  yearFrom: string
-  yearTo: string
-  mileageFrom: string
-  mileageTo: string
-  county: string
-  area: string
-  radius: string
-  fuelType: string[]
-  transmission: string[]
-  bodyType: string[]
-  engineSizeFrom: string
-  engineSizeTo: string
-  enginePowerFrom: string
-  enginePowerTo: string
-  batteryRange: string
-  seatCount: string
-  doors: string
-  color: string
-  registrationCountry: string
-  nctValid: boolean
-  warrantyDuration: string
-  totalOwners: string
-  adType: string
-}
+import { useCarSearch } from '@/hooks/useCarSearch'
+import type { Car, CarSearchFilters } from '@/types/car'
 
 function CarsContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [cars, setCars] = useState<Car[]>([])
-  const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sortBy, setSortBy] = useState('newest')
   
-  const [currentFilters, setCurrentFilters] = useState<FilterState>({
-    searchText: '',
-    make: '',
-    model: '',
-    sellerType: [],
-    priceFrom: '',
-    priceTo: '',
-    yearFrom: '',
-    yearTo: '',
-    mileageFrom: '',
-    mileageTo: '',
-    county: '',
-    area: '',
-    radius: '',
-    fuelType: [],
-    transmission: [],
-    bodyType: [],
-    engineSizeFrom: '',
-    engineSizeTo: '',
-    enginePowerFrom: '',
-    enginePowerTo: '',
-    batteryRange: '',
-    seatCount: '',
-    doors: '',
-    color: '',
-    registrationCountry: '',
-    nctValid: false,
-    warrantyDuration: '',
-    totalOwners: '',
-    adType: 'for-sale'
-  })
-
-  useEffect(() => {
+  // 🚀 REACT QUERY: Initialize filters from URL
+  const [filters, setFilters] = useState<CarSearchFilters>(() => {
     const params = Object.fromEntries(searchParams.entries())
-    console.log('🔗 URL params received:', params)
     
     let priceFrom = ''
     let priceTo = ''
@@ -130,8 +38,7 @@ function CarsContent() {
       yearTo = max && max !== '2025' ? max : ''
     }
     
-    const newFilters = {
-      ...currentFilters,
+    return {
       searchText: params.q || '',
       make: params.make || '',
       model: params.model || '',
@@ -140,92 +47,37 @@ function CarsContent() {
       yearFrom,
       yearTo,
       county: params.county || '',
-      area: params.area || ''
+      area: params.area || '',
+      mileageFrom: params.mileageFrom || '',
+      mileageTo: params.mileageTo || '',
+      color: params.color || '',
+      doors: params.doors || '',
+      seatCount: params.seats || '',
+      nctValid: params.nctValid === 'true',
+      fuelType: params.fuelType ? params.fuelType.split(',') : [],
+      transmission: params.transmission ? params.transmission.split(',') : [],
+      bodyType: params.bodyType ? params.bodyType.split(',') : [],
+      sellerType: params.sellerType ? params.sellerType.split(',') : [],
+      sortBy
     }
-    
-    console.log('🎯 Setting filters from URL:', newFilters)
-    setCurrentFilters(newFilters)
-    
-    const hasFilters = params.q || params.make || params.model || params.county || 
-                       params.priceRange || params.year || params.autoSearch
-    
-    if (hasFilters) {
-      console.log('🚀 Auto-searching because filters detected')
-      setTimeout(() => {
-        fetchCars()
-      }, 100)
-    }
-  }, [searchParams])
+  })
 
-  useEffect(() => {
-    if (cars.length > 0) {
-      fetchCars()
-    }
-  }, [sortBy])
+  // 🚀 REACT QUERY: Use optimized car search hook
+  const { 
+    data: searchResponse, 
+    isLoading, 
+    isError, 
+    error,
+    isFetching,
+    isStale 
+  } = useCarSearch({ ...filters, sortBy })
 
-  const fetchCars = async () => {
-    try {
-      setLoading(true)
-      const params = new URLSearchParams()
-      
-      if (currentFilters.searchText) params.set('q', currentFilters.searchText)
-      if (currentFilters.make) params.set('make', currentFilters.make)
-      if (currentFilters.model) params.set('model', currentFilters.model)
-      if (currentFilters.county) params.set('county', currentFilters.county)
-      if (currentFilters.area) params.set('area', currentFilters.area)
-      
-      if (currentFilters.priceFrom || currentFilters.priceTo) {
-        const minPrice = currentFilters.priceFrom || '0'
-        const maxPrice = currentFilters.priceTo || '1000000'
-        params.set('priceRange', `${minPrice}-${maxPrice}`)
-      }
-      
-      if (currentFilters.yearFrom || currentFilters.yearTo) {
-        const minYear = currentFilters.yearFrom || '1900'
-        const maxYear = currentFilters.yearTo || '2025'
-        params.set('year', `${minYear}-${maxYear}`)
-      }
-      
-      if (currentFilters.mileageFrom) params.set('mileageFrom', currentFilters.mileageFrom)
-      if (currentFilters.mileageTo) params.set('mileageTo', currentFilters.mileageTo)
-      
-      if (currentFilters.color) params.set('color', currentFilters.color)
-      if (currentFilters.doors) params.set('doors', currentFilters.doors)
-      if (currentFilters.seatCount) params.set('seats', currentFilters.seatCount)
-      if (currentFilters.nctValid) params.set('nctValid', 'true')
-      
-      if (currentFilters.fuelType.length > 0) params.set('fuelType', currentFilters.fuelType.join(','))
-      if (currentFilters.transmission.length > 0) params.set('transmission', currentFilters.transmission.join(','))
-      if (currentFilters.bodyType.length > 0) params.set('bodyType', currentFilters.bodyType.join(','))
-      if (currentFilters.sellerType.length > 0) params.set('sellerType', currentFilters.sellerType.join(','))
-      
-      params.set('sort', sortBy)
-      
-      console.log('🔍 Fetching cars with params:', params.toString())
-      
-      const response = await fetch(`/api/cars?${params.toString()}`)
-      const data = await response.json()
-      
-      if (data.success) {
-        setCars(data.cars)
-        console.log(`✅ Found ${data.cars.length} cars`)
-      } else {
-        console.error('❌ API error:', data.error)
-        setCars([])
-      }
-    } catch (error) {
-      console.error('❌ Fetch error:', error)
-      setCars([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  const cars: Car[] = searchResponse?.cars || []
 
-    const handleFiltersChange = (newFilters: FilterState) => {
-    console.log('🔧 Filters changed:', newFilters)
-    setCurrentFilters(newFilters)
-    
+  // 🚀 OPTIMIZATION: Update URL without triggering re-fetch
+  const updateURL = (newFilters: CarSearchFilters) => {
     const params = new URLSearchParams()
+    
     if (newFilters.searchText) params.set('q', newFilters.searchText)
     if (newFilters.make) params.set('make', newFilters.make)
     if (newFilters.model) params.set('model', newFilters.model)
@@ -241,47 +93,60 @@ function CarsContent() {
     }
     if (newFilters.county) params.set('county', newFilters.county)
     if (newFilters.area) params.set('area', newFilters.area)
+    if (newFilters.mileageFrom) params.set('mileageFrom', newFilters.mileageFrom)
+    if (newFilters.mileageTo) params.set('mileageTo', newFilters.mileageTo)
+    if (newFilters.color) params.set('color', newFilters.color)
+    if (newFilters.doors) params.set('doors', newFilters.doors)
+    if (newFilters.seatCount) params.set('seats', newFilters.seatCount)
+    if (newFilters.nctValid) params.set('nctValid', 'true')
     if (newFilters.fuelType.length > 0) params.set('fuelType', newFilters.fuelType.join(','))
     if (newFilters.transmission.length > 0) params.set('transmission', newFilters.transmission.join(','))
     if (newFilters.bodyType.length > 0) params.set('bodyType', newFilters.bodyType.join(','))
     if (newFilters.sellerType.length > 0) params.set('sellerType', newFilters.sellerType.join(','))
     
-    // Fixed: Use the correct App Router syntax
-    router.push(`/cars?${params.toString()}`)
-    fetchCars()
+    router.push(`/cars?${params.toString()}`, { scroll: false })
   }
 
-  const handleSearch = () => {
-    console.log('🔍 Search button clicked')
-    fetchCars()
-    setFiltersOpen(false)
+  // 🚀 SMART: Handle filter changes with React Query
+  const handleFiltersChange = (newFilters: any) => {
+    console.log('🔧 Filters changed:', newFilters)
+    setFilters(prev => ({ ...prev, ...newFilters }))
+    updateURL({ ...filters, ...newFilters })
+  }
+
+  // 🚀 SMART: Handle sort changes
+  const handleSortChange = (newSort: string) => {
+    setSortBy(newSort)
+    setFilters(prev => ({ ...prev, sortBy: newSort }))
   }
 
   const getActiveFilterCount = () => {
     let count = 0
-    if (currentFilters.searchText) count++
-    if (currentFilters.make) count++ // Ensure this triggers for make alone
-    if (currentFilters.model) count++
-    if (currentFilters.priceFrom || currentFilters.priceTo) count++
-    if (currentFilters.yearFrom || currentFilters.yearTo) count++
-    if (currentFilters.mileageFrom || currentFilters.mileageTo) count++
-    if (currentFilters.county) count++
-    if (currentFilters.area) count++
-    count += currentFilters.fuelType.length
-    count += currentFilters.transmission.length
-    count += currentFilters.bodyType.length
-    count += currentFilters.sellerType.length
-    if (currentFilters.seatCount) count++
-    if (currentFilters.doors) count++
-    if (currentFilters.nctValid) count++
+    if (filters.searchText) count++
+    if (filters.make) count++
+    if (filters.model) count++
+    if (filters.priceFrom || filters.priceTo) count++
+    if (filters.yearFrom || filters.yearTo) count++
+    if (filters.mileageFrom || filters.mileageTo) count++
+    if (filters.county) count++
+    if (filters.area) count++
+    if (filters.color) count++
+    if (filters.doors) count++
+    if (filters.seatCount) count++
+    if (filters.nctValid) count++
+    count += filters.fuelType.length
+    count += filters.transmission.length
+    count += filters.bodyType.length
+    count += filters.sellerType.length
     return count
   }
 
   const getSearchDescription = () => {
     const terms = []
-    if (currentFilters.searchText) terms.push(`"${currentFilters.searchText}"`)
-    if (currentFilters.make) terms.push(currentFilters.make)
-    if (currentFilters.county) terms.push(currentFilters.county)
+    if (filters.searchText) terms.push(`"${filters.searchText}"`)
+    if (filters.make) terms.push(filters.make)
+    if (filters.model) terms.push(filters.model)
+    if (filters.county) terms.push(filters.county)
     
     if (terms.length > 0) {
       return `Search results for ${terms.join(', ')}`
@@ -292,18 +157,20 @@ function CarsContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
+        {/* Desktop Sidebar */}
         <div className="hidden lg:block w-80 flex-shrink-0">
           <div className="w-80 h-screen sticky top-0 overflow-y-auto">
             <CarFilters
               onFiltersChange={handleFiltersChange}
-              onSearch={handleSearch}
               isOpen={true}
               onToggle={() => {}}
               className="h-full"
+              initialFilters={filters}
             />
           </div>
         </div>
 
+        {/* Mobile Filters Overlay */}
         {filtersOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
             <div className="fixed inset-0 bg-black bg-opacity-50" onClick={() => setFiltersOpen(false)} />
@@ -319,17 +186,19 @@ function CarsContent() {
               </div>
               <CarFilters
                 onFiltersChange={handleFiltersChange}
-                onSearch={handleSearch}
                 isOpen={true}
                 onToggle={() => setFiltersOpen(!filtersOpen)}
                 className="h-full overflow-y-auto"
+                initialFilters={filters}
               />
             </div>
           </div>
         )}
 
+        {/* Main Content */}
         <div className="flex-1 min-w-0">
           <div className="max-w-none px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+            {/* Back Button */}
             <div className="mb-4 sm:mb-6">
               <button
                 onClick={() => router.back()}
@@ -340,18 +209,36 @@ function CarsContent() {
               </button>
             </div>
 
+            {/* Header */}
             <div className="mb-6 sm:mb-8">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-2 sm:space-y-0">
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">{getSearchDescription()}</h1>
-                  <p className="text-sm sm:text-base text-gray-600 mt-1">
-                    {loading ? 'Loading...' : `${cars.length} car${cars.length !== 1 ? 's' : ''} found`}
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">
+                    {getSearchDescription()}
+                  </h1>
+                  <div className="flex items-center space-x-2 text-sm sm:text-base text-gray-600 mt-1">
+                    {isLoading ? (
+                      <div className="flex items-center">
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        <span>Loading...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <span>{cars.length} car{cars.length !== 1 ? 's' : ''} found</span>
+                        {isFetching && !isLoading && (
+                          <div className="flex items-center text-green-600">
+                            <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                            <span className="text-xs">Updating...</span>
+                          </div>
+                        )}
+                      </>
+                    )}
                     {getActiveFilterCount() > 0 && (
-                      <span className="ml-2 text-green-600">
+                      <span className="text-green-600">
                         ({getActiveFilterCount()} filter{getActiveFilterCount() !== 1 ? 's' : ''} applied)
                       </span>
                     )}
-                  </p>
+                  </div>
                 </div>
                 <Link
                   href="/"
@@ -362,6 +249,7 @@ function CarsContent() {
                 </Link>
               </div>
 
+              {/* Controls Bar */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white p-3 sm:p-4 rounded-lg shadow space-y-3 sm:space-y-0">
                 <div className="flex items-center justify-between sm:justify-start sm:space-x-4">
                   <button 
@@ -380,7 +268,7 @@ function CarsContent() {
                   </button>
                   <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
+                    onChange={(e) => handleSortChange(e.target.value)}
                     className="border border-gray-300 rounded px-2 py-1 sm:px-3 sm:py-1 text-xs sm:text-sm focus:border-green-500 focus:ring-2 focus:ring-green-500/20"
                   >
                     <option value="newest">Newest First</option>
@@ -392,6 +280,7 @@ function CarsContent() {
                   </select>
                 </div>
 
+                {/* View Mode Toggle */}
                 <div className="flex items-center justify-center sm:justify-end space-x-2">
                   <button
                     onClick={() => setViewMode('grid')}
@@ -417,10 +306,27 @@ function CarsContent() {
               </div>
             </div>
 
-            {loading ? (
+            {/* Results */}
+            {isError ? (
               <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-green-600 mx-auto"></div>
-                <p className="text-gray-600 mt-4 text-sm sm:text-base">Loading cars...</p>
+                <div className="text-red-500 mb-4">
+                  <X className="mx-auto h-10 w-10 sm:h-12 sm:w-12 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Search Error</h3>
+                  <p className="text-gray-600 text-sm sm:text-base px-4">
+                    {error?.message || 'Failed to search cars. Please try again.'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="inline-flex items-center rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700 transition-colors"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : isLoading ? (
+              <div className="text-center py-12">
+                <Loader2 className="animate-spin h-10 w-10 sm:h-12 sm:w-12 text-green-600 mx-auto mb-4" />
+                <p className="text-gray-600 text-sm sm:text-base">Finding the perfect cars for you...</p>
               </div>
             ) : cars.length > 0 ? (
               <div className={`
@@ -428,7 +334,7 @@ function CarsContent() {
                   ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6'
                   : 'space-y-4 sm:space-y-6'
                 }`}>
-                {cars.map((car) => (
+                {cars.map((car: Car) => (
                   <CarCard
                     key={car.id}
                     car={car}
@@ -441,13 +347,34 @@ function CarsContent() {
               <div className="text-center py-12">
                 <Search className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No cars found</h3>
-                <p className="text-gray-600 mb-4 text-sm sm:text-base px-4">Try adjusting your search criteria or browse all cars.</p>
+                <p className="text-gray-600 mb-4 text-sm sm:text-base px-4">
+                  Try adjusting your search criteria or browse all cars.
+                </p>
                 <Link
                   href="/cars"
                   className="inline-flex items-center rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700 transition-colors"
                 >
                   Browse All Cars
                 </Link>
+              </div>
+            )}
+
+            {/* 🚀 PERFORMANCE INDICATOR */}
+            {searchResponse && (
+              <div className="mt-8 text-center">
+                <div className="inline-flex items-center text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                  {isFetching ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                      <span>Updating results...</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                      <span>Search completed in {isStale ? 'cache' : 'real-time'}</span>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -463,7 +390,10 @@ export default function CarsPage() {
       <Header currentPage="cars" />
       <Suspense fallback={
         <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-green-600"></div>
+          <div className="text-center">
+            <Loader2 className="animate-spin h-10 w-10 sm:h-12 sm:w-12 text-green-600 mx-auto mb-4" />
+            <p className="text-gray-600">Loading search interface...</p>
+          </div>
         </div>
       }>
         <CarsContent />

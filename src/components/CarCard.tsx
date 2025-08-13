@@ -1,9 +1,10 @@
-// 🚀 ENHANCED CARCARD - BETTER LOCATION DISPLAY
+// components/CarCard.tsx - Updated with centralized types
 'use client'
 
 import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Heart, Calendar, Gauge, Fuel, Settings, MapPin, Eye, MessageCircle, Star, Shield, User, CheckCircle } from 'lucide-react'
+import type { Car } from '@/types/car'
 
 // 🔥 YOUR ENHANCED LIKEBUTTON - EXACT API INTEGRATION
 const LikeButton = ({ carId }: { carId: string }) => {
@@ -98,36 +99,9 @@ const LikeButton = ({ carId }: { carId: string }) => {
   )
 }
 
+// ✅ FIXED: Updated interface to use centralized Car type
 interface CarCardProps {
-  car: {
-    id: string
-    title: string
-    make: string
-    model: string
-    year: number
-    price: number
-    mileage?: number
-    fuelType?: string
-    transmission?: string
-    bodyType?: string
-    color?: string
-    description?: string
-    location?: any
-    featured?: boolean
-    views?: number
-    inquiries?: number
-    likesCount?: number
-    isLiked?: boolean
-    images?: Array<{ id: string; url: string; alt: string }>
-    seller?: {
-      name?: string
-      type?: string
-      phone?: string
-      verified?: boolean
-      businessName?: string
-    }
-    savedAt?: string
-  }
+  car: Car  // Now uses the centralized type from types/car.ts
   variant?: 'grid' | 'list'
   showPerformance?: boolean
   showSavedDate?: boolean
@@ -240,9 +214,11 @@ const CarImageCarousel = React.memo(({ images, title, featured, price, carId }: 
   )
 })
 
+CarImageCarousel.displayName = 'CarImageCarousel'
+
 // ✅ ENHANCED CarContent - WITH IMPROVED LOCATION DISPLAY
 const CarContent = React.memo(({ car, variant, showPerformance, showSavedDate }: {
-  car: CarCardProps['car']
+  car: Car  // ✅ FIXED: Use centralized Car type
   variant?: 'grid' | 'list'
   showPerformance?: boolean
   showSavedDate?: boolean
@@ -411,6 +387,8 @@ const CarContent = React.memo(({ car, variant, showPerformance, showSavedDate }:
     </div>
   )
 })
+
+CarContent.displayName = 'CarContent'
 
 export default function CarCard({ 
   car, 
