@@ -1,4 +1,4 @@
-// src/app/dealers/[id]/page.tsx
+// src/app/dealers/[id]/page.tsx - Fixed with compatible Car interface
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,40 +10,14 @@ import {
 import Link from 'next/link';
 import { formatLocation } from '@/lib/utils';
 import CarCard from '@/components/CarCard'; // ✅ Import your main CarCard component
+import type { Car as CentralizedCar } from '@/types/car'; // ✅ Import centralized type
 
-interface Car {
-  id: string;
-  title: string; // ✅ ADD THIS REQUIRED FIELD
-  make: string;
-  model: string;
-  year: number;
-  price: number;
-  mileage: number;
-  fuelType: string;
-  transmission: string;
-  bodyType: string;
-  color: string;
-  imageUrl: string;
-  images?: Array<{ id: string; url: string; alt: string }>; // ✅ Add images array
+// ✅ FIXED: Make local Car interface compatible with centralized Car type
+interface Car extends CentralizedCar {
+  // Additional fields specific to dealer cars
   status: 'ACTIVE' | 'SOLD' | 'PENDING';
-  featured: boolean;
-  views: number;
-  inquiries: number;
-  likes: number;
-  createdAt: string;
-  location: string;
-  // ✅ Add seller info for CarCard compatibility
-  seller?: {
-    name: string;
-    type: string;
-    businessName?: string;
-    verified?: boolean;
-    phone?: string;
-  };
-  // ✅ Add additional fields that CarCard expects
-  viewsCount?: number;
-  inquiriesCount?: number;
-  likesCount?: number;
+  imageUrl?: string; // Legacy field for backward compatibility
+  likes?: number;    // Legacy field for backward compatibility
 }
 
 interface Dealer {
@@ -103,11 +77,11 @@ export default function DealerDetailPage() {
         if (response.ok) {
           const dealerData = await response.json();
           
-          // ✅ Transform car data to be compatible with CarCard component
-          const transformedCars = dealerData.cars.map((car: any) => ({
+          // ✅ FIXED: Transform car data to be fully compatible with centralized Car type
+          const transformedCars: Car[] = dealerData.cars.map((car: any) => ({
             ...car,
-            // ✅ ADD REQUIRED TITLE FIELD
-            title: `${car.year} ${car.make} ${car.model}`,
+            // ✅ Required fields from centralized Car type
+            title: car.title || `${car.year} ${car.make} ${car.model}`,
             
             // Convert single imageUrl to images array for CarCard compatibility
             images: car.images || (car.imageUrl ? [{ 
@@ -120,15 +94,35 @@ export default function DealerDetailPage() {
             seller: {
               name: dealerData.businessName,
               type: 'dealer', // ✅ This will trigger "Verified Dealer" display
-              businessName: dealerData.businessName,
-              verified: dealerData.verified,
-              phone: dealerData.phoneNumber
+              phone: dealerData.phoneNumber,
+              verified: dealerData.verified
             },
             
-            // Ensure all required fields exist
-            viewsCount: car.views || 0,
-            inquiriesCount: car.inquiries || 0,
-            likesCount: car.likes || 0
+            // ✅ FIXED: Ensure all required fields from centralized Car type exist
+            featured: car.featured || false,
+            views: car.views || car.viewsCount || 0,
+            inquiries: car.inquiries || car.inquiriesCount || 0,
+            likesCount: car.likesCount || car.likes || 0,
+            isLiked: car.isLiked || false, // ✅ CRITICAL: Add missing isLiked property
+            
+            // Handle nullable fields properly
+            mileage: car.mileage || null,
+            fuelType: car.fuelType || null,
+            transmission: car.transmission || null,
+            bodyType: car.bodyType || null,
+            color: car.color || null,
+            description: car.description || null,
+            
+            // Preserve dealer-specific fields
+            status: car.status || 'ACTIVE',
+            imageUrl: car.imageUrl, // Keep for backward compatibility
+            likes: car.likes || car.likesCount || 0, // Keep for backward compatibility
+            
+            // Optional fields
+            slug: car.slug,
+            savedAt: car.savedAt,
+            createdAt: car.createdAt,
+            updatedAt: car.updatedAt
           }));
 
           setDealer({ ...dealerData, cars: transformedCars });
@@ -176,11 +170,11 @@ export default function DealerDetailPage() {
         case 'year_desc':
           return b.year - a.year;
         case 'mileage_asc':
-          return a.mileage - b.mileage;
+          return (a.mileage || 0) - (b.mileage || 0);
         case 'most_viewed':
-          return b.views - a.views;
+          return (b.views || 0) - (a.views || 0);
         default: // newest
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return new Date(b.createdAt || b.updatedAt || '').getTime() - new Date(a.createdAt || a.updatedAt || '').getTime();
       }
     });
 
@@ -471,7 +465,7 @@ export default function DealerDetailPage() {
               : 'grid-cols-1 max-w-4xl mx-auto'
           }`}>
             {filteredCars.map((car) => (
-              // ✅ Use your main CarCard component instead of the basic one
+              // ✅ Use your main CarCard component - now fully compatible!
               <CarCard 
                 key={car.id} 
                 car={car} 
