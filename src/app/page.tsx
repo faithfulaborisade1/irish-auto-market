@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Car, Users, Star, MapPin, Search } from 'lucide-react'
+import { Car, Users, Star, MapPin, Search, CheckCircle, Clock, FileText, MapPin as LocationIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
@@ -105,41 +105,39 @@ export default function HomePage() {
 
   const featuredCars = cars.filter((car: any) => car.featured)
 
-// 🔧 FIXED: Replace your handleSearch function in homepage with this:
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    const params = new URLSearchParams()
+    
+    // Basic filters
+    if (searchFilters.searchText) params.set('q', searchFilters.searchText)
+    if (searchFilters.make) params.set('make', searchFilters.make)
+    if (searchFilters.model) params.set('model', searchFilters.model)
+    if (searchFilters.county) params.set('county', searchFilters.county)
+    if (searchFilters.area) params.set('area', searchFilters.area)
+    
+    // Send price as range string instead of separate min/max
+    if (searchFilters.minPrice || searchFilters.maxPrice) {
+      const minPrice = searchFilters.minPrice || '0'
+      const maxPrice = searchFilters.maxPrice || '1000000'
+      params.set('priceRange', `${minPrice}-${maxPrice}`)
+    }
+    
+    // Send year as range string instead of separate min/max
+    if (searchFilters.minYear || searchFilters.maxYear) {
+      const minYear = searchFilters.minYear || '1900'
+      const maxYear = searchFilters.maxYear || '2025'
+      params.set('year', `${minYear}-${maxYear}`)
+    }
 
-const handleSearch = (e: React.FormEvent) => {
-  e.preventDefault()
-  
-  const params = new URLSearchParams()
-  
-  // Basic filters
-  if (searchFilters.searchText) params.set('q', searchFilters.searchText)
-  if (searchFilters.make) params.set('make', searchFilters.make)
-  if (searchFilters.model) params.set('model', searchFilters.model)
-  if (searchFilters.county) params.set('county', searchFilters.county)
-  if (searchFilters.area) params.set('area', searchFilters.area)
-  
-  // 🔧 FIXED: Send price as range string instead of separate min/max
-  if (searchFilters.minPrice || searchFilters.maxPrice) {
-    const minPrice = searchFilters.minPrice || '0'
-    const maxPrice = searchFilters.maxPrice || '1000000'
-    params.set('priceRange', `${minPrice}-${maxPrice}`)
+    // Add auto-search parameter so cars page knows to search immediately
+    params.set('autoSearch', 'true')
+    
+    console.log('🔍 Homepage search params:', params.toString())
+    
+    router.push(`/cars?${params.toString()}`)
   }
-  
-  // 🔧 FIXED: Send year as range string instead of separate min/max
-  if (searchFilters.minYear || searchFilters.maxYear) {
-    const minYear = searchFilters.minYear || '1900'
-    const maxYear = searchFilters.maxYear || '2025'
-    params.set('year', `${minYear}-${maxYear}`)
-  }
-
-  // 🚀 NEW: Add auto-search parameter so cars page knows to search immediately
-  params.set('autoSearch', 'true')
-  
-  console.log('🔍 Homepage search params:', params.toString())
-  
-  router.push(`/cars?${params.toString()}`)
-}
 
   return (
     <div className="min-h-screen bg-white">
@@ -186,7 +184,7 @@ const handleSearch = (e: React.FormEvent) => {
               <div className="border-t pt-4">
                 <h3 className="mb-3 text-sm font-medium text-gray-700">Refine your search</h3>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-                  {/* Make Dropdown - UPDATED with comprehensive data */}
+                  {/* Make Dropdown */}
                   <div>
                     <label className="mb-1 block text-xs font-medium text-gray-600">Make</label>
                     <select 
@@ -201,7 +199,7 @@ const handleSearch = (e: React.FormEvent) => {
                     </select>
                   </div>
 
-                  {/* Model Dropdown - UPDATED with dependency */}
+                  {/* Model Dropdown */}
                   <div>
                     <label className="mb-1 block text-xs font-medium text-gray-600">Model</label>
                     <select 
@@ -221,7 +219,7 @@ const handleSearch = (e: React.FormEvent) => {
                     </select>
                   </div>
 
-                  {/* County Dropdown - UPDATED with comprehensive data */}
+                  {/* County Dropdown */}
                   <div>
                     <label className="mb-1 block text-xs font-medium text-gray-600">County</label>
                     <select 
@@ -236,7 +234,7 @@ const handleSearch = (e: React.FormEvent) => {
                     </select>
                   </div>
 
-                  {/* Area Dropdown - NEW dependent selection */}
+                  {/* Area Dropdown */}
                   <div>
                     <label className="mb-1 block text-xs font-medium text-gray-600">Area</label>
                     <select 
@@ -358,6 +356,164 @@ const handleSearch = (e: React.FormEvent) => {
         </div>
       </section>
 
+      {/* 🚗 UPDATED: Home Car Inspection Service Section */}
+      <section className="py-16 bg-gradient-to-br from-green-50 to-orange-50">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+              🚗 Professional Home Car Inspection
+            </h2>
+            <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+              Buying a car? Get peace of mind with our certified mobile inspection service. 
+              Our qualified mechanics come to you and provide a comprehensive 50-point inspection report.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left side - Service Details */}
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="text-center p-6 bg-white rounded-xl shadow-md">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="w-8 h-8 text-green-600" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-2">50-Point Check</h3>
+                  <p className="text-sm text-gray-600">Comprehensive inspection of engine, brakes, suspension, and more</p>
+                </div>
+
+                <div className="text-center p-6 bg-white rounded-xl shadow-md">
+                  <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <LocationIcon className="w-8 h-8 text-orange-600" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-2">At Your Location</h3>
+                  <p className="text-sm text-gray-600">We come to your home, workplace, or the seller's location</p>
+                </div>
+
+                <div className="text-center p-6 bg-white rounded-xl shadow-md">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="w-8 h-8 text-green-600" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-2">Same Day Service</h3>
+                  <p className="text-sm text-gray-600">Book today, inspect today. Fast and convenient scheduling</p>
+                </div>
+
+                <div className="text-center p-6 bg-white rounded-xl shadow-md">
+                  <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-orange-600" />
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-2">Detailed Report</h3>
+                  <p className="text-sm text-gray-600">Written report with photos and estimated repair costs</p>
+                </div>
+              </div>
+
+              {/* Pricing */}
+              <div className="bg-white p-6 rounded-xl shadow-lg border-2 border-green-200">
+                <div className="text-center">
+                  <span className="text-3xl font-bold text-green-600">€99</span>
+                  <span className="text-gray-600 ml-2">per inspection</span>
+                </div>
+                <ul className="mt-4 space-y-2 text-sm text-gray-600">
+                  <li className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                    Full 50-point mechanical inspection
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                    Detailed written report with photos
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                    Estimated repair costs for any issues
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                    Available across Ireland
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Right side - Call to Action */}
+            <div className="text-center lg:text-left">
+              <div className="bg-white p-8 rounded-2xl shadow-xl">
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">
+                  Don't Buy Blind - Get Inspected!
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Found a car you're interested in? Our certified mechanics will inspect it before you buy, 
+                  giving you the confidence to negotiate or walk away if needed.
+                </p>
+                
+                <div className="space-y-4">
+                  {/* FIXED: Link to correct booking page */}
+                  <Link 
+                    href="/book-inspection"
+                    className="w-full bg-green-600 text-white px-8 py-4 rounded-lg font-bold text-lg hover:bg-green-700 transition-colors shadow-lg flex items-center justify-center"
+                  >
+                    📋 Book Inspection Online
+                  </Link>
+                  
+                  {/* Alternative contact methods */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <a 
+                      href="tel:+353871708603"
+                      className="bg-orange-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-orange-700 transition-colors flex items-center justify-center"
+                    >
+                      📞 Call Now
+                    </a>
+                    
+                    <a 
+                      href="https://wa.me/353871708603?text=Hi, I'd like to book a car inspection"
+                      className="bg-green-500 text-white px-4 py-3 rounded-lg font-medium hover:bg-green-600 transition-colors flex items-center justify-center"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      💬 WhatsApp
+                    </a>
+                  </div>
+                  
+                  <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
+                    <span className="flex items-center">
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Qualified Mechanics
+                    </span>
+                    <span className="flex items-center">
+                      <CheckCircle className="w-4 h-4 mr-1" />
+                      Fully Insured
+                    </span>
+                  </div>
+
+                  {/* FIXED: Updated phone number */}
+                  <p className="text-xs text-gray-500">
+                    Call us at <span className="font-bold text-green-600">087 170 8603</span> or 
+                    book online for next available slot
+                  </p>
+                </div>
+              </div>
+
+              {/* Trust indicators */}
+              <div className="mt-8 text-center">
+                <p className="text-sm text-gray-500 mb-4">Trusted by Irish car buyers</p>
+                <div className="flex justify-center space-x-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">500+</div>
+                    <div className="text-xs text-gray-500">Inspections</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">4.9★</div>
+                    <div className="text-xs text-gray-500">Rating</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">98%</div>
+                    <div className="text-xs text-gray-500">Satisfied</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Featured Cars */}
       {featuredCars.length > 0 && (
         <section className="bg-gray-50 py-16">
@@ -371,7 +527,7 @@ const handleSearch = (e: React.FormEvent) => {
               {featuredCars.map((car: any) => (
                 <div key={car.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                   <div className="relative h-48">
-                  <img
+                    <img
                       src={car.images[0]?.url || '/placeholder-car.jpg'}
                       alt={car.images[0]?.alt || car.title}
                       className="w-full h-full object-cover"

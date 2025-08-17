@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Search, Grid, List, ArrowLeft, Filter, X, Loader2 } from 'lucide-react'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, Suspense, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
@@ -18,8 +18,8 @@ function CarsContent() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sortBy, setSortBy] = useState('newest')
   
-  // 🚀 REACT QUERY: Initialize filters from URL
-  const [filters, setFilters] = useState<CarSearchFilters>(() => {
+  // 🚀 FIXED: Memoize initial filters to prevent re-initialization
+  const initialFilters = useMemo(() => {
     const params = Object.fromEntries(searchParams.entries())
     
     let priceFrom = ''
@@ -60,7 +60,15 @@ function CarsContent() {
       sellerType: params.sellerType ? params.sellerType.split(',') : [],
       sortBy
     }
-  })
+  }, [searchParams, sortBy])
+
+  // 🚀 FIXED: Use stable filter state
+  const [filters, setFilters] = useState<CarSearchFilters>(initialFilters)
+
+  // 🚀 FIXED: Only update filters when URL actually changes
+  useEffect(() => {
+    setFilters(initialFilters)
+  }, [initialFilters])
 
   // 🚀 REACT QUERY: Use optimized car search hook
   const { 
@@ -70,12 +78,12 @@ function CarsContent() {
     error,
     isFetching,
     isStale 
-  } = useCarSearch({ ...filters, sortBy })
+  } = useCarSearch(filters)
 
   const cars: Car[] = searchResponse?.cars || []
 
-  // 🚀 OPTIMIZATION: Update URL without triggering re-fetch
-  const updateURL = (newFilters: CarSearchFilters) => {
+  // 🚀 OPTIMIZATION: Memoize URL update function to prevent recreations
+  const updateURL = useCallback((newFilters: CarSearchFilters) => {
     const params = new URLSearchParams()
     
     if (newFilters.searchText) params.set('q', newFilters.searchText)
@@ -104,23 +112,37 @@ function CarsContent() {
     if (newFilters.bodyType.length > 0) params.set('bodyType', newFilters.bodyType.join(','))
     if (newFilters.sellerType.length > 0) params.set('sellerType', newFilters.sellerType.join(','))
     
-    router.push(`/cars?${params.toString()}`, { scroll: false })
-  }
+    const newURL = `/cars?${params.toString()}`
+    router.push(newURL, { scroll: false })
+  }, [router])
 
-  // 🚀 SMART: Handle filter changes with React Query
-  const handleFiltersChange = (newFilters: any) => {
+  // 🚀 FIXED: Stable filter change handler without URL update during render
+  const handleFiltersChange = useCallback((newFilters: Partial<CarSearchFilters>) => {
     console.log('🔧 Filters changed:', newFilters)
-    setFilters(prev => ({ ...prev, ...newFilters }))
-    updateURL({ ...filters, ...newFilters })
-  }
+    
+    setFilters(prevFilters => {
+      const updatedFilters = { ...prevFilters, ...newFilters }
+      return updatedFilters
+    })
+  }, [])
 
-  // 🚀 SMART: Handle sort changes
-  const handleSortChange = (newSort: string) => {
+  // 🚀 FIXED: Update URL in effect, not during render
+  useEffect(() => {
+    // Skip URL update on initial mount
+    const isInitialMount = JSON.stringify(filters) === JSON.stringify(initialFilters)
+    if (!isInitialMount) {
+      updateURL(filters)
+    }
+  }, [filters, updateURL, initialFilters])
+
+  // 🚀 FIXED: Stable sort change handler
+  const handleSortChange = useCallback((newSort: string) => {
     setSortBy(newSort)
     setFilters(prev => ({ ...prev, sortBy: newSort }))
-  }
+  }, [])
 
-  const getActiveFilterCount = () => {
+  // 🚀 OPTIMIZED: Memoize computed values
+  const activeFilterCount = useMemo(() => {
     let count = 0
     if (filters.searchText) count++
     if (filters.make) count++
@@ -139,9 +161,9 @@ function CarsContent() {
     count += filters.bodyType.length
     count += filters.sellerType.length
     return count
-  }
+  }, [filters])
 
-  const getSearchDescription = () => {
+  const searchDescription = useMemo(() => {
     const terms = []
     if (filters.searchText) terms.push(`"${filters.searchText}"`)
     if (filters.make) terms.push(filters.make)
@@ -152,7 +174,7 @@ function CarsContent() {
       return `Search results for ${terms.join(', ')}`
     }
     return 'All Cars'
-  }
+  }, [filters.searchText, filters.make, filters.model, filters.county])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -214,7 +236,7 @@ function CarsContent() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-2 sm:space-y-0">
                 <div className="min-w-0 flex-1">
                   <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 truncate">
-                    {getSearchDescription()}
+                    {searchDescription}
                   </h1>
                   <div className="flex items-center space-x-2 text-sm sm:text-base text-gray-600 mt-1">
                     {isLoading ? (
@@ -233,9 +255,9 @@ function CarsContent() {
                         )}
                       </>
                     )}
-                    {getActiveFilterCount() > 0 && (
+                    {activeFilterCount > 0 && (
                       <span className="text-green-600">
-                        ({getActiveFilterCount()} filter{getActiveFilterCount() !== 1 ? 's' : ''} applied)
+                        ({activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''} applied)
                       </span>
                     )}
                   </div>
@@ -260,9 +282,9 @@ function CarsContent() {
                     <span className="text-sm sm:text-base">
                       {filtersOpen ? 'Hide Filters' : 'Show Filters'}
                     </span>
-                    {getActiveFilterCount() > 0 && (
+                    {activeFilterCount > 0 && (
                       <span className="ml-1 bg-green-600 text-white text-xs rounded-full px-2 py-1">
-                        {getActiveFilterCount()}
+                        {activeFilterCount}
                       </span>
                     )}
                   </button>

@@ -6,114 +6,154 @@ import { User, LogOut, Settings, Heart, FileText, ChevronDown, MessageCircle, Pl
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 
-// 🚀 FIX #1: Lazy load the NotificationBell component
+// 🚀 LAZY LOAD: NotificationBell component
 const NotificationBell = dynamic(() => import('./NotificationBell'), {
   loading: () => <div className="w-6 h-6 bg-gray-200 rounded animate-pulse"></div>,
-  ssr: false // Don't render on server if it makes API calls
+  ssr: false
 })
 
 interface HeaderProps {
   currentPage?: 'home' | 'cars' | 'sell' | 'dealers' | 'about' | 'messages' | 'place-ad' | 'profile' | 'my-ads' | 'saved-cars' | 'find-dealer'
 }
 
-// 🚀 FIX #2: Add caching for auth state
+// 🚀 AUTHENTICATION CACHE: Prevent repeated API calls
 let authCache: any = null
 let authCacheTime = 0
+let messagesCountCache = 0
+let messagesCountCacheTime = 0
 const AUTH_CACHE_DURATION = 30000 // 30 seconds
+const MESSAGES_CACHE_DURATION = 60000 // 1 minute
 
 export default function Header({ currentPage = 'home' }: HeaderProps) {
-  const [user, setUser] = useState<any>(authCache) // Start with cache if available
+  const [user, setUser] = useState<any>(authCache)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
-  const [loading, setLoading] = useState(!authCache) // Don't show loading if we have cache
-  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0)
+  const [loading, setLoading] = useState(!authCache)
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(messagesCountCache)
   const router = useRouter()
 
-  // 🚀 FIX #3: Optimized auth check with caching
-  useEffect(() => {
-    async function checkAuth() {
-      const now = Date.now()
-      
-      // Use cache if available and fresh
-      if (authCache && (now - authCacheTime) < AUTH_CACHE_DURATION) {
-        setUser(authCache)
-        setLoading(false)
-        return
-      }
+  // 🚀 FIXED: Graceful auth check with proper error handling
+  const checkAuth = useCallback(async () => {
+    const now = Date.now()
+    
+    // Use cache if available and fresh
+    if (authCache && (now - authCacheTime) < AUTH_CACHE_DURATION) {
+      setUser(authCache)
+      setLoading(false)
+      return
+    }
 
-      try {
-        const response = await fetch('/api/auth/me', {
-          // Add cache headers to prevent unnecessary requests
-          headers: {
-            'Cache-Control': 'max-age=30'
-          }
-        })
+    try {
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Cache-Control': 'max-age=30'
+        }
+      })
+      
+      if (response.ok) {
         const data = await response.json()
-        
         if (data.success) {
           authCache = data.user
           authCacheTime = now
           setUser(data.user)
         } else {
+          // API returned unsuccessful but valid response
           authCache = null
           authCacheTime = now
           setUser(null)
         }
-      } catch (error) {
-        console.log('User not logged in')
+      } else if (response.status === 401) {
+        // 401 Unauthorized - user not logged in (expected)
         authCache = null
         authCacheTime = now
         setUser(null)
-      } finally {
-        setLoading(false)
+      } else {
+        // Other errors - don't cache, allow retry
+        console.error('Auth check failed:', response.status)
+        setUser(null)
       }
+    } catch (error) {
+      // Network errors - don't cache, allow retry
+      console.error('Auth check network error:', error)
+      setUser(null)
+    } finally {
+      setLoading(false)
     }
-    
-    checkAuth()
   }, [])
 
-  // 🚀 FIX #4: Debounced and cached unread messages fetch
+  // 🚀 FIXED: Only run auth check once on mount
+  useEffect(() => {
+    checkAuth()
+  }, [checkAuth])
+
+  // 🚀 FIXED: Cached messages count fetch
   const fetchUnreadMessagesCount = useCallback(async () => {
-    if (!user) return
+    if (!user) {
+      setUnreadMessagesCount(0)
+      return
+    }
+    
+    const now = Date.now()
+    
+    // Use cache if available and fresh
+    if (messagesCountCache && (now - messagesCountCacheTime) < MESSAGES_CACHE_DURATION) {
+      setUnreadMessagesCount(messagesCountCache)
+      return
+    }
     
     try {
       const response = await fetch('/api/conversations', {
         headers: {
-          'Cache-Control': 'max-age=10' // Cache for 10 seconds
+          'Cache-Control': 'max-age=60'
         }
       })
-      const data = await response.json()
-      if (data.success) {
-        const unreadCount = data.conversations.filter((conv: any) => conv.hasUnread).length
-        setUnreadMessagesCount(unreadCount)
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success) {
+          const unreadCount = data.conversations.filter((conv: any) => conv.hasUnread).length
+          messagesCountCache = unreadCount
+          messagesCountCacheTime = now
+          setUnreadMessagesCount(unreadCount)
+        }
+      } else if (response.status === 401) {
+        // User session expired
+        authCache = null
+        authCacheTime = 0
+        setUser(null)
+        setUnreadMessagesCount(0)
       }
     } catch (error) {
-      console.error('Error fetching unread messages count:', error)
+      // Silently fail for messages count
+      console.log('Messages count fetch failed (non-critical)')
     }
   }, [user])
 
-  // 🚀 FIX #5: Only fetch messages once, with longer delay
+  // 🚀 FIXED: Delayed messages fetch to prevent blocking
   useEffect(() => {
     if (user) {
       // Delay messages fetch to not block initial render
       const timer = setTimeout(() => {
         fetchUnreadMessagesCount()
-      }, 1000) // 1 second delay
+      }, 1000)
       
       return () => clearTimeout(timer)
     } else {
       setUnreadMessagesCount(0)
+      messagesCountCache = 0
     }
-  }, [user]) // Remove fetchUnreadMessagesCount from dependencies
+  }, [user, fetchUnreadMessagesCount])
 
-  // 🚀 FIX #6: Optimized event handlers with useCallback
+  // 🚀 OPTIMIZED: Stable logout handler
   const handleLogout = useCallback(async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
       
-      // Clear cache
+      // Clear all caches
       authCache = null
       authCacheTime = 0
+      messagesCountCache = 0
+      messagesCountCacheTime = 0
       
       setUser(null)
       setUnreadMessagesCount(0)
@@ -125,6 +165,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
     }
   }, [])
 
+  // 🚀 OPTIMIZED: Stable place ad handler
   const handlePlaceAd = useCallback(() => {
     if (!user) {
       router.push('/login?redirect=/place-ad')
@@ -134,7 +175,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
     setShowMobileMenu(false)
   }, [user, router])
 
-  // 🚀 FIX #7: Memoize computed values
+  // 🚀 MEMOIZED: User display values
   const userDisplayName = useMemo(() => {
     if (!user) return ''
     if (user.dealerProfile?.businessName) {
@@ -151,7 +192,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
     return `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase()
   }, [user])
 
-  // 🚀 FIX #8: Optimized click outside handler
+  // 🚀 OPTIMIZED: Click outside handler
   useEffect(() => {
     if (!showUserMenu && !showMobileMenu) return
 
@@ -172,7 +213,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showUserMenu, showMobileMenu])
 
-  // 🚀 FIX #9: Show basic header immediately, load user features progressively
+  // 🚀 PROGRESSIVE LOADING: Show basic header immediately
   return (
     <header className="border-b bg-white shadow-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
