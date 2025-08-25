@@ -1,5 +1,6 @@
-// src/app/api/admin/notifications/stream/route.ts - Next.js Compatible Version
+// src/app/api/admin/notifications/stream/route.ts - FIXED VERSION
 import { NextRequest } from 'next/server'
+import { AdminAuth } from '@/lib/admin-auth'
 import { adminConnections, broadcastToAdmins } from '@/lib/admin-notification-broadcaster'
 
 export const dynamic = 'force-dynamic'
@@ -12,14 +13,20 @@ export async function GET(request: NextRequest) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  console.log('🔗 SSE connection attempt...')
+  // ✅ FIXED: Use actual admin ID from token
+  const adminSession = await AdminAuth.verifyToken(authToken)
+  
+  if (!adminSession) {
+    return new Response('Invalid admin token', { status: 401 })
+  }
+
+  const adminId = adminSession.userId // ✅ Use real admin ID
+  console.log(`🔗 SSE connection attempt for admin: ${adminId}`)
 
   // Create SSE stream
   const stream = new ReadableStream({
     start(controller) {
-      const adminId = `admin_${Date.now()}_${Math.random()}`
-      
-      // Store connection info with proper typing
+      // ✅ FIXED: Store connection with real admin ID
       const connectionInfo = {
         controller,
         isActive: true,
@@ -27,8 +34,9 @@ export async function GET(request: NextRequest) {
       }
       adminConnections.set(adminId, connectionInfo)
       
-      console.log(`✅ SSE connection authorized for admin: ${adminId}`)
-      console.log(`🚀 SSE stream started for admin: ${adminId}`)
+      console.log(`✅ SSE connection stored for admin: ${adminId}`)
+console.log(`📊 Total admin connections after storage: ${adminConnections.size}`)
+console.log(`📊 All stored connection IDs: [${Array.from(adminConnections.keys()).join(', ')}]`)
 
       // Send connection confirmation
       try {
@@ -90,6 +98,7 @@ export async function GET(request: NextRequest) {
         }
         
         adminConnections.delete(adminId)
+        console.log(`📊 Remaining admin connections: ${adminConnections.size}`) // ✅ ADDED
         
         try {
           controller.close()

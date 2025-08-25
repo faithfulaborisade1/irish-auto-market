@@ -1,4 +1,4 @@
-// src/app/api/admin/invitations/route.ts - FIXED VERSION
+// src/app/api/admin/invitations/route.ts - FIXED VERSION WITH DEBUG LOGGING
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
@@ -119,21 +119,54 @@ async function checkExistingUser(email: string) {
 // Send dealer invitation email
 async function sendInvitationEmail(invitation: any, adminName: string) {
   try {
+    console.log('📧 Attempting to send dealer invitation email to:', invitation.email);
+    
+    // Check if environment is configured
+    if (!process.env.RESEND_API_KEY) {
+      console.error('❌ RESEND_API_KEY not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+    
+    console.log('✅ Environment check passed, importing email function...');
+    
     // Dynamic import to prevent build issues
     const { sendDealerInvitation } = await import('@/lib/email');
+    console.log('✅ Email function imported successfully');
     
-    const result = await sendDealerInvitation({
+    // Prepare the invitation data with correct parameter structure
+    const invitationData = {
       email: invitation.email,
-      businessName: invitation.businessName,
-      contactName: invitation.contactName,
-      location: invitation.location,
+      businessName: invitation.businessName || undefined,
+      contactName: invitation.contactName || undefined,  
+      location: invitation.location || undefined,
       registrationToken: invitation.registrationToken,
-      adminName
+      adminName: adminName
+    };
+    
+    console.log('📧 Sending invitation with data:', {
+      email: invitationData.email,
+      businessName: invitationData.businessName,
+      contactName: invitationData.contactName,
+      location: invitationData.location,
+      hasToken: !!invitationData.registrationToken,
+      adminName: invitationData.adminName
     });
+    
+    // Call the email function with correct parameters
+    const result = await sendDealerInvitation(invitationData);
 
+    console.log('📧 Email send result:', result);
+    
+    if (result.success) {
+      console.log('✅ Dealer invitation sent successfully to:', invitation.email, 'with ID:', result.emailId);
+    } else {
+      console.error('❌ Failed to send dealer invitation:', result.error);
+    }
+    
     return result;
+    
   } catch (error: any) {
-    console.error('Email sending error:', error);
+    console.error('❌ Email sending error:', error);
     return { success: false, error: error.message };
   }
 }
@@ -293,6 +326,9 @@ export async function POST(request: NextRequest) {
     }
 
     const currentAdmin = authResult.user;
+    console.log('🔍 DEBUG: Current admin:', currentAdmin.firstName, currentAdmin.lastName);
+    console.log('🔍 DEBUG: Admin profile ID:', currentAdmin.adminProfile?.id);
+    
     const body = await request.json();
 
     // Determine if single or bulk invitation
@@ -334,14 +370,19 @@ export async function POST(request: NextRequest) {
     const adminName = `${currentAdmin.firstName} ${currentAdmin.lastName}`;
     const clientIP = request.headers.get('x-forwarded-for') || 'unknown';
 
+    console.log('🔍 DEBUG: About to process', validatedData.length, 'invitations');
+
     // Process each invitation
     for (const invitationData of validatedData) {
       try {
         const email = invitationData.email.toLowerCase();
+        
+        console.log('🔍 DEBUG: Processing invitation for:', email);
 
         // Check if user already exists
         const existingUser = await checkExistingUser(email);
         if (existingUser) {
+          console.log('🔍 DEBUG: User already exists:', email);
           results.alreadyExists.push({
             email,
             reason: `User already exists with role: ${existingUser.role}`,
@@ -360,6 +401,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (existingInvitation) {
+          console.log('🔍 DEBUG: Invitation already exists for:', email);
           results.alreadyExists.push({
             email,
             reason: 'Invitation already sent',
@@ -372,28 +414,57 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // ✅ FIX: Generate token BEFORE creating invitation
+        // Generate token BEFORE creating invitation
         const registrationToken = generateInvitationToken();
+        console.log('🔍 DEBUG: Generated registration token:', registrationToken);
+        console.log('🔍 DEBUG: About to create invitation record...');
 
-        // Create invitation record with token
-        const invitation = await prisma.dealerInvitation.create({
-          data: {
+        // Create invitation record with better error handling
+        let invitation;
+        try {
+          invitation = await prisma.dealerInvitation.create({
+            data: {
+              email,
+              businessName: invitationData.businessName || null,
+              contactName: invitationData.contactName || null,
+              phone: invitationData.phone || null,
+              location: invitationData.location || null,
+              registrationToken,
+              invitedBy: currentAdmin.adminProfile!.id,
+              ipAddress: clientIP,
+              source: isBulk ? 'bulk_import' : 'admin_dashboard'
+            }
+          });
+          
+          console.log('✅ DEBUG: Invitation record created successfully:', invitation.id);
+          console.log('🔍 DEBUG: Invitation data:', {
+            id: invitation.id,
+            email: invitation.email,
+            registrationToken: invitation.registrationToken,
+            invitedBy: invitation.invitedBy
+          });
+          
+        } catch (dbError: any) {
+          console.error('❌ DATABASE ERROR creating invitation:', dbError);
+          console.error('❌ Error details:', {
+            message: dbError.message,
+            code: dbError.code,
+            meta: dbError.meta
+          });
+          
+          results.failed.push({
             email,
-            businessName: invitationData.businessName || null,
-            contactName: invitationData.contactName || null,
-            phone: invitationData.phone || null,
-            location: invitationData.location || null,
-            registrationToken, // ✅ Include token in creation
-            invitedBy: currentAdmin.adminProfile!.id,
-            ipAddress: clientIP,
-            source: isBulk ? 'bulk_import' : 'admin_dashboard'
-          }
-        });
+            reason: `Database error: ${dbError.message}`
+          });
+          continue;
+        }
 
         // Send email
+        console.log('🔍 DEBUG: About to send email for:', email);
         const emailResult = await sendInvitationEmail(invitation, adminName);
 
         if (emailResult.success) {
+          console.log('🔍 DEBUG: Email sent successfully, adding to results...');
           results.successful.push({
             id: invitation.id,
             email,
@@ -418,6 +489,7 @@ export async function POST(request: NextRequest) {
             );
           }
         } else {
+          console.log('🔍 DEBUG: Email failed:', emailResult.error);
           results.failed.push({
             email,
             reason: emailResult.error || 'Email sending failed'
@@ -426,6 +498,12 @@ export async function POST(request: NextRequest) {
           // Keep invitation record even if email fails (for retry)
           console.log(`⚠️ Email failed for ${email}, but invitation record created for retry`);
         }
+
+        console.log('🔍 DEBUG: Results so far:', {
+          successful: results.successful.length,
+          failed: results.failed.length,
+          alreadyExists: results.alreadyExists.length
+        });
 
       } catch (error: any) {
         console.error(`❌ Error processing invitation for ${invitationData.email}:`, error);
@@ -444,6 +522,7 @@ export async function POST(request: NextRequest) {
     };
 
     console.log(`✅ Invitation batch complete: ${summary.successful}/${summary.total} successful`);
+    console.log('🔍 DEBUG: Final results:', results);
 
     return NextResponse.json({
       success: true,

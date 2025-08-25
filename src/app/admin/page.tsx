@@ -27,6 +27,7 @@ import {
   XCircle,
   AlertCircle
 } from 'lucide-react';
+import notificationSoundManager from '@/lib/notification-sound';
 
 interface DashboardStats {
   totalUsers?: number;
@@ -556,6 +557,54 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         </div>
+        
+
+ {/* Replace the existing test button with this enhanced debug panel */}
+<div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+  <h3 className="text-sm font-semibold text-yellow-800 mb-3">🔊 Sound Debug Panel</h3>
+  
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+<button 
+  onClick={async () => {
+    try {
+      // This would call your server to broadcast a test notification
+      const response = await fetch('/api/admin/notifications/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          type: 'TEST',
+          title: 'SSE Test Notification',
+          message: 'Testing real SSE notification with sound',
+          priority: 'medium',
+          playSound: true
+        })
+      });
+      
+      if (response.ok) {
+        console.log('✅ SSE test notification sent');
+        alert('✅ SSE test notification sent - check if sound plays!');
+      } else {
+        console.log('❌ SSE test failed:', response.status);
+        alert('❌ SSE test failed: ' + response.status);
+      }
+    } catch (error: any) {
+      console.error('❌ SSE test error:', error);
+      alert('❌ SSE test error: ' + error.message);
+    }
+  }}
+  className="bg-red-600 text-white px-4 py-2 rounded"
+>
+  Test Real SSE Notification
+</button>
+  </div>
+
+  <div className="mt-3 text-xs text-yellow-700">
+    <p>✅ Simple beep worked - browser audio is enabled</p>
+    <p>🔍 Testing notification sound manager components...</p>
+  </div>
+</div>
+
 
         {/* Debug Info (Development Only) */}
         {process.env.NODE_ENV === 'development' && (

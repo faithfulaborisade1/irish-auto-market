@@ -265,12 +265,12 @@ export default function Footer() {
           {/* Additional Info */}
           <div className="mt-4 pt-4 border-t border-gray-800">
             <div className="flex flex-col md:flex-row justify-between items-center text-xs text-gray-500 space-y-2 md:space-y-0">
-              <div className="flex items-center space-x-4">
-                <span>VAT: IE1234567890</span>
+             <div className="flex items-center space-x-4">
+                <span>Irish Sole Trader Business</span>
                 <span>•</span>
-                <span>Company Reg: 123456</span>
+                <span>Revenue Registration: Pending</span>
                 <span>•</span>
-                <span>Licensed by the Central Bank of Ireland</span>
+                <span>Compliant with Irish Business Laws</span>
               </div>
               <div className="flex items-center space-x-2">
                 <span>Powered by</span>

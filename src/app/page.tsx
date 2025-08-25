@@ -71,23 +71,48 @@ export default function HomePage() {
   const availableAreas = searchFilters.county ? IRISH_LOCATIONS[searchFilters.county as keyof typeof IRISH_LOCATIONS] || [] : []
 
   // Fetch cars and count on client side only
-  useEffect(() => {
-    async function fetchCars() {
-      try {
-        const response = await fetch('/api/cars')
-        const data = await response.json()
-        if (data.success) {
-          setCars(data.cars)
+ // Replace the existing useEffect in your HomePage component with this:
+
+useEffect(() => {
+  // Fetch count first (fast query, updates search button immediately)
+  async function fetchCount() {
+    try {
+      const response = await fetch('/api/cars/count')
+      const data = await response.json()
+      if (data.success) {
+        setCarCount(data.count)
+      }
+    } catch (error) {
+      console.error('Error fetching car count:', error)
+      // Fallback: still fetch cars to get count
+    }
+  }
+  
+  // Fetch cars second (slower query, for featured cars display)
+  async function fetchCars() {
+    try {
+      const response = await fetch('/api/cars')
+      const data = await response.json()
+      if (data.success) {
+        setCars(data.cars)
+        // Fallback: if count API failed, use cars length
+        if (carCount === 0) {
           setCarCount(data.cars.length)
         }
-      } catch (error) {
-        console.error('Error fetching cars:', error)
-      } finally {
-        setLoading(false)
       }
+    } catch (error) {
+      console.error('Error fetching cars:', error)
+    } finally {
+      setLoading(false)
     }
-    fetchCars()
-  }, [])
+  }
+
+  // Run count fetch immediately (fast)
+  fetchCount()
+  
+  // Run cars fetch after small delay or immediately
+  fetchCars()
+}, [])
 
   // Reset model when make changes
   useEffect(() => {

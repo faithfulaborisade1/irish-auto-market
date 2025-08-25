@@ -1,4 +1,4 @@
-// src/app/admin/invitations/page.tsx
+// src/app/admin/invitations/page.tsx - COMPLETE UPDATED VERSION
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -119,9 +119,11 @@ export default function DealerInvitationsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setInvitations(data.invitations);
-        setStats(data.statistics);
-        setTotalPages(data.pagination.totalPages);
+        if (mounted.current) {
+          setInvitations(data.invitations);
+          setStats(data.statistics);
+          setTotalPages(data.pagination.totalPages);
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to fetch invitations');
@@ -163,7 +165,22 @@ export default function DealerInvitationsPage() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess(`Invitation sent successfully to ${formData.email}`);
+        const { summary, results } = data;
+        
+        // Show appropriate message based on results
+        if (summary.successful > 0) {
+          setSuccess(`✅ Invitation sent successfully to ${formData.email}`);
+        } else if (summary.alreadyExists > 0) {
+          const reason = results.alreadyExists[0]?.reason || 'already exists';
+          setError(`❌ Cannot send invitation: ${reason}`);
+        } else if (summary.failed > 0) {
+          const reason = results.failed[0]?.reason || 'unknown error';
+          setError(`❌ Failed to send invitation: ${reason}`);
+        } else {
+          setError('❌ No invitation was sent');
+        }
+        
+        // Clear form and close modal
         setFormData({
           email: '',
           businessName: '',
@@ -172,6 +189,8 @@ export default function DealerInvitationsPage() {
           location: ''
         });
         setShowForm(false);
+        
+        // Refresh the list to show updated data
         fetchInvitations();
       } else {
         setError(data.error || 'Failed to send invitation');
@@ -227,11 +246,35 @@ export default function DealerInvitationsPage() {
       const data = await response.json();
 
       if (response.ok) {
-        const { summary } = data;
-        setSuccess(`Bulk invitation complete: ${summary.successful} sent, ${summary.failed} failed, ${summary.alreadyExists} already exist`);
+        const { summary, results } = data;
+        
+        // Create detailed success/error messages
+        let message = '';
+        if (summary.successful > 0) {
+          message += `✅ ${summary.successful} invitation${summary.successful > 1 ? 's' : ''} sent successfully`;
+        }
+        if (summary.failed > 0) {
+          message += message ? '\n' : '';
+          message += `❌ ${summary.failed} failed`;
+        }
+        if (summary.alreadyExists > 0) {
+          message += message ? '\n' : '';
+          message += `⚠️ ${summary.alreadyExists} already exist${summary.alreadyExists > 1 ? '' : 's'} (duplicates skipped)`;
+        }
+        
+        // Show success if any were sent, otherwise show error
+        if (summary.successful > 0) {
+          setSuccess(message);
+        } else {
+          setError(message || 'No invitations were sent');
+        }
+        
+        // Clear form and close modal
         setBulkEmails('');
         setBulkMode(false);
         setShowForm(false);
+        
+        // Refresh the list to show updated data
         fetchInvitations();
       } else {
         setError(data.error || 'Failed to send bulk invitations');
@@ -306,7 +349,7 @@ export default function DealerInvitationsPage() {
               <XCircle className="w-5 h-5 text-red-600" />
               <div>
                 <p className="text-red-800 font-medium">Error</p>
-                <p className="text-red-700 text-sm">{error}</p>
+                <p className="text-red-700 text-sm whitespace-pre-line">{error}</p>
               </div>
             </div>
           </div>
@@ -318,7 +361,7 @@ export default function DealerInvitationsPage() {
               <CheckCircle className="w-5 h-5 text-green-600" />
               <div>
                 <p className="text-green-800 font-medium">Success</p>
-                <p className="text-green-700 text-sm">{success}</p>
+                <p className="text-green-700 text-sm whitespace-pre-line">{success}</p>
               </div>
             </div>
           </div>
@@ -697,6 +740,14 @@ export default function DealerInvitationsPage() {
                 onClick={() => {
                   setShowForm(false);
                   setBulkMode(false);
+                  setFormData({
+                    email: '',
+                    businessName: '',
+                    contactName: '',
+                    phone: '',
+                    location: ''
+                  });
+                  setBulkEmails('');
                 }}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
               >

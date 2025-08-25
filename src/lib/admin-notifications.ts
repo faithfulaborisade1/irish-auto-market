@@ -1,203 +1,179 @@
-// src/lib/admin-notifications.ts - Fixed TypeScript Version
+// src/lib/admin-notifications.ts
 export interface AdminNotification {
   id: string;
-  type: 'NEW_CAR' | 'NEW_USER' | 'NEW_DEALER' | 'URGENT_REPORT' | 'SYSTEM_ALERT';
+  type: 'NEW_CAR' | 'NEW_USER' | 'NEW_DEALER' | 'URGENT_REPORT' | 'PAYMENT_ISSUE' | 'SYSTEM_ALERT' | 'NEW_MESSAGE' | 'TEST';
   title: string;
   message: string;
-  data?: any;
   priority: 'low' | 'medium' | 'high' | 'critical';
   timestamp: string;
-  actionUrl?: string;
   playSound?: boolean;
+  actionUrl?: string;
+  metadata?: {
+    userId?: string;
+    carId?: string;
+    dealerId?: string;
+    messageId?: string;
+    reportId?: string;
+    [key: string]: any;
+  };
+   data?: any; 
 }
 
-// Create notification for new car listing
-export function createNewCarNotification(carData: any, userData: any): AdminNotification {
-  const location = carData.location?.area 
-    ? `${carData.location.area}, ${carData.location.county}`
-    : carData.location?.county || 'Unknown location';
+export type NotificationPriority = 'low' | 'medium' | 'high' | 'critical';
 
-  return {
-    id: `car-${carData.id}-${Date.now()}`,
-    type: 'NEW_CAR',
-    title: '🚗 New Car Listed!',
-    message: `${carData.year} ${carData.make} ${carData.model} - €${carData.price.toLocaleString()} in ${location}`,
-    data: {
-      carId: carData.id,
-      make: carData.make,
-      model: carData.model,
-      year: carData.year,
-      price: carData.price,
-      location: location,
-      images: carData.images || [],
-      seller: {
-        name: userData.dealerProfile?.businessName || `${userData.firstName} ${userData.lastName}`,
-        type: userData.role === 'DEALER' ? 'dealer' : 'private',
-        email: userData.email
-      }
-    },
-    priority: 'medium',
-    timestamp: new Date().toISOString(),
-    actionUrl: `/admin/cars/${carData.id}`,
-    playSound: true
+export interface NotificationSettings {
+  soundEnabled: boolean;
+  soundVolume: number;
+  browserNotificationsEnabled: boolean;
+  emailNotificationsEnabled: boolean;
+  notificationTypes: {
+    [K in AdminNotification['type']]: {
+      enabled: boolean;
+      playSound: boolean;
+      priority: NotificationPriority;
+    };
   };
 }
 
-// Create notification for new user registration
-export function createNewUserNotification(userData: any): AdminNotification {
-  const isDealer = userData.role === 'DEALER';
-  
-  return {
-    id: `user-${userData.id}-${Date.now()}`,
-    type: isDealer ? 'NEW_DEALER' : 'NEW_USER',
-    title: isDealer ? '🏢 New Dealer Registered!' : '👤 New User Registered!',
-    message: `${userData.firstName} ${userData.lastName} (${userData.email}) has joined${isDealer ? ' as a dealer' : ''}`,
-    data: {
-      userId: userData.id,
-      name: `${userData.firstName} ${userData.lastName}`,
-      email: userData.email,
-      role: userData.role,
-      isDealer: isDealer
-    },
-    priority: isDealer ? 'high' : 'low',
-    timestamp: new Date().toISOString(),
-    actionUrl: `/admin/users/${userData.id}`,
-    playSound: isDealer // Only play sound for dealer registrations
-  };
-}
-
-// Create notification for urgent reports
-export function createUrgentReportNotification(reportData: any): AdminNotification {
-  return {
-    id: `report-${reportData.id}-${Date.now()}`,
-    type: 'URGENT_REPORT',
-    title: '🚨 Urgent Report Received!',
-    message: `${reportData.type}: ${reportData.title}`,
-    data: {
-      reportId: reportData.id,
-      type: reportData.type,
-      severity: reportData.severity,
-      title: reportData.title
-    },
-    priority: 'critical',
-    timestamp: new Date().toISOString(),
-    actionUrl: `/admin/reports/${reportData.id}`,
-    playSound: true
-  };
-}
-
-// Broadcast notification to all admins via SSE
-export async function broadcastAdminNotification(notification: AdminNotification) {
-  try {
-    console.log(`📡 Broadcasting notification: ${notification.type} - ${notification.title}`);
-    
-    // Import the broadcast function dynamically to avoid circular imports
-   // ✅ NEW (correct path):
-    const { broadcastToAdmins } = await import('@/lib/admin-notification-broadcaster');
-    
-    // ✅ FIXED: Send notification in the correct format that broadcastToAdmins expects
-    broadcastToAdmins({
-      type: 'NEW_CAR_NOTIFICATION', // The SSE message type
-      title: notification.title,
-      message: notification.message,
-      data: {
-        // Include the full notification object in the data
-        notification: notification,
-        // Also include specific fields for easy access
-        id: notification.id,
-        notificationType: notification.type,
-        priority: notification.priority,
-        actionUrl: notification.actionUrl,
-        playSound: notification.playSound,
-        carData: notification.data
-      },
-      timestamp: notification.timestamp
-    });
-    
-    // Log to database for persistence (optional)
-    await logNotificationToDatabase(notification);
-    
-    console.log(`✅ Notification broadcast successful: ${notification.id}`);
-  } catch (error: any) {
-    console.error('❌ Failed to broadcast notification:', error);
-  }
-}
-
-// Log notification to database for admin notification history
-async function logNotificationToDatabase(notification: AdminNotification) {
-  try {
-    const { db } = await import('@/lib/database');
-    
-    // Create admin notification record (you might want to add this table to your schema)
-    // For now, we'll use the existing notification system
-    const admins = await db.user.findMany({
-      where: {
-        adminProfile: {
-          isNot: null
-        }
-      },
-      include: {
-        adminProfile: true
-      }
-    });
-
-    // Create notification for each admin
-    const notificationPromises = admins.map((admin: any) => 
-      db.notification.create({
-        data: {
-          userId: admin.id,
-          type: 'SYSTEM_UPDATE', // Map to existing enum
-          title: notification.title,
-          message: notification.message,
-          actionUrl: notification.actionUrl,
-          metadata: {
-            originalType: notification.type,
-            priority: notification.priority,
-            notificationId: notification.id,
-            data: notification.data
-          }
-        }
-      }).catch((error: any) => {
-        console.error(`Failed to create notification for admin ${admin.id}:`, error);
-      })
-    );
-
-    await Promise.allSettled(notificationPromises);
-    console.log(`📝 Notification logged to database for ${admins.length} admins`);
-  } catch (error: any) {
-    console.error('❌ Failed to log notification to database:', error);
-  }
-}
-
-// Get notification sound configuration
-export function getNotificationConfig(type: AdminNotification['type']) {
-  const configs = {
+// Default notification settings
+export const defaultNotificationSettings: NotificationSettings = {
+  soundEnabled: true,
+  soundVolume: 0.8,
+  browserNotificationsEnabled: true,
+  emailNotificationsEnabled: true,
+  notificationTypes: {
     NEW_CAR: {
-      sound: 'custom', // Will use uploaded custom sound
-      duration: 6000, // 6 seconds
-      persistent: false
-    },
-    NEW_DEALER: {
-      sound: 'custom',
-      duration: 6000,
-      persistent: false
-    },
-    URGENT_REPORT: {
-      sound: 'custom',
-      duration: 6000,
-      persistent: true // Keep notification until dismissed
+      enabled: true,
+      playSound: true,
+      priority: 'medium'
     },
     NEW_USER: {
-      sound: null, // No sound for regular users
-      duration: 4000,
-      persistent: false
+      enabled: true,
+      playSound: false,
+      priority: 'low'
+    },
+    NEW_DEALER: {
+      enabled: true,
+      playSound: true,
+      priority: 'high'
+    },
+    URGENT_REPORT: {
+      enabled: true,
+      playSound: true,
+      priority: 'critical'
+    },
+    PAYMENT_ISSUE: {
+      enabled: true,
+      playSound: true,
+      priority: 'high'
     },
     SYSTEM_ALERT: {
-      sound: 'custom',
-      duration: 6000,
-      persistent: true
+      enabled: true,
+      playSound: true,
+      priority: 'critical'
+    },
+    NEW_MESSAGE: {
+      enabled: true,
+      playSound: false,
+      priority: 'medium'
+    },
+    TEST: {
+      enabled: true,
+      playSound: true,
+      priority: 'medium'
     }
-  };
+  }
+};
 
-  return configs[type] || configs.NEW_CAR;
+// Helper functions
+export function createAdminNotification(
+  type: AdminNotification['type'],
+  title: string,
+  message: string,
+  options: Partial<Omit<AdminNotification, 'id' | 'type' | 'title' | 'message' | 'timestamp'>> = {}
+): AdminNotification {
+  return {
+    id: `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    type,
+    title,
+    message,
+    timestamp: new Date().toISOString(),
+    priority: options.priority || 'medium',
+    playSound: options.playSound ?? true,
+    actionUrl: options.actionUrl,
+    metadata: options.metadata
+  };
+}
+
+export function shouldPlaySound(notification: AdminNotification, settings: NotificationSettings): boolean {
+  if (!settings.soundEnabled) return false;
+  if (!notification.playSound) return false;
+  
+  const typeSettings = settings.notificationTypes[notification.type];
+  return typeSettings?.enabled && typeSettings?.playSound;
+}
+
+export function getNotificationIcon(type: AdminNotification['type']): string {
+  const icons = {
+    NEW_CAR: '🚗',
+    NEW_USER: '👤',
+    NEW_DEALER: '🏢',
+    URGENT_REPORT: '🚨',
+    PAYMENT_ISSUE: '💳',
+    SYSTEM_ALERT: '⚠️',
+    NEW_MESSAGE: '💬',
+    TEST: '🧪'
+  };
+  
+  return icons[type] || '📢';
+}
+
+export function getPriorityColor(priority: NotificationPriority): string {
+  const colors = {
+    low: 'text-gray-600 bg-gray-100',
+    medium: 'text-blue-600 bg-blue-100',
+    high: 'text-orange-600 bg-orange-100',
+    critical: 'text-red-600 bg-red-100'
+  };
+  
+  return colors[priority];
+}
+// Add these functions to the end of your admin-notifications.ts file
+
+// Create notification for new car
+export function createNewCarNotification(carData: any): AdminNotification {
+  return createAdminNotification(
+    'NEW_CAR',
+    'New Car Listed',
+    `${carData.make} ${carData.model} - €${carData.price?.toLocaleString()}`,
+    {
+      priority: 'medium',
+      playSound: true,
+      actionUrl: `/admin/cars/${carData.id}`,
+      data: {
+        carId: carData.id,
+        make: carData.make,
+        model: carData.model,
+        price: carData.price,
+        location: carData.location,
+        seller: carData.seller
+      }
+    }
+  );
+}
+
+// Broadcast notification to admins
+export function broadcastAdminNotification(notification: AdminNotification) {
+  // Import the broadcaster here to avoid circular imports
+  const { broadcastToAdmins } = require('@/lib/admin-notification-broadcaster');
+  
+  broadcastToAdmins({
+    type: 'NOTIFICATION',
+    title: notification.title,
+    message: notification.message,
+    data: {
+      notification: notification
+    },
+    timestamp: new Date().toISOString()
+  });
 }

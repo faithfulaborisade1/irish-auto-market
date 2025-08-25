@@ -1,4 +1,4 @@
-// src/hooks/useAdminNotifications.ts
+// src/hooks/useAdminNotifications.ts - FIXED - NO RE-RENDER LOOP
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -25,6 +25,7 @@ export function useAdminNotifications() {
   const mountedRef = useRef(true);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
+  const hasRequestedAudioPermission = useRef(false);
 
   // Show notification toast
   const showNotificationToast = useCallback((notification: AdminNotification) => {
@@ -63,13 +64,29 @@ export function useAdminNotifications() {
     console.log(`📢 Notification received: ${notification.title}`);
   }, []);
 
-  // Play notification sound
+  // Play notification sound with better error handling
   const playNotificationSound = useCallback(async (notification: AdminNotification) => {
-    if (notification.playSound) {
-      try {
-        await notificationSoundManager.playNotificationSound();
-      } catch (error) {
-        console.error('Failed to play notification sound:', error);
+    if (!notification.playSound) {
+      console.log('🔇 Notification sound disabled for this notification');
+      return;
+    }
+
+    try {
+      // Check if we need audio permission first
+      if (notificationSoundManager.needsPermission() && !hasRequestedAudioPermission.current) {
+        console.log('🔊 Audio permission needed for notification sound');
+        return; // Don't auto-request, let user enable manually
+      }
+
+      console.log('🔊 Playing notification sound...');
+      await notificationSoundManager.playNotificationSound();
+      console.log('✅ Notification sound played successfully');
+    } catch (error) {
+      console.error('❌ Failed to play notification sound:', error);
+      
+      // If it's an autoplay error, mark that we need permission
+      if (error instanceof Error && error.name === 'NotAllowedError') {
+        console.log('🔇 Audio autoplay blocked - user interaction required');
       }
     }
   }, []);
@@ -78,10 +95,12 @@ export function useAdminNotifications() {
   const handleMessage = useCallback((event: MessageEvent) => {
     try {
       const data = JSON.parse(event.data);
+      console.log('📨 SSE message received:', data);
       
       switch (data.type) {
         case 'CONNECTED':
-          console.log('✅ Admin notifications connected:', data.data.message);
+        case 'connected':
+          console.log('✅ Admin notifications connected:', data.message || data.data?.message);
           setState(prev => ({ 
             ...prev, 
             connected: true, 
@@ -92,20 +111,37 @@ export function useAdminNotifications() {
           break;
 
         case 'NOTIFICATION':
-          const notification = data.notification as AdminNotification;
-          showNotificationToast(notification);
-          playNotificationSound(notification);
+          console.log('🔍 Raw notification data:', data);
+          console.log('🔍 Looking for notification in data.data:', data.data);
+          
+          // Handle notification nested in data property
+          const notification = data.data?.notification as AdminNotification;
+          if (notification) {
+            console.log('🔊 Processing SSE notification:', notification.title);
+            console.log('🔊 Notification details:', notification);
+            showNotificationToast(notification);
+            playNotificationSound(notification);
+          } else {
+            console.log('❌ No notification found in SSE data:', data);
+            console.log('❌ Available data keys:', Object.keys(data));
+            if (data.data) {
+              console.log('❌ data.data keys:', Object.keys(data.data));
+            }
+          }
           break;
 
         case 'PING':
+        case 'ping':
           // Keep-alive ping, no action needed
+          console.log('📡 SSE ping received');
           break;
 
         default:
-          console.log('📨 Unknown notification type:', data.type);
+          console.log('📨 Unknown notification type:', data.type, 'Full data:', data);
       }
     } catch (error) {
-      console.error('Failed to parse SSE message:', error);
+      console.error('❌ Failed to parse SSE message:', error);
+      console.error('❌ Raw event data:', event.data);
     }
   }, [showNotificationToast, playNotificationSound]);
 
@@ -129,9 +165,9 @@ export function useAdminNotifications() {
       reconnecting: true
     }));
     
-    // Attempt to reconnect
+    // Attempt to reconnect with exponential backoff
     if (mountedRef.current && reconnectAttempts.current < maxReconnectAttempts) {
-      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000); // Exponential backoff, max 10s
+      const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 10000); // Max 10s
       console.log(`🔄 Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current + 1}/${maxReconnectAttempts})`);
       
       reconnectTimeoutRef.current = setTimeout(() => {
@@ -147,7 +183,7 @@ export function useAdminNotifications() {
     }
   }, []);
 
-  // Connect to SSE stream
+  // ✅ FIXED: Create stable connectToNotifications without dependencies
   const connectToNotifications = useCallback(() => {
     if (!mountedRef.current) return;
 
@@ -168,8 +204,12 @@ export function useAdminNotifications() {
         console.log('🚀 SSE connection opened');
       };
 
-      // Handle close event
-      eventSource.addEventListener('close', handleClose);
+      // Handle close event manually since EventSource doesn't have onclose
+      const originalClose = eventSource.close;
+      eventSource.close = function() {
+        handleClose();
+        originalClose.call(this);
+      };
 
     } catch (error) {
       console.error('Failed to create SSE connection:', error);
@@ -179,7 +219,7 @@ export function useAdminNotifications() {
         reconnecting: false
       }));
     }
-  }, [handleMessage, handleError, handleClose]);
+  }, []); // ✅ FIXED: Empty dependency array to prevent re-creation
 
   // Request browser notification permission
   const requestNotificationPermission = useCallback(async () => {
@@ -194,6 +234,7 @@ export function useAdminNotifications() {
   // Request audio permission (call after user interaction)
   const requestAudioPermission = useCallback(async () => {
     try {
+      hasRequestedAudioPermission.current = true;
       const granted = await notificationSoundManager.requestAudioPermission();
       if (granted) {
         console.log('🔊 Audio permission granted');
@@ -209,7 +250,7 @@ export function useAdminNotifications() {
   const testNotification = useCallback(async () => {
     const testNotif: AdminNotification = {
       id: `test-${Date.now()}`,
-      type: 'NEW_CAR',
+      type: 'TEST',
       title: '🧪 Test Notification',
       message: 'This is a test notification with sound',
       priority: 'medium',
@@ -241,18 +282,24 @@ export function useAdminNotifications() {
     connectToNotifications();
   }, [connectToNotifications]);
 
-  // Initialize connection
+  // ✅ FIXED: Initialize connection ONCE ONLY - no changing dependencies
   useEffect(() => {
+    console.log('🔄 Admin Notifications Hook: Initializing ONCE');
     mountedRef.current = true;
     
     // Request permissions on mount
-    requestNotificationPermission();
+    if ('Notification' in window) {
+      Notification.requestPermission().then(permission => {
+        console.log(`🔔 Browser notification permission: ${permission}`);
+      });
+    }
     
     // Connect to notifications
     connectToNotifications();
 
     // Cleanup on unmount
     return () => {
+      console.log('🧹 Admin Notifications Hook: Cleaning up');
       mountedRef.current = false;
       
       if (eventSourceRef.current) {
@@ -265,7 +312,7 @@ export function useAdminNotifications() {
         reconnectTimeoutRef.current = null;
       }
     };
-  }, [connectToNotifications, requestNotificationPermission]);
+  }, []); // ✅ CRITICAL: EMPTY DEPENDENCY ARRAY - RUNS ONCE ONLY
 
   return {
     // State
@@ -283,6 +330,9 @@ export function useAdminNotifications() {
     requestNotificationPermission,
     
     // Sound manager access
-    soundManager: notificationSoundManager
+    soundManager: notificationSoundManager,
+    
+    // Audio permission status
+    needsAudioPermission: () => typeof window !== 'undefined' && notificationSoundManager.needsPermission()
   };
 }
