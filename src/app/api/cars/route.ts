@@ -609,9 +609,10 @@ export async function POST(request: NextRequest) {
     })
 
     // 🚗🔔 NEW: BROADCAST NOTIFICATION TO ALL ADMINS (with error handling)
+    // 🔧 FIXED: Only pass ONE parameter - the complete car data
     try {
       if (completeCarData) {
-        const notification = createNewCarNotification(completeCarData, completeCarData.user);
+        const notification = createNewCarNotification(completeCarData);
         await broadcastAdminNotification(notification);
         console.log('📡 Admin notification sent for new car:', completeCarData.id);
       }
