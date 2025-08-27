@@ -42,8 +42,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       },
       include: {
         images: {
-          orderBy: { orderIndex: 'asc' },
-          take: 1
+          orderBy: { orderIndex: 'asc' }
         }
       },
       orderBy: {
@@ -104,27 +103,55 @@ export async function GET(request: NextRequest, { params }: Params) {
       aboutUs: dealerProfile?.description || 'We are a professional car dealership committed to providing quality vehicles and excellent customer service. Our experienced team is here to help you find the perfect car for your needs and budget.',
       cars: cars.map(car => {
         const stats = carStats.find(s => s.carId === car.id);
+        
+        // Transform car images to proper format for CarCard component
+        const transformedImages = car.images.map(image => ({
+          id: image.id,
+          url: image.mediumUrl || image.largeUrl || image.originalUrl,
+          alt: `${car.make} ${car.model} ${car.year}`
+        }));
+
         return {
           id: car.id,
+          title: car.title || `${car.year} ${car.make} ${car.model}`,
           make: car.make,
           model: car.model,
           year: car.year,
           price: Number(car.price),
-          mileage: car.mileage || 0,
-          fuelType: car.fuelType || 'Petrol',
-          transmission: car.transmission || 'Manual',
-          bodyType: car.bodyType || 'Saloon',
-          color: car.color || 'White',
+          mileage: car.mileage || null,
+          fuelType: car.fuelType || null,
+          transmission: car.transmission || null,
+          bodyType: car.bodyType || null,
+          color: car.color || null,
+          description: car.description || null,
+          
+          // ✅ FIXED: Include proper images array for carousel
+          images: transformedImages,
+          
+          // Keep legacy imageUrl for backward compatibility
           imageUrl: car.images?.[0]?.mediumUrl || 
                    car.images?.[0]?.largeUrl || 
                    car.images?.[0]?.originalUrl || 
                    '/placeholder-car.jpg',
+          
           status: car.status,
           featured: car.featuredUntil ? new Date(car.featuredUntil) > new Date() : false,
           views: car.viewsCount || 0,
           inquiries: stats?.inquiries || 0,
           likes: stats?.likes || 0,
+          likesCount: stats?.likes || 0, // For CarCard compatibility
+          isLiked: false, // Will be determined by frontend
+          
+          // Add seller info for CarCard
+          seller: {
+            name: dealerProfile?.businessName || `${dealer.firstName} ${dealer.lastName}`,
+            type: 'dealer',
+            phone: dealer.phone || '',
+            verified: dealerProfile?.verified || false
+          },
+          
           createdAt: car.createdAt.toISOString(),
+          updatedAt: car.updatedAt?.toISOString() || car.createdAt.toISOString(),
           location: `${location.city || ''}, ${location.county || 'Ireland'}`.trim().replace(/^,\s*|,\s*$/, '')
         };
       })

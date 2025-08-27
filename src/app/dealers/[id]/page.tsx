@@ -77,52 +77,12 @@ export default function DealerDetailPage() {
         if (response.ok) {
           const dealerData = await response.json();
           
-          // ✅ FIXED: Transform car data to be fully compatible with centralized Car type
+          // ✅ SIMPLIFIED: API now provides proper format, minimal transformation needed
           const transformedCars: Car[] = dealerData.cars.map((car: any) => ({
             ...car,
-            // ✅ Required fields from centralized Car type
-            title: car.title || `${car.year} ${car.make} ${car.model}`,
-            
-            // Convert single imageUrl to images array for CarCard compatibility
-            images: car.images || (car.imageUrl ? [{ 
-              id: '1', 
-              url: car.imageUrl, 
-              alt: `${car.make} ${car.model}` 
-            }] : []),
-            
-            // Add seller info from dealer data
-            seller: {
-              name: dealerData.businessName,
-              type: 'dealer', // ✅ This will trigger "Verified Dealer" display
-              phone: dealerData.phoneNumber,
-              verified: dealerData.verified
-            },
-            
-            // ✅ FIXED: Ensure all required fields from centralized Car type exist
-            featured: car.featured || false,
-            views: car.views || car.viewsCount || 0,
-            inquiries: car.inquiries || car.inquiriesCount || 0,
-            likesCount: car.likesCount || car.likes || 0,
-            isLiked: car.isLiked || false, // ✅ CRITICAL: Add missing isLiked property
-            
-            // Handle nullable fields properly
-            mileage: car.mileage || null,
-            fuelType: car.fuelType || null,
-            transmission: car.transmission || null,
-            bodyType: car.bodyType || null,
-            color: car.color || null,
-            description: car.description || null,
-            
-            // Preserve dealer-specific fields
-            status: car.status || 'ACTIVE',
-            imageUrl: car.imageUrl, // Keep for backward compatibility
-            likes: car.likes || car.likesCount || 0, // Keep for backward compatibility
-            
-            // Optional fields
-            slug: car.slug,
-            savedAt: car.savedAt,
-            createdAt: car.createdAt,
-            updatedAt: car.updatedAt
+            // Ensure all cars have required fields for CarCard compatibility
+            isLiked: car.isLiked || false, // Will be updated by LikeButton component
+            slug: car.slug || car.id, // Fallback to ID if no slug
           }));
 
           setDealer({ ...dealerData, cars: transformedCars });

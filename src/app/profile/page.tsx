@@ -435,9 +435,55 @@ export default function ProfilePage() {
         {activeTab === 'settings' && (
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile Settings</h3>
-            <p className="text-gray-600">
-              Update your profile information on the <a href="/profile/edit" className="text-green-600 hover:underline">Edit Profile page</a>.
-            </p>
+            
+            <div className="space-y-4">
+              {/* Personal Profile */}
+              <div className="p-4 border border-gray-200 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                  <User className="w-4 h-4 mr-2" />
+                  Personal Profile
+                </h4>
+                <p className="text-gray-600 text-sm mb-3">
+                  Update your personal information, contact details, and account preferences.
+                </p>
+                <a 
+                  href="/profile/edit" 
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Edit3 className="w-4 h-4 mr-2" />
+                  Edit Personal Profile
+                </a>
+              </div>
+
+              {/* Dealer Profile (only show for dealers) */}
+              {user?.role === 'DEALER' && (
+                <div className="p-4 border border-blue-200 rounded-lg bg-blue-50">
+                  <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                    <Badge className="w-4 h-4 mr-2 text-blue-600" />
+                    Dealer Tools
+                  </h4>
+                  <p className="text-gray-600 text-sm mb-4">
+                    Access advanced dealer features, analytics, and business management tools.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <a 
+                      href="/profile/dealer/dashboard" 
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <TrendingUp className="w-4 h-4 mr-2" />
+                      Dealer Dashboard
+                    </a>
+                    <a 
+                      href="/profile/dealer/edit" 
+                      className="inline-flex items-center px-4 py-2 bg-white border border-blue-300 text-blue-600 text-sm rounded-lg hover:bg-blue-50 transition-colors"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      Edit Profile
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

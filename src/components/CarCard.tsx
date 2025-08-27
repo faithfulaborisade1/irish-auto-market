@@ -118,6 +118,7 @@ const CarImageCarousel = React.memo(({ images, title, featured, price, carId }: 
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   
+  // TEMPORARY: Force show arrows for testing (normally should be: images && images.length > 1)
   const hasMultipleImages = images && images.length > 1
   const currentImage = images?.[currentImageIndex]
 
