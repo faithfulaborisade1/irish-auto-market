@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { cn } from '@/lib/utils'
 import ReactQueryProvider from '@/components/providers/ReactQueryProvider'
+import { AnalyticsProvider } from '@/components/providers/AnalyticsProvider'
 import { Analytics } from "@vercel/analytics/next"
 
 const inter = Inter({ subsets: ['latin'] })
@@ -96,11 +97,13 @@ export default function RootLayout({ children }: RootLayoutProps) {
       )}>
         {/* 🚀 REACT QUERY PROVIDER WRAPPER */}
         <ReactQueryProvider>
-          <div className="relative flex min-h-screen flex-col">
-            <div className="flex-1">
-              {children}
+          <AnalyticsProvider enabled={true}>
+            <div className="relative flex min-h-screen flex-col">
+              <div className="flex-1">
+                {children}
+              </div>
             </div>
-          </div>
+          </AnalyticsProvider>
         </ReactQueryProvider>
         <Analytics />
       </body>

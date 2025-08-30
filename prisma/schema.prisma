@@ -54,6 +54,9 @@ model User {
   
   // 🆕 NEW DEALER INVITATION RELATION
   receivedInvitation  DealerInvitation?
+  
+  // 🆕 WEB ANALYTICS RELATIONS
+  pageViews           PageView[]
 
   @@map("users")
 }
@@ -1113,4 +1116,157 @@ enum InvitationStatus {
   VIEWED         // Email opened by recipient
   REGISTERED     // Dealer completed registration
   ALREADY_MEMBER // Email belongs to existing user
+}
+
+// ============================================================================
+// WEB ANALYTICS MODELS - NEW ADDITION (Safe to add, won't affect existing data)
+// ============================================================================
+
+model PageView {
+  id            String   @id @default(cuid())
+  
+  // Page Information
+  path          String
+  title         String?
+  referrer      String?
+  
+  // Visitor Information
+  visitorId     String
+  visitor       Visitor  @relation(fields: [visitorId], references: [id])
+  
+  // Session Information
+  sessionId     String
+  session       VisitorSession @relation(fields: [sessionId], references: [id])
+  
+  // User Information (if logged in)
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
+  
+  // Technical Details
+  userAgent     String?
+  browser       String?
+  device        String?
+  os            String?
+  
+  // Location
+  ipAddress     String?
+  country       String?
+  city          String?
+  
+  // Timestamps
+  viewedAt      DateTime @default(now())
+  
+  @@index([path, viewedAt])
+  @@index([visitorId, viewedAt])
+  @@index([sessionId])
+  @@index([userId])
+  @@map("page_views")
+}
+
+model Visitor {
+  id            String   @id @default(cuid())
+  
+  // Visitor Identification
+  fingerprint   String   @unique // Browser fingerprint
+  
+  // Location
+  ipAddress     String?
+  country       String?
+  countryCode   String?
+  city          String?
+  region        String?
+  
+  // Device Information
+  userAgent     String?
+  browser       String?
+  browserVersion String?
+  device        String?
+  deviceType    String?  // desktop, mobile, tablet
+  os            String?
+  osVersion     String?
+  
+  // First Visit
+  firstVisitAt  DateTime @default(now())
+  lastVisitAt   DateTime @default(now())
+  
+  // Visit Stats
+  totalVisits   Int      @default(1)
+  totalPageViews Int     @default(0)
+  
+  // Relations
+  pageViews     PageView[]
+  sessions      VisitorSession[]
+  
+  @@index([fingerprint])
+  @@index([country, city])
+  @@index([deviceType])
+  @@index([firstVisitAt])
+  @@map("visitors")
+}
+
+model VisitorSession {
+  id            String   @id @default(cuid())
+  
+  // Session Information
+  visitorId     String
+  visitor       Visitor  @relation(fields: [visitorId], references: [id])
+  
+  // Session Details
+  startedAt     DateTime @default(now())
+  lastActivityAt DateTime @default(now())
+  endedAt       DateTime?
+  durationMs    Int?     // Duration in milliseconds
+  
+  // Entry/Exit
+  entryPage     String
+  exitPage      String?
+  referrer      String?
+  
+  // Live Tracking
+  isActive      Boolean  @default(true)
+  currentPage   String?
+  lastHeartbeat DateTime @default(now())
+  
+  // Session Stats
+  pageViewCount Int      @default(0)
+  bounced       Boolean  @default(false) // True if only 1 page view
+  
+  // Relations
+  pageViews     PageView[]
+  
+  @@index([visitorId, startedAt])
+  @@index([startedAt])
+  @@index([bounced])
+  @@map("visitor_sessions")
+}
+
+model DailyAnalytics {
+  id            String   @id @default(cuid())
+  
+  // Date
+  date          DateTime @unique @db.Date
+  
+  // Visitor Metrics
+  uniqueVisitors Int     @default(0)
+  totalVisitors  Int     @default(0)
+  newVisitors    Int     @default(0)
+  returningVisitors Int  @default(0)
+  
+  // Page View Metrics
+  totalPageViews Int     @default(0)
+  avgPageViewsPerVisitor Decimal @default(0) @db.Decimal(10, 2)
+  
+  // Session Metrics
+  totalSessions  Int     @default(0)
+  avgSessionDuration Int @default(0) // in seconds
+  bounceRate     Decimal @default(0) @db.Decimal(5, 2)
+  
+  // Top Content
+  topPages       Json?   // Array of {path, views}
+  topCountries   Json?   // Array of {country, visitors}
+  topDevices     Json?   // Array of {device, visitors}
+  topBrowsers    Json?   // Array of {browser, visitors}
+  
+  @@index([date])
+  @@map("daily_analytics")
 }

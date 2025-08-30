@@ -42,6 +42,8 @@ import {
   Download
 } from 'lucide-react';
 
+import { LiveVisitors } from '@/components/admin/LiveVisitors';
+
 interface AnalyticsData {
   overview: {
     totalUsers: number;
@@ -519,6 +521,16 @@ export default function AdminAnalyticsPage() {
                     />
                   </LineChart>
                 </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Live Visitors */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              <LiveVisitors />
+              
+              {/* Additional live stats could go here */}
+              <div className="lg:col-span-2">
+                {/* This space could be used for real-time activity feed or other live metrics */}
               </div>
             </div>
 
