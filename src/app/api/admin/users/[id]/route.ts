@@ -660,7 +660,7 @@ export async function DELETE(
       await tx.issueReport.deleteMany({
         where: { 
           OR: [
-            { userId: userId },
+            { reporterId: userId },
             { dealerId: userId }
           ]
         }
