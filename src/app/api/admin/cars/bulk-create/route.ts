@@ -257,7 +257,7 @@ export async function POST(request: NextRequest) {
                     doors: carData.doors ? parseInt(carData.doors.toString()) : null,
                     seats: carData.seats ? parseInt(carData.seats.toString()) : null,
                     color: sanitizedData.color,
-                    condition: carData.condition || 'USED',
+                    condition: (carData.condition && ['NEW', 'USED', 'CERTIFIED_PRE_OWNED'].includes(carData.condition)) ? carData.condition as any : 'USED',
                     previousOwners: carData.previousOwners ? parseInt(carData.previousOwners.toString()) : 1,
                     nctExpiry: carData.nctExpiry ? new Date(carData.nctExpiry) : null,
                     serviceHistory: Boolean(carData.serviceHistory),
