@@ -465,7 +465,7 @@ export async function DELETE(
                 messages: true
               }
             },
-            carLikes: true
+            likes: true
           }
         },
         sentMessages: {
@@ -577,6 +577,11 @@ export async function DELETE(
           where: { carId: car.id }
         });
 
+        // Delete car favorites
+        await tx.favoriteCar.deleteMany({
+          where: { carId: car.id }
+        });
+
         // Delete the car
         await tx.car.delete({
           where: { id: car.id }
@@ -603,24 +608,74 @@ export async function DELETE(
         where: { userId: userId }
       });
 
-      // 5. Delete user's notifications
+      // 5. Delete user's favorite cars
+      await tx.favoriteCar.deleteMany({
+        where: { userId: userId }
+      });
+
+      // 6. Delete user's notifications
       await tx.notification.deleteMany({
         where: { userId: userId }
       });
 
-      // 6. Delete revenue records
+      // 7. Delete revenue records
       await tx.revenueRecord.deleteMany({
         where: { userId: userId }
       });
 
-      // 7. Delete dealer profile if exists
+      // 8. Delete saved searches
+      await tx.savedSearch.deleteMany({
+        where: { userId: userId }
+      });
+
+      // 9. Delete contact messages
+      await tx.contactMessage.deleteMany({
+        where: { userId: userId }
+      });
+
+      // 10. Delete feedback
+      await tx.feedback.deleteMany({
+        where: { userId: userId }
+      });
+
+      // 11. Delete issue reports (both created and dealer reports)
+      await tx.issueReport.deleteMany({
+        where: { 
+          OR: [
+            { userId: userId },
+            { dealerId: userId }
+          ]
+        }
+      });
+
+      // 12. Delete page views (web analytics)
+      await tx.pageView.deleteMany({
+        where: { userId: userId }
+      });
+
+      // 13. Delete accounts (OAuth accounts)
+      await tx.account.deleteMany({
+        where: { userId: userId }
+      });
+
+      // 14. Delete sessions
+      await tx.session.deleteMany({
+        where: { userId: userId }
+      });
+
+      // 15. Delete dealer invitation if exists
+      await tx.dealerInvitation.deleteMany({
+        where: { userId: userId }
+      });
+
+      // 16. Delete dealer profile if exists
       if (user.dealerProfile) {
         await tx.dealerProfile.delete({
           where: { userId: userId }
         });
       }
 
-      // 8. Finally, delete the user
+      // 17. Finally, delete the user
       await tx.user.delete({
         where: { id: userId }
       });
