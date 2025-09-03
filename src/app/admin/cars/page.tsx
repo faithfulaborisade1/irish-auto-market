@@ -450,6 +450,14 @@ export default function AdminCarsManagement() {
               <p className="text-gray-600 text-sm">Manage all car listings and moderate content</p>
             </div>
             <div className="flex items-center gap-3">
+              <a
+                href="/admin/cars/add"
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                Add Cars for Dealers
+              </a>
+              
               <button
                 onClick={handleRetry}
                 className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
