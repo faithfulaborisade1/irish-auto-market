@@ -122,6 +122,7 @@ model Car {
   viewsCount      Int               @default(0)
   inquiriesCount  Int               @default(0)
   likesCount      Int               @default(0)
+  favoritesCount  Int               @default(0)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   
@@ -809,6 +810,7 @@ enum CarCondition {
   CERTIFIED_PRE_OWNED
 }
 
+
 enum ListingStatus {
   ACTIVE
   SOLD
@@ -847,6 +849,7 @@ enum SubscriptionType {
 
 enum NotificationType {
   CAR_LIKED
+  CAR_FAVORITED
   PRICE_DROP
   CAR_SOLD
   INQUIRY_RECEIVED

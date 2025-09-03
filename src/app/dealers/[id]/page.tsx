@@ -81,7 +81,9 @@ export default function DealerDetailPage() {
           const transformedCars: Car[] = dealerData.cars.map((car: any) => ({
             ...car,
             // Ensure all cars have required fields for CarCard compatibility
-            isLiked: car.isLiked || false, // Will be updated by LikeButton component
+            isLiked: car.isLiked || false, // Will be updated by FavoriteButton component
+            isFavorited: car.isFavorited || false,
+            favoritesCount: car.favoritesCount || 0,
             slug: car.slug || car.id, // Fallback to ID if no slug
           }));
 

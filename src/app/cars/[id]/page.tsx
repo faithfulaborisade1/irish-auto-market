@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Phone, Mail, MapPin, Calendar, Gauge, Fuel, Settings, Eye, MessageCircle, X, ChevronLeft, ChevronRight, Star, Shield, Clock, Heart, Share2, Car, Zap, Users } from 'lucide-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import { formatPrice } from '@/utils/currency'
 
 interface CarDetailPageProps {
   params: {
@@ -197,6 +198,38 @@ function CarImageGallery({ images, title, featured, views, inquiries }: CarImage
   )
 }
 
+// Helper function to get NCT status and styling
+function getNCTStatus(nctExpiry: string | null | undefined): { text: string; color: string } {
+  if (!nctExpiry) {
+    return { text: 'Not Available', color: 'text-gray-500' }
+  }
+
+  try {
+    const expiryDate = new Date(nctExpiry)
+    const today = new Date()
+    const monthsUntilExpiry = (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30)
+    
+    // Format the date nicely
+    const formattedDate = expiryDate.toLocaleDateString('en-IE', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric' 
+    })
+
+    if (expiryDate < today) {
+      return { text: `Expired ${formattedDate}`, color: 'text-red-600' }
+    } else if (monthsUntilExpiry < 1) {
+      return { text: `Expires Soon (${formattedDate})`, color: 'text-orange-600' }
+    } else if (monthsUntilExpiry < 3) {
+      return { text: `${formattedDate}`, color: 'text-yellow-600' }
+    } else {
+      return { text: `${formattedDate}`, color: 'text-green-600' }
+    }
+  } catch (error) {
+    return { text: 'Invalid Date', color: 'text-gray-500' }
+  }
+}
+
 export default function CarDetailPage({ params }: CarDetailPageProps) {
   const router = useRouter()
   const [car, setCar] = useState<any>(null)
@@ -207,12 +240,13 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
   const [messageText, setMessageText] = useState('')
   const [sendingMessage, setSendingMessage] = useState(false)
   const [showPhoneNumber, setShowPhoneNumber] = useState(false)
-  const [isLiked, setIsLiked] = useState(false)
+  const [isFavorited, setIsFavorited] = useState(false)
+  const [favoritesCount, setFavoritesCount] = useState(0)
 
   // Share functionality
   const handleShare = async () => {
     const url = window.location.href
-    const title = `${car.make} ${car.model} ${car.year} - €${car.price.toLocaleString()}`
+    const title = `${car.make} ${car.model} ${car.year} - ${formatPrice(car.price, car.currency || 'EUR')}`
     
     if (navigator.share) {
       try {
@@ -235,15 +269,16 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
     }
   }
 
-  const handleSave = async () => {
+  const handleFavorite = async () => {
     if (!user) {
       router.push('/login')
       return
     }
 
     try {
-      const response = await fetch(`/api/cars/${car.id}/like`, {
-        method: 'POST',
+      const method = isFavorited ? 'DELETE' : 'POST'
+      const response = await fetch(`/api/cars/${car.id}/favorite`, {
+        method,
         headers: {
           'Content-Type': 'application/json'
         }
@@ -252,13 +287,14 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
       const data = await response.json()
       
       if (data.success) {
-        setIsLiked(data.isLiked)
+        setIsFavorited(data.favorited)
+        setFavoritesCount(data.favoritesCount || 0)
       } else {
-        alert('Failed to save car')
+        alert('Failed to update favorite')
       }
     } catch (error) {
-      console.error('Error saving car:', error)
-      alert('Failed to save car')
+      console.error('Error updating favorite:', error)
+      alert('Failed to update favorite')
     }
   }
 
@@ -269,19 +305,20 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
 
   useEffect(() => {
     if (car && user) {
-      checkIfLiked()
+      checkIfFavorited()
     }
   }, [car, user])
 
-  const checkIfLiked = async () => {
+  const checkIfFavorited = async () => {
     try {
-      const response = await fetch(`/api/cars/${car.id}/like-status`)
+      const response = await fetch(`/api/cars/${car.id}/favorite`)
       const data = await response.json()
       if (data.success) {
-        setIsLiked(data.isLiked)
+        setIsFavorited(data.favorited)
+        setFavoritesCount(data.favoritesCount || 0)
       }
     } catch (error) {
-      console.log('Could not check like status')
+      console.log('Could not check favorite status')
     }
   }
 
@@ -488,7 +525,7 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
                       {car.make} {car.model} {car.year}
                     </h1>
                     <div className="text-4xl font-bold text-green-600 mb-2">
-                      €{car.price.toLocaleString()}
+                      {formatPrice(car.price, car.currency || 'EUR')}
                     </div>
                     <div className="flex items-center text-sm text-gray-600 space-x-4">
                       <span className="flex items-center">
@@ -524,6 +561,13 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
                       <div className="font-semibold text-gray-900 capitalize">{car.transmission?.toLowerCase() || 'N/A'}</div>
                       <div className="text-sm text-gray-600">Transmission</div>
                     </div>
+                    <div className="bg-gray-50 rounded-lg p-4 text-center col-span-2">
+                      <Shield className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+                      <div className={`font-semibold text-sm ${getNCTStatus(car.nctExpiry).color}`}>
+                        {getNCTStatus(car.nctExpiry).text}
+                      </div>
+                      <div className="text-sm text-gray-600">NCT Status</div>
+                    </div>
                   </div>
 
                   {/* Action Buttons */}
@@ -551,15 +595,15 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
                         Share
                       </button>
                       <button 
-                        onClick={handleSave}
+                        onClick={handleFavorite}
                         className={`flex-1 border py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center ${
-                          isLiked 
+                          isFavorited 
                             ? 'border-red-300 text-red-600 bg-red-50 hover:bg-red-100' 
                             : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                         }`}
                       >
-                        <Heart className={`w-4 h-4 mr-1 ${isLiked ? 'fill-current' : ''}`} />
-                        {isLiked ? 'Saved' : 'Save'}
+                        <Heart className={`w-4 h-4 mr-1 ${isFavorited ? 'fill-current' : ''}`} />
+                        {isFavorited ? 'Favorited' : 'Add to Favorites'}
                       </button>
                     </div>
                   </div>
@@ -647,6 +691,12 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
                       <span className="text-gray-600">Seats</span>
                       <span className="font-medium">{car.seats || 'N/A'}</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">NCT Expiry</span>
+                      <span className={`font-medium ${getNCTStatus(car.nctExpiry).color}`}>
+                        {getNCTStatus(car.nctExpiry).text}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -679,7 +729,7 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
                   />
                   <div>
                     <div className="font-medium text-sm">{car.make} {car.model} {car.year}</div>
-                    <div className="text-green-600 font-semibold">€{car.price.toLocaleString()}</div>
+                    <div className="text-green-600 font-semibold">{formatPrice(car.price, car.currency || 'EUR')}</div>
                   </div>
                 </div>
               </div>

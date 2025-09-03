@@ -5,99 +5,8 @@ import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Heart, Calendar, Gauge, Fuel, Settings, MapPin, Eye, MessageCircle, Star, Shield, User, CheckCircle } from 'lucide-react'
 import type { Car } from '@/types/car'
-
-// 🔥 YOUR ENHANCED LIKEBUTTON - EXACT API INTEGRATION
-const LikeButton = ({ carId }: { carId: string }) => {
-  const [isLiked, setIsLiked] = useState(false)
-  const [likesCount, setLikesCount] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [initialized, setInitialized] = useState(false)
-
-  // Get initial like status when component mounts
-  React.useEffect(() => {
-    const fetchLikeStatus = async () => {
-      try {
-        const response = await fetch(`/api/cars/${carId}/like`)
-        const data = await response.json()
-        if (data.success) {
-          setIsLiked(data.liked)
-          setLikesCount(data.likesCount)
-        }
-      } catch (error) {
-        console.error('Error fetching like status:', error)
-      } finally {
-        setInitialized(true)
-      }
-    }
-
-    fetchLikeStatus()
-  }, [carId])
-
-  const handleLike = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    if (loading || !initialized) return
-    
-    try {
-      setLoading(true)
-      
-      // ✅ FIXED: Use POST for liking, DELETE for unliking (matches your API exactly)
-      const method = isLiked ? 'DELETE' : 'POST'
-      const response = await fetch(`/api/cars/${carId}/like`, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' }
-      })
-      
-      const data = await response.json()
-      
-      if (data.success) {
-        setIsLiked(data.liked)
-        setLikesCount(data.likesCount)
-      } else {
-        // Handle specific errors from your API
-        if (response.status === 401) {
-          alert('Please log in to like cars')
-        } else if (response.status === 400) {
-          alert(data.error) // "Cannot like your own car" etc.
-        }
-      }
-    } catch (error) {
-      console.error('Like error:', error)
-      alert('Failed to update like. Please try again.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (!initialized) {
-    return (
-      <div className="p-1.5 sm:p-2 rounded-full bg-white/90 shadow-lg backdrop-blur-sm">
-        <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gray-200 rounded animate-pulse"></div>
-      </div>
-    )
-  }
-
-  return (
-    <button
-      onClick={handleLike}
-      disabled={loading}
-      className={`relative p-1.5 sm:p-2 rounded-full transition-all duration-200 touch-manipulation ${
-        isLiked 
-          ? 'bg-red-100 text-red-600 hover:bg-red-200' 
-          : 'bg-white/90 text-gray-600 hover:bg-white hover:text-red-600'
-      } shadow-lg backdrop-blur-sm ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-      title={isLiked ? 'Unlike this car' : 'Like this car'}
-    >
-      <Heart className={`w-3 h-3 sm:w-4 sm:h-4 ${isLiked ? 'fill-current' : ''} ${loading ? 'animate-pulse' : ''}`} />
-      {likesCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1 min-w-[16px] h-4 flex items-center justify-center">
-          {likesCount > 99 ? '99+' : likesCount}
-        </span>
-      )}
-    </button>
-  )
-}
+import FavoriteButton from './FavoriteButton'
+import { formatPrice } from '@/utils/currency'
 
 // ✅ FIXED: Updated interface to use centralized Car type
 interface CarCardProps {
@@ -109,11 +18,12 @@ interface CarCardProps {
 }
 
 // ✅ YOUR ENHANCED CarImageCarousel - WITH MOBILE OPTIMIZATIONS
-const CarImageCarousel = React.memo(({ images, title, featured, price, carId }: {
+const CarImageCarousel = React.memo(({ images, title, featured, price, currency, carId }: {
   images?: Array<{ id: string; url: string; alt: string }>
   title: string
   featured?: boolean
   price: number
+  currency?: string
   carId: string
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -179,13 +89,13 @@ const CarImageCarousel = React.memo(({ images, title, featured, price, carId }: 
         {/* Price overlay - MOBILE RESPONSIVE */}
         <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3">
           <div className="bg-black/80 backdrop-blur-sm text-white px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg">
-            <div className="text-base sm:text-lg font-bold">€{price.toLocaleString()}</div>
+            <div className="text-base sm:text-lg font-bold">{formatPrice(price, currency || 'EUR')}</div>
           </div>
         </div>
 
-        {/* Like button - MOBILE OPTIMIZED */}
+        {/* Favorite button - MOBILE OPTIMIZED */}
         <div className="absolute bottom-2 right-2 sm:bottom-3 sm:right-3 pointer-events-auto">
-          <LikeButton carId={carId} />
+          <FavoriteButton carId={carId} size="sm" showCount={false} />
         </div>
       </div>
 
@@ -371,7 +281,7 @@ const CarContent = React.memo(({ car, variant, showPerformance, showSavedDate }:
           </div>
           <div className="flex items-center">
             <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
-            <span>{car.likesCount || 0} likes</span>
+            <span>{car.favoritesCount || 0} favorites</span>
           </div>
         </div>
       )}
@@ -418,6 +328,7 @@ export default function CarCard({
             title={car.title}
             featured={car.featured}
             price={car.price}
+            currency={car.currency}
             carId={car.id}
           />
         </div>
@@ -440,6 +351,7 @@ export default function CarCard({
         title={car.title}
         featured={car.featured}
         price={car.price}
+        currency={car.currency}
         carId={car.id}
       />
       <CarContent 

@@ -9,6 +9,7 @@ import { Car, MapPin, Euro, Calendar, Gauge, Fuel, Settings, Eye, CheckCircle, P
 // Import comprehensive car and location data
 import { CAR_MAKES_MODELS, getAllCarMakes, getModelsForMake } from '@/data/car-makes-models';
 import { IRISH_LOCATIONS, getAllCounties, getAreasForCounty } from '@/data/irish-locations';
+import { SUPPORTED_CURRENCIES, getCurrencySymbol, formatPrice } from '@/utils/currency';
 
 interface UploadedImage {
   id: string;
@@ -67,6 +68,7 @@ export default function PlaceAdPage() {
     model: '',
     year: new Date().getFullYear(),
     price: '',
+    currency: 'EUR',
     
     // Car Details
     mileage: '',
@@ -333,22 +335,45 @@ export default function PlaceAdPage() {
                 </select>
               </div>
 
-              {/* Price */}
+              {/* Price with Currency Selector */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Price (€) *
+                  Price *
                 </label>
-                <div className="relative">
-                  <Euro className="absolute left-3 top-3 text-gray-400" size={20} />
-                  <input
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => handleInputChange('price', e.target.value)}
-                    className="w-full pl-12 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="e.g. 25000"
-                    required
-                  />
+                <div className="flex gap-2">
+                  {/* Currency Selector */}
+                  <select
+                    value={formData.currency}
+                    onChange={(e) => handleInputChange('currency', e.target.value)}
+                    className="w-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+                  >
+                    {Object.entries(SUPPORTED_CURRENCIES).map(([code, currency]) => (
+                      <option key={code} value={code}>
+                        {currency.flag} {currency.symbol}
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {/* Price Input */}
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-3 text-gray-400 font-medium">
+                      {getCurrencySymbol(formData.currency)}
+                    </span>
+                    <input
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) => handleInputChange('price', e.target.value)}
+                      className="w-full pl-12 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      placeholder={formData.currency === 'EUR' ? 'e.g. 25000' : 'e.g. 21000'}
+                      required
+                    />
+                  </div>
                 </div>
+                {formData.price && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Price: {formatPrice(parseFloat(formData.price), formData.currency)}
+                  </p>
+                )}
               </div>
 
               {/* Mileage */}

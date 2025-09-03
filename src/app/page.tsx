@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
-import LikeButton from '@/components/LikeButton'
+import FavoriteButton from '@/components/FavoriteButton'
 import { CAR_MAKES_MODELS, getAllCarMakes, getModelsForMake } from '@/data/car-makes-models'
 import { IRISH_LOCATIONS } from '@/data/irish-locations'
 
@@ -566,10 +566,10 @@ useEffect(() => {
                       <span className="bg-white bg-opacity-90 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
                         €{car.price.toLocaleString()}
                       </span>
-                      <LikeButton 
+                      <FavoriteButton 
                         carId={car.id}
-                        initialLikesCount={car.likesCount || 0}
-                        initialIsLiked={car.isLiked || false}
+                        initialFavoritesCount={car.likesCount || 0}
+                        initialIsFavorited={car.isLiked || false}
                         size="sm"
                         showCount={false}
                         className="bg-white bg-opacity-90 rounded-full"
@@ -609,10 +609,10 @@ useEffect(() => {
                         <span className="text-sm text-gray-600">
                           {car.seller.verified ? '✓ Verified' : ''} {car.seller.type}
                         </span>
-                        <LikeButton 
+                        <FavoriteButton 
                           carId={car.id}
-                          initialLikesCount={car.likesCount || 0}
-                          initialIsLiked={car.isLiked || false}
+                          initialFavoritesCount={car.likesCount || 0}
+                          initialIsFavorited={car.isLiked || false}
                           size="sm"
                         />
                       </div>

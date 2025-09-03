@@ -4,26 +4,26 @@ import { useState, useEffect, useCallback } from 'react'
 import { Heart } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-interface LikeButtonProps {
+interface FavoriteButtonProps {
   carId: string
-  initialLikesCount?: number
-  initialIsLiked?: boolean
+  initialFavoritesCount?: number
+  initialIsFavorited?: boolean
   size?: 'sm' | 'md' | 'lg'
   showCount?: boolean
   className?: string
 }
 
-export default function LikeButton({ 
+export default function FavoriteButton({ 
   carId, 
-  initialLikesCount = 0, 
-  initialIsLiked = false,
+  initialFavoritesCount = 0, 
+  initialIsFavorited = false,
   size = 'md',
   showCount = true,
   className = ''
-}: LikeButtonProps) {
+}: FavoriteButtonProps) {
   const router = useRouter()
-  const [likesCount, setLikesCount] = useState(initialLikesCount)
-  const [isLiked, setIsLiked] = useState(initialIsLiked)
+  const [favoritesCount, setFavoritesCount] = useState(initialFavoritesCount)
+  const [isFavorited, setIsFavorited] = useState(initialIsFavorited)
   const [isLoading, setIsLoading] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [authChecked, setAuthChecked] = useState(false)
@@ -59,20 +59,20 @@ export default function LikeButton({
   useEffect(() => {
     let mounted = true
     
-    async function fetchLikeStatus() {
+    async function fetchFavoriteStatus() {
       try {
-        const response = await fetch(`/api/cars/${carId}/like`)
+        const response = await fetch(`/api/cars/${carId}/favorite`)
         const data = await response.json()
         if (mounted && data.success) {
-          setLikesCount(data.likesCount)
-          setIsLiked(data.liked)
+          setFavoritesCount(data.favoritesCount)
+          setIsFavorited(data.favorited)
         }
       } catch (error) {
-        console.error('Error fetching like status:', error)
+        console.error('Error fetching favorite status:', error)
       }
     }
     
-    fetchLikeStatus()
+    fetchFavoriteStatus()
     
     return () => {
       mounted = false
@@ -80,7 +80,7 @@ export default function LikeButton({
   }, [carId]) // ✅ Only depends on carId
 
   // ✅ FIXED: Stable function reference
-  const handleLike = useCallback(async () => {
+  const handleFavorite = useCallback(async () => {
     // Check if user is logged in
     if (!user) {
       // Redirect to login with return URL
@@ -94,8 +94,8 @@ export default function LikeButton({
     setIsLoading(true)
 
     try {
-      const method = isLiked ? 'DELETE' : 'POST'
-      const response = await fetch(`/api/cars/${carId}/like`, {
+      const method = isFavorited ? 'DELETE' : 'POST'
+      const response = await fetch(`/api/cars/${carId}/favorite`, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -106,11 +106,11 @@ export default function LikeButton({
 
       if (data.success) {
         // Optimistic UI update
-        setIsLiked(data.liked)
-        setLikesCount(data.likesCount)
+        setIsFavorited(data.favorited)
+        setFavoritesCount(data.favoritesCount)
         
         // Optional: Show toast notification
-        if (data.liked) {
+        if (data.favorited) {
           // Could add toast: "Added to favorites!"
         } else {
           // Could add toast: "Removed from favorites"
@@ -120,17 +120,17 @@ export default function LikeButton({
         if (response.status === 401) {
           router.push('/login')
         } else {
-          console.error('Like action failed:', data.error)
+          console.error('Favorite action failed:', data.error)
           // Could show error toast
         }
       }
     } catch (error) {
-      console.error('Like action error:', error)
+      console.error('Favorite action error:', error)
       // Could show error toast
     } finally {
       setIsLoading(false)
     }
-  }, [user, isLoading, isLiked, carId, router])
+  }, [user, isLoading, isFavorited, carId, router])
 
   // Size variants
   const sizeClasses = {
@@ -162,7 +162,7 @@ export default function LikeButton({
         </div>
         {showCount && (
           <span className={`${currentSize.text} text-gray-400`}>
-            {likesCount}
+            {favoritesCount}
           </span>
         )}
       </div>
@@ -172,26 +172,26 @@ export default function LikeButton({
   return (
     <div className={`flex items-center space-x-1 ${className}`}>
       <button
-        onClick={handleLike}
+        onClick={handleFavorite}
         disabled={isLoading}
         className={`
           ${currentSize.button}
           rounded-full
           transition-all duration-200 ease-in-out
-          ${isLiked 
+          ${isFavorited 
             ? 'text-red-500 hover:text-red-600 bg-red-50 hover:bg-red-100' 
             : 'text-gray-400 hover:text-red-500 bg-gray-50 hover:bg-red-50'
           }
           ${isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 active:scale-95'}
           focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1
         `}
-        title={user ? (isLiked ? 'Unlike this car' : 'Like this car') : 'Login to like cars'}
+        title={user ? (isFavorited ? 'Remove from favorites' : 'Add to favorites') : 'Login to add favorites'}
       >
         <Heart 
           className={`
             ${currentSize.icon} 
             transition-all duration-200
-            ${isLiked ? 'fill-current' : ''}
+            ${isFavorited ? 'fill-current' : ''}
             ${isLoading ? 'animate-pulse' : ''}
           `}
         />
@@ -204,7 +204,7 @@ export default function LikeButton({
           transition-all duration-200
           ${isLoading ? 'animate-pulse' : ''}
         `}>
-          {likesCount}
+          {favoritesCount}
         </span>
       )}
     </div>

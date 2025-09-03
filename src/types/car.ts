@@ -6,18 +6,22 @@ export interface Car {
   model: string
   year: number
   price: number
+  currency?: string
   mileage?: number | null  // ✅ Fixed: Allow null values from database
   fuelType?: string | null
   transmission?: string | null
   bodyType?: string | null
   color?: string | null
   description?: string | null
+  nctExpiry?: string | null
   location: any
   featured: boolean
   views: number
   inquiries: number
   likesCount: number
+  favoritesCount: number
   isLiked: boolean  // ✅ FIXED: Added required isLiked property
+  isFavorited: boolean
   slug?: string
   images: Array<{ id: string; url: string; alt: string }>
   seller: {
