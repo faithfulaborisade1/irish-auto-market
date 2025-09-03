@@ -23,26 +23,40 @@ export interface CloudinaryUploadResult {
 
 export const uploadImage = async (
   file: File,
-  folder: string = 'cars'
+  folder: string = 'irish_auto_market/cars'
 ): Promise<CloudinaryUploadResult> => {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', 'irish_auto_market');
-  formData.append('folder', folder);
+  // Try multiple presets in order of preference
+  const presets = ['irish_auto_market', 'ml_default', 'cars_preset', 'unsigned_preset'];
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-    {
-      method: 'POST',
-      body: formData,
+  for (const preset of presets) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', preset);
+      formData.append('folder', folder);
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        {
+          method: 'POST',
+          body: formData,
+        }
+      );
+
+      if (response.ok) {
+        return response.json();
+      } else {
+        const errorText = await response.text();
+        console.warn(`Upload with preset ${preset} failed:`, errorText);
+      }
+    } catch (error) {
+      console.warn(`Upload with preset ${preset} failed:`, error);
+      continue;
     }
-  );
-
-  if (!response.ok) {
-    throw new Error('Upload failed');
   }
 
-  return response.json();
+  throw new Error('All upload presets failed. Please check your Cloudinary configuration.');
 };
 
 // Generate image URLs with transformations

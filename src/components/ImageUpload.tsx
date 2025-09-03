@@ -44,11 +44,97 @@ const ImageUpload = React.memo(({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  const uploadWithSignedRequest = useCallback(async (file: File): Promise<UploadedImage> => {
+    // First try to create a signed upload URL via our API
+    try {
+      const signResponse = await fetch('/api/upload/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: 'irish_auto_market/cars' })
+      });
+
+      if (signResponse.ok) {
+        const { signature, timestamp, cloudName } = await signResponse.json();
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'irish_auto_market/cars');
+        formData.append('api_key', '175672295118562');
+        formData.append('timestamp', timestamp.toString());
+        formData.append('signature', signature);
+
+        const uploadResponse = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          { method: 'POST', body: formData }
+        );
+
+        if (uploadResponse.ok) {
+          const result = await uploadResponse.json();
+          const baseUrl = `https://res.cloudinary.com/${cloudName}/image/upload`;
+          
+          return {
+            id: result.public_id,
+            url: result.secure_url,
+            originalUrl: result.secure_url,
+            thumbnailUrl: `${baseUrl}/c_limit,w_150,h_150,q_auto,f_auto/${result.public_id}`,
+            mediumUrl: `${baseUrl}/c_limit,w_500,h_400,q_auto,f_auto/${result.public_id}`,
+            largeUrl: `${baseUrl}/c_limit,w_800,h_600,q_auto,f_auto/${result.public_id}`,
+            publicId: result.public_id,
+            fileName: file.name,
+            size: file.size,
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Signed upload failed:', error);
+    }
+
+    // Fallback: Try with different presets
+    const presets = ['irish_auto_market', 'cars_preset', 'unsigned_preset'];
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dmynffe63';
+
+    for (const preset of presets) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', preset);
+        formData.append('folder', 'irish_auto_market/cars');
+
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          { method: 'POST', body: formData }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          const baseUrl = `https://res.cloudinary.com/${cloudName}/image/upload`;
+          
+          return {
+            id: result.public_id,
+            url: result.secure_url,
+            originalUrl: result.secure_url,
+            thumbnailUrl: `${baseUrl}/c_limit,w_150,h_150,q_auto,f_auto/${result.public_id}`,
+            mediumUrl: `${baseUrl}/c_limit,w_500,h_400,q_auto,f_auto/${result.public_id}`,
+            largeUrl: `${baseUrl}/c_limit,w_800,h_600,q_auto,f_auto/${result.public_id}`,
+            publicId: result.public_id,
+            fileName: file.name,
+            size: file.size,
+          };
+        }
+      } catch (error) {
+        console.error(`Upload with preset ${preset} failed:`, error);
+        continue;
+      }
+    }
+
+    throw new Error('All upload methods failed. Please check your Cloudinary configuration.');
+  }, []);
+
   const uploadToCloudinary = useCallback(async (file: File): Promise<UploadedImage> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('upload_preset', 'irish_auto_market'); // ✅ Your existing preset
-    formData.append('folder', 'cars');
+    formData.append('upload_preset', 'ml_default'); // Use default unsigned preset
+    formData.append('folder', 'irish_auto_market/cars');
 
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dmynffe63';
     const response = await fetch(
@@ -62,7 +148,10 @@ const ImageUpload = React.memo(({
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Cloudinary upload error:', errorText);
-      throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+      console.error('Upload failed. Trying alternative preset...');
+      
+      // Try with a different approach - create our own signed upload
+      return uploadWithSignedRequest(file);
     }
 
     const result = await response.json();
