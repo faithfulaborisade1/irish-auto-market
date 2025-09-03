@@ -683,7 +683,7 @@ export async function DELETE(
 
       // 15. Delete dealer invitation if exists
       await tx.dealerInvitation.deleteMany({
-        where: { userId: userId }
+        where: { dealerUserId: userId }
       });
 
       // 16. Delete dealer profile if exists
