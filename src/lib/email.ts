@@ -1348,5 +1348,219 @@ export function checkEmailDeliverability(subject: string, content: string): {
   return { score: Math.max(score, 0), warnings, suggestions };
 }
 
+// ============================================================================
+// 🆕 ADMIN CUSTOM EMAIL SYSTEM (For manual dealer outreach)
+// ============================================================================
+
+export async function sendCustomAdminEmail(emailData: {
+  recipients: string[]; // Array of email addresses
+  subject: string;
+  message: string;
+  adminName: string;
+  emailType?: 'marketing' | 'transactional';
+  template?: 'dealer_outreach' | 'general' | 'follow_up';
+}) {
+  try {
+    if (!resend) {
+      console.warn('⚠️ Email service not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const { recipients, subject, message, adminName, emailType = 'marketing', template = 'dealer_outreach' } = emailData;
+
+    // Validate recipients
+    if (!recipients || recipients.length === 0) {
+      return { success: false, error: 'No recipients specified' };
+    }
+
+    // Validate recipient email addresses
+    const invalidEmails = recipients.filter(email => !validateEmailAddress(email));
+    if (invalidEmails.length > 0) {
+      return { success: false, error: `Invalid email addresses: ${invalidEmails.join(', ')}` };
+    }
+
+    // Check for spam content
+    const spamCheck = checkEmailDeliverability(subject, message);
+    if (spamCheck.score < 70) {
+      console.warn('⚠️ Low deliverability score:', spamCheck.score, spamCheck.warnings);
+    }
+
+    // Get appropriate template content based on template type
+    let templateContent = '';
+    let templateTitle = '';
+    let fromEmail = '';
+
+    switch (template) {
+      case 'dealer_outreach':
+        templateTitle = 'Partnership Opportunity with Irish Auto Market';
+        fromEmail = EMAIL_CONFIG.dealerEmail;
+        templateContent = `
+          <h2>Partnership Opportunity 🤝</h2>
+          
+          <p>Hello,</p>
+          
+          <div style="background: #ffffff; padding: 20px; border-radius: 8px; border-left: 4px solid #059669; margin: 20px 0;">
+            <div style="white-space: pre-wrap; line-height: 1.6;">${message}</div>
+          </div>
+          
+          <div class="info-card">
+            <h3>📞 Get in Touch</h3>
+            <p>We'd love to discuss this opportunity with you:</p>
+            <p>
+              📧 <strong>Email:</strong> <a href="mailto:dealers@irishautomarket.ie">dealers@irishautomarket.ie</a><br>
+              🌐 <strong>Website:</strong> <a href="${EMAIL_CONFIG.baseUrl}">www.irishautomarket.ie</a><br>
+              💬 <strong>Reply to this email</strong> to start the conversation
+            </p>
+          </div>
+          
+          <div class="button-container">
+            <a href="${EMAIL_CONFIG.baseUrl}/register/dealer" class="button">Learn More About Partnership</a>
+          </div>
+          
+          <p style="text-align: center; margin-top: 24px;">
+            Best regards,<br>
+            <strong>${adminName}</strong><br>
+            Irish Auto Market Team 🇮🇪
+          </p>
+        `;
+        break;
+
+      case 'follow_up':
+        templateTitle = 'Following up on Irish Auto Market';
+        fromEmail = EMAIL_CONFIG.dealerEmail;
+        templateContent = `
+          <h2>Following Up 📞</h2>
+          
+          <p>Hello,</p>
+          
+          <div style="background: #ffffff; padding: 20px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 20px 0;">
+            <div style="white-space: pre-wrap; line-height: 1.6;">${message}</div>
+          </div>
+          
+          <div class="button-container">
+            <a href="${EMAIL_CONFIG.baseUrl}" class="button">Visit Irish Auto Market</a>
+          </div>
+          
+          <p style="text-align: center; margin-top: 24px;">
+            Best regards,<br>
+            <strong>${adminName}</strong><br>
+            Irish Auto Market Team 🇮🇪
+          </p>
+        `;
+        break;
+
+      default: // general
+        templateTitle = 'Message from Irish Auto Market';
+        fromEmail = EMAIL_CONFIG.from;
+        templateContent = `
+          <h2>Message from Irish Auto Market 📧</h2>
+          
+          <p>Hello,</p>
+          
+          <div style="background: #ffffff; padding: 20px; border-radius: 8px; border-left: 4px solid #059669; margin: 20px 0;">
+            <div style="white-space: pre-wrap; line-height: 1.6;">${message}</div>
+          </div>
+          
+          <div class="card">
+            <h3>📞 Contact Information</h3>
+            <p>
+              📧 <strong>General:</strong> <a href="mailto:info@irishautomarket.ie">info@irishautomarket.ie</a><br>
+              📧 <strong>Support:</strong> <a href="mailto:support@irishautomarket.ie">support@irishautomarket.ie</a><br>
+              🌐 <strong>Website:</strong> <a href="${EMAIL_CONFIG.baseUrl}">www.irishautomarket.ie</a>
+            </p>
+          </div>
+          
+          <p style="text-align: center; margin-top: 24px;">
+            Best regards,<br>
+            <strong>${adminName}</strong><br>
+            Irish Auto Market Team 🇮🇪
+          </p>
+        `;
+    }
+
+    // Create plain text version
+    const plainText = `
+Hello,
+
+${message}
+
+Best regards,
+${adminName}
+Irish Auto Market Team
+
+---
+Contact Information:
+General: info@irishautomarket.ie
+Support: support@irishautomarket.ie  
+Website: ${EMAIL_CONFIG.baseUrl}
+
+Irish Auto Market, Dublin, Ireland
+${emailType === 'marketing' ? `\nYou received this email because we believe you may be interested in Irish Auto Market's services.\nUnsubscribe: ${EMAIL_CONFIG.baseUrl}/unsubscribe` : ''}
+    `;
+
+    // Send emails (batch sending for multiple recipients)
+    const results = [];
+    const errors = [];
+
+    for (const recipient of recipients) {
+      try {
+        const result = await resend.emails.send({
+          from: `Irish Auto Market <${fromEmail}>`,
+          to: recipient,
+          subject: subject,
+          html: getEmailTemplate(templateContent, templateTitle, template === 'dealer_outreach' ? 'dealer' : 'user', emailType),
+          text: plainText,
+          headers: getSpamPreventionHeaders(emailType)
+        });
+
+        results.push({
+          email: recipient,
+          success: true,
+          emailId: result.data?.id
+        });
+
+        console.log(`✅ Custom admin email sent to ${recipient}:`, result.data?.id);
+
+        // Add small delay between emails to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+      } catch (error: any) {
+        console.error(`❌ Failed to send email to ${recipient}:`, error);
+        errors.push({
+          email: recipient,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    // Send admin notification about the email campaign
+    await sendAdminNotification({
+      type: 'dealer_invited' as any,
+      data: {
+        email: `${recipients.length} recipients`,
+        businessName: `Custom Email Campaign`,
+        contactName: subject,
+        location: `${results.length} successful, ${errors.length} failed`,
+        adminName: adminName
+      }
+    });
+
+    return {
+      success: true,
+      results: results,
+      errors: errors,
+      totalSent: results.length,
+      totalFailed: errors.length,
+      spamScore: spamCheck.score,
+      warnings: spamCheck.warnings
+    };
+
+  } catch (error: any) {
+    console.error('❌ Failed to send custom admin emails:', error);
+    return { success: false, error: error.message };
+  }
+}
+
 // Export updated email configuration
 export { EMAIL_CONFIG };

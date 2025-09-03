@@ -211,6 +211,15 @@ export default function AdminLayout({
     badge: null, // TODO: Add pending invitations count
     badgeColor: 'bg-blue-500'
   }] : []),
+  // 🆕 NEW: Email Messaging (SUPER_ADMIN only)
+  ...(user?.role === 'SUPER_ADMIN' ? [{
+    name: 'Messaging',
+    href: '/admin/messaging',
+    icon: MessageCircle,
+    active: pathname.startsWith('/admin/messaging'),
+    badge: null,
+    badgeColor: 'bg-purple-500'
+  }] : []),
   {
     name: 'Users',
     href: '/admin/users',
