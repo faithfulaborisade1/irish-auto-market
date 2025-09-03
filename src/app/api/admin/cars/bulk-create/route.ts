@@ -221,7 +221,8 @@ export async function POST(request: NextRequest) {
           async (tx) => {
             const results = [];
             
-            for (const [batchIndex, carData] of batch.entries()) {
+            for (let batchIndex = 0; batchIndex < batch.length; batchIndex++) {
+              const carData = batch[batchIndex];
               const globalIndex = i + batchIndex;
               
               try {
