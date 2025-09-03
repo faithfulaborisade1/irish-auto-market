@@ -264,7 +264,7 @@ export default function UnifiedUserManagement() {
     }
   };
 
-  const handleUserAction = async (userId: string, action: string, newStatus?: string) => {
+  const handleUserAction = async (userId: string, action: string, newStatus?: string, hardDelete?: boolean) => {
     try {
       setActionLoading(`${action}-${userId}`);
       setError(null);
@@ -286,8 +286,12 @@ export default function UnifiedUserManagement() {
           endpoint = `/api/admin/users/${userId}/force-password-reset`;
           method = 'POST';
           break;
-        case 'delete_user':
+        case 'suspend_user':
           endpoint = `/api/admin/users/${userId}`;
+          method = 'DELETE';
+          break;
+        case 'delete_user':
+          endpoint = `/api/admin/users/${userId}${hardDelete ? '?hard=true' : ''}`;
           method = 'DELETE';
           break;
         default:
@@ -305,17 +309,25 @@ export default function UnifiedUserManagement() {
       });
 
       if (response.ok) {
+        const result = await response.json();
         fetchUsers(); // Refresh the list
+        
         if (action === 'reset_password') {
           alert('Password reset email sent successfully');
         } else if (action === 'verify_dealer') {
           alert('Dealer verified successfully');
+        } else if (action === 'suspend_user') {
+          alert(`User suspended successfully`);
         } else if (action === 'delete_user') {
-          alert('User deleted successfully');
+          if (result.action === 'hard_deleted') {
+            alert(`🗑️ PERMANENTLY DELETED\n\nUser "${result.dataRemoved.email}" and all data removed forever.\nEmail is now available for reuse.\n\nData removed:\n• ${result.dataRemoved.cars} cars\n• ${result.dataRemoved.messages} messages\n• ${result.dataRemoved.likes} likes\n• ${result.dataRemoved.notifications} notifications`);
+          } else {
+            alert('User suspended successfully');
+          }
         }
       } else {
         const errorData = await response.json();
-        setError(errorData.message || `Failed to ${action.replace('_', ' ')}`);
+        setError(errorData.message || errorData.error || `Failed to ${action.replace('_', ' ')}`);
       }
     } catch (error: any) {
       setError(`Network error performing ${action.replace('_', ' ')}`);
@@ -794,17 +806,45 @@ export default function UnifiedUserManagement() {
                             </button>
                           )}
 
-                          {/* Delete User (careful!) */}
+                          {/* Suspend User */}
+                          {user.role === 'USER' && user.status !== 'SUSPENDED' && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Suspend ${user.firstName} ${user.lastName}?\n\nThis will disable their account but keep all data. They can be reactivated later.`)) {
+                                  handleUserAction(user.id, 'suspend_user');
+                                }
+                              }}
+                              disabled={actionLoading === `suspend_user-${user.id}`}
+                              className="p-2 text-orange-600 hover:bg-orange-50 rounded-md transition-colors disabled:opacity-50"
+                              title="Suspend User"
+                            >
+                              {actionLoading === `suspend_user-${user.id}` ? (
+                                <div className="w-4 h-4 animate-spin border-2 border-orange-600 border-t-transparent rounded-full"></div>
+                              ) : (
+                                <Ban className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
+
+                          {/* Permanent Delete User (DANGEROUS) */}
                           {user.role === 'USER' && (
                             <button
                               onClick={() => {
-                                if (confirm(`Are you sure you want to delete ${user.firstName} ${user.lastName}? This action cannot be undone.`)) {
-                                  handleUserAction(user.id, 'delete_user');
+                                const confirmation = confirm(`⚠️ PERMANENT DELETION\n\nDelete ${user.firstName} ${user.lastName} FOREVER?\n\nThis will:\n• Remove ALL user data permanently\n• Delete their cars, messages, likes\n• Free up their email for reuse\n• CANNOT BE UNDONE\n\nType "DELETE FOREVER" to confirm:`);
+                                
+                                if (confirmation) {
+                                  const secondConfirmation = prompt(`⚠️ FINAL WARNING\n\nType "DELETE FOREVER" to permanently delete ${user.email}:`);
+                                  
+                                  if (secondConfirmation === "DELETE FOREVER") {
+                                    handleUserAction(user.id, 'delete_user', undefined, true);
+                                  } else if (secondConfirmation !== null) {
+                                    alert("Deletion cancelled - incorrect confirmation text");
+                                  }
                                 }
                               }}
                               disabled={actionLoading === `delete_user-${user.id}`}
                               className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
-                              title="Delete User"
+                              title="PERMANENT DELETE (Cannot be undone)"
                             >
                               {actionLoading === `delete_user-${user.id}` ? (
                                 <div className="w-4 h-4 animate-spin border-2 border-red-600 border-t-transparent rounded-full"></div>
@@ -1241,7 +1281,7 @@ export default function UnifiedUserManagement() {
                       onClick={() => handleUserAction(selectedUser.id, 'toggle_status', selectedUser.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE')}
                       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                         selectedUser.status === 'ACTIVE'
-                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                          ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
                           : 'bg-green-100 text-green-700 hover:bg-green-200'
                       }`}
                     >
@@ -1260,9 +1300,31 @@ export default function UnifiedUserManagement() {
                     {['SUPER_ADMIN', 'ADMIN', 'CONTENT_MOD'].includes(selectedUser.role) && (
                       <button
                         onClick={() => handleUserAction(selectedUser.id, 'reset_password')}
-                        className="px-4 py-2 bg-orange-100 text-orange-700 hover:bg-orange-200 rounded-md text-sm font-medium transition-colors"
+                        className="px-4 py-2 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded-md text-sm font-medium transition-colors"
                       >
                         Force Password Reset
+                      </button>
+                    )}
+                    
+                    {selectedUser.role === 'USER' && (
+                      <button
+                        onClick={() => {
+                          setShowUserDetailsModal(false);
+                          const confirmation = confirm(`⚠️ PERMANENT DELETION\n\nDelete ${selectedUser.firstName} ${selectedUser.lastName} FOREVER?\n\nThis will:\n• Remove ALL user data permanently\n• Delete their cars, messages, likes\n• Free up their email for reuse\n• CANNOT BE UNDONE`);
+                          
+                          if (confirmation) {
+                            const secondConfirmation = prompt(`⚠️ FINAL WARNING\n\nType "DELETE FOREVER" to permanently delete ${selectedUser.email}:`);
+                            
+                            if (secondConfirmation === "DELETE FOREVER") {
+                              handleUserAction(selectedUser.id, 'delete_user', undefined, true);
+                            } else if (secondConfirmation !== null) {
+                              alert("Deletion cancelled - incorrect confirmation text");
+                            }
+                          }
+                        }}
+                        className="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-md text-sm font-medium transition-colors"
+                      >
+                        🗑️ PERMANENT DELETE
                       </button>
                     )}
                   </div>
