@@ -90,7 +90,7 @@ interface DealerProfile {
 
 export default function DealerProfile({ user: initialUser }: DealerProfileProps) {
   const [user, setUser] = useState(initialUser);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'analytics' | 'leads' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'analytics' | 'leads'>('dashboard');
   const [cars, setCars] = useState<DealerCar[]>([]);
   const [analytics, setAnalytics] = useState<DealerAnalytics | null>(null);
   const [dealerProfile, setDealerProfile] = useState<DealerProfile | null>(null);
@@ -261,14 +261,14 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
 
             <div className="flex items-center space-x-3">
               <a 
-                href="/cars/create"
+                href="/place-ad"
                 className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Car</span>
               </a>
               <a 
-                href="/profile/dealer/edit"
+                href="/profile/edit"
                 className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
               >
                 <Settings className="w-4 h-4" />
@@ -283,8 +283,7 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
               { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
               { id: 'inventory', label: 'Inventory', icon: Car, count: cars.length },
               { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-              { id: 'leads', label: 'Leads', icon: Users, count: analytics?.totalLeads },
-              { id: 'settings', label: 'Business', icon: Settings }
+              { id: 'leads', label: 'Leads', icon: Users, count: analytics?.totalLeads }
             ].map(({ id, label, icon: Icon, count }) => (
               <button
                 key={id}
@@ -391,41 +390,12 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
                 </div>
               </div>
 
-              {/* Quick Actions */}
+              {/* Recent Activity */}
               <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">Quick Actions</h3>
-                <div className="space-y-3">
-                  <a
-                    href="/cars/create"
-                    className="w-full bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-3"
-                  >
-                    <Plus className="w-5 h-5" />
-                    <span className="font-medium">Add New Car</span>
-                  </a>
-
-                  <a
-                    href="/messages"
-                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-3"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    <span className="font-medium">Check Messages</span>
-                  </a>
-
-                  <a
-                    href="/profile/dealer/edit"
-                    className="w-full bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-3"
-                  >
-                    <Settings className="w-5 h-5" />
-                    <span className="font-medium">Business Settings</span>
-                  </a>
-
-                  <a
-                    href="#"
-                    className="w-full bg-green-100 text-green-700 py-3 px-4 rounded-lg hover:bg-green-200 transition-colors flex items-center space-x-3"
-                  >
-                    <Zap className="w-5 h-5" />
-                    <span className="font-medium">Upgrade Plan</span>
-                  </a>
+                <h3 className="text-lg font-semibold text-gray-900 mb-6">Recent Activity</h3>
+                <div className="space-y-3 text-gray-600">
+                  <p className="text-sm">No recent activity to display.</p>
+                  <p className="text-sm">Start listing cars to see your activity here!</p>
                 </div>
               </div>
             </div>
@@ -437,7 +407,7 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Inventory Management</h2>
               <a 
-                href="/cars/create"
+                href="/place-ad"
                 className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
@@ -524,7 +494,7 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">No inventory yet</h3>
                 <p className="text-gray-600 mb-6">Start building your inventory by adding cars to your dealership!</p>
                 <a 
-                  href="/cars/create"
+                  href="/place-ad"
                   className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors inline-flex items-center space-x-2"
                 >
                   <Plus className="w-5 h-5" />
@@ -549,48 +519,6 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
             <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Lead Management</h3>
             <p className="text-gray-600">Comprehensive lead tracking coming soon!</p>
-          </div>
-        )}
-
-        {activeTab === 'settings' && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Business Settings</h3>
-            
-            <div className="space-y-4">
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Business Profile
-                </h4>
-                <p className="text-gray-600 text-sm mb-3">
-                  Manage your dealership information, logo, and business details.
-                </p>
-                <a 
-                  href="/profile/dealer/edit" 
-                  className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  <Edit3 className="w-4 h-4 mr-2" />
-                  Edit Business Profile
-                </a>
-              </div>
-
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                  <User className="w-4 h-4 mr-2" />
-                  Personal Account
-                </h4>
-                <p className="text-gray-600 text-sm mb-3">
-                  Update your personal information and account settings.
-                </p>
-                <a 
-                  href="/profile/edit" 
-                  className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Account Settings
-                </a>
-              </div>
-            </div>
           </div>
         )}
       </div>

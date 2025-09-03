@@ -17,6 +17,11 @@ function getTokenFromRequest(request: NextRequest): string | null {
     return authHeader.substring(7);
   }
   
+  // Check for auth-token cookie (used by other profile endpoints)
+  const authToken = request.cookies.get('auth-token')?.value;
+  if (authToken) return authToken;
+  
+  // Fallback to token cookie
   const cookieToken = request.cookies.get('token')?.value;
   return cookieToken || null;
 }

@@ -198,7 +198,7 @@ export default function SellerProfile({ user: initialUser }: SellerProfileProps)
 
             <div className="flex items-center space-x-3">
               <a 
-                href="/cars/create"
+                href="/place-ad"
                 className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
@@ -294,7 +294,7 @@ export default function SellerProfile({ user: initialUser }: SellerProfileProps)
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Your Car Listings</h2>
               <a 
-                href="/cars/create"
+                href="/place-ad"
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
@@ -372,7 +372,7 @@ export default function SellerProfile({ user: initialUser }: SellerProfileProps)
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">No cars listed yet</h3>
                 <p className="text-gray-600 mb-6">Start selling by creating your first car listing!</p>
                 <a 
-                  href="/cars/create"
+                  href="/place-ad"
                   className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center space-x-2"
                 >
                   <Plus className="w-5 h-5" />

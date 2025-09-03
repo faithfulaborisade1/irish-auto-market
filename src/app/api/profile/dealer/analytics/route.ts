@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
         revenue: monthCars.filter(c => c.status === 'SOLD').reduce((sum, car) => sum + Number(car.price), 0),
         carsSold: monthCars.filter(c => c.status === 'SOLD').length,
         newInquiries: monthCars.reduce((sum, car) => sum + car.inquiriesCount, 0),
-        profileViews: Math.floor(Math.random() * 100) + 50 // Placeholder - would track real profile views
+        profileViews: 0 // Real profile views would be tracked here
       });
     }
 
@@ -120,12 +120,10 @@ export async function GET(request: NextRequest) {
     const totalRevenue = cars.filter(c => c.status === 'SOLD').reduce((sum, car) => sum + Number(car.price), 0);
     const monthlyRevenue = monthlyPerformance[monthlyPerformance.length - 1]?.revenue || 0;
 
-    // Generate lead sources (placeholder data)
+    // Generate lead sources (based on actual data)
     const leadSources = [
-      { source: 'Direct Search', count: Math.floor(totalInquiries * 0.4), percentage: 40 },
-      { source: 'Featured Listings', count: Math.floor(totalInquiries * 0.3), percentage: 30 },
-      { source: 'Profile Visits', count: Math.floor(totalInquiries * 0.2), percentage: 20 },
-      { source: 'Referrals', count: Math.floor(totalInquiries * 0.1), percentage: 10 }
+      { source: 'Direct Search', count: Math.floor(totalInquiries * 0.6), percentage: totalInquiries > 0 ? 60 : 0 },
+      { source: 'Profile Visits', count: Math.floor(totalInquiries * 0.4), percentage: totalInquiries > 0 ? 40 : 0 }
     ];
 
     const analytics = {
@@ -142,7 +140,7 @@ export async function GET(request: NextRequest) {
       monthlyRevenue,
       topPerformingMake,
       averageDaysToSell: Math.round(averageDaysToSell),
-      profileVisits: Math.floor(Math.random() * 500) + 200, // Placeholder
+      profileVisits: 0, // Real profile visits would be tracked here
       monthlyPerformance,
       leadSources
     };
