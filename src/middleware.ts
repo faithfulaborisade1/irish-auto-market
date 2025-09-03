@@ -356,9 +356,9 @@ function getSecurityHeaders(): Record<string, string> {
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js needs these
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: https:",
+      "img-src 'self' data: https: res.cloudinary.com",
       "font-src 'self' data:",
-      "connect-src 'self'",
+      "connect-src 'self' https://api.cloudinary.com https://res.cloudinary.com",
       "frame-ancestors 'none'"
     ].join('; '),
     
