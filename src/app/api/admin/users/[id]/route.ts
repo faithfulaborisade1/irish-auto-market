@@ -473,7 +473,12 @@ export async function DELETE(
             conversation: true
           }
         },
-        conversations: {
+        buyerConversations: {
+          include: {
+            messages: true
+          }
+        },
+        sellerConversations: {
           include: {
             messages: true
           }
@@ -593,7 +598,20 @@ export async function DELETE(
         where: { senderId: userId }
       });
 
-      // 3. Delete conversations where user is involved
+      // 3. Delete conversations where user is involved (buyer or seller)
+      const userConversations = [
+        ...user.buyerConversations, 
+        ...user.sellerConversations
+      ];
+      
+      for (const conversation of userConversations) {
+        // Delete all messages in this conversation
+        await tx.message.deleteMany({
+          where: { conversationId: conversation.id }
+        });
+      }
+      
+      // Delete the conversations themselves
       await tx.conversation.deleteMany({
         where: { 
           OR: [
