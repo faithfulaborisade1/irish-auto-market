@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Search, Grid, List, ArrowLeft, Filter, X, Loader2 } from 'lucide-react'
+import { Search, Grid, List, ArrowLeft, Filter, X, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState, useEffect, Suspense, useCallback, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Header from '@/components/Header'
@@ -17,6 +17,7 @@ function CarsContent() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sortBy, setSortBy] = useState('newest')
+  const [currentPage, setCurrentPage] = useState(1)
   
   // 🚀 FIXED: Memoize initial filters to prevent re-initialization
   const initialFilters = useMemo(() => {
@@ -38,6 +39,10 @@ function CarsContent() {
       yearTo = max && max !== '2025' ? max : ''
     }
     
+    // Get page from URL params
+    const page = parseInt(params.page || '1')
+    setCurrentPage(page)
+    
     return {
       searchText: params.q || '',
       make: params.make || '',
@@ -58,7 +63,9 @@ function CarsContent() {
       transmission: params.transmission ? params.transmission.split(',') : [],
       bodyType: params.bodyType ? params.bodyType.split(',') : [],
       sellerType: params.sellerType ? params.sellerType.split(',') : [],
-      sortBy
+      sortBy,
+      page,
+      limit: 24 // 24 cars per page
     }
   }, [searchParams, sortBy])
 
@@ -81,6 +88,7 @@ function CarsContent() {
   } = useCarSearch(filters)
 
   const cars: Car[] = searchResponse?.cars || []
+  const pagination = searchResponse?.pagination
 
   // 🚀 OPTIMIZATION: Memoize URL update function to prevent recreations
   const updateURL = useCallback((newFilters: CarSearchFilters) => {
@@ -111,6 +119,7 @@ function CarsContent() {
     if (newFilters.transmission.length > 0) params.set('transmission', newFilters.transmission.join(','))
     if (newFilters.bodyType.length > 0) params.set('bodyType', newFilters.bodyType.join(','))
     if (newFilters.sellerType.length > 0) params.set('sellerType', newFilters.sellerType.join(','))
+    if (newFilters.page && newFilters.page > 1) params.set('page', newFilters.page.toString())
     
     const newURL = `/cars?${params.toString()}`
     router.push(newURL, { scroll: false })
@@ -121,9 +130,10 @@ function CarsContent() {
     console.log('🔧 Filters changed:', newFilters)
     
     setFilters(prevFilters => {
-      const updatedFilters = { ...prevFilters, ...newFilters }
+      const updatedFilters = { ...prevFilters, ...newFilters, page: 1 } // Reset to page 1 on filter change
       return updatedFilters
     })
+    setCurrentPage(1)
   }, [])
 
   // 🚀 FIXED: Update URL in effect, not during render
@@ -138,7 +148,16 @@ function CarsContent() {
   // 🚀 FIXED: Stable sort change handler
   const handleSortChange = useCallback((newSort: string) => {
     setSortBy(newSort)
-    setFilters(prev => ({ ...prev, sortBy: newSort }))
+    setFilters(prev => ({ ...prev, sortBy: newSort, page: 1 })) // Reset to page 1 on sort change
+    setCurrentPage(1)
+  }, [])
+
+  // Pagination handler
+  const handlePageChange = useCallback((newPage: number) => {
+    setCurrentPage(newPage)
+    setFilters(prev => ({ ...prev, page: newPage }))
+    // Scroll to top of results
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
 
   // 🚀 OPTIMIZED: Memoize computed values
@@ -246,7 +265,12 @@ function CarsContent() {
                       </div>
                     ) : (
                       <>
-                        <span>{cars.length} car{cars.length !== 1 ? 's' : ''} found</span>
+                        <span>
+                          {pagination ? 
+                            `${pagination.totalCount} car${pagination.totalCount !== 1 ? 's' : ''} found` :
+                            `${cars.length} car${cars.length !== 1 ? 's' : ''} found`
+                          }
+                        </span>
                         {isFetching && !isLoading && (
                           <div className="flex items-center text-green-600">
                             <Loader2 className="w-3 h-3 animate-spin mr-1" />
@@ -378,6 +402,109 @@ function CarsContent() {
                 >
                   Browse All Cars
                 </Link>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center">
+                <nav className="flex items-center space-x-2">
+                  {/* Previous Button */}
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={!pagination.hasPreviousPage}
+                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      pagination.hasPreviousPage
+                        ? 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                        : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
+                    }`}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Previous
+                  </button>
+
+                  {/* Page Numbers */}
+                  <div className="hidden sm:flex items-center space-x-1">
+                    {/* First page */}
+                    {currentPage > 3 && (
+                      <>
+                        <button
+                          onClick={() => handlePageChange(1)}
+                          className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          1
+                        </button>
+                        {currentPage > 4 && (
+                          <span className="px-2 py-2 text-gray-500">...</span>
+                        )}
+                      </>
+                    )}
+
+                    {/* Current page and nearby pages */}
+                    {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
+                      .filter(page => 
+                        page === currentPage || 
+                        page === currentPage - 1 || 
+                        page === currentPage + 1 ||
+                        (currentPage <= 2 && page <= 3) ||
+                        (currentPage >= pagination.totalPages - 1 && page >= pagination.totalPages - 2)
+                      )
+                      .map(page => (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            page === currentPage
+                              ? 'text-white bg-green-600 border border-green-600'
+                              : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+
+                    {/* Last page */}
+                    {currentPage < pagination.totalPages - 2 && (
+                      <>
+                        {currentPage < pagination.totalPages - 3 && (
+                          <span className="px-2 py-2 text-gray-500">...</span>
+                        )}
+                        <button
+                          onClick={() => handlePageChange(pagination.totalPages)}
+                          className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          {pagination.totalPages}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Mobile: Just show current page info */}
+                  <div className="sm:hidden flex items-center px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg">
+                    Page {currentPage} of {pagination.totalPages}
+                  </div>
+
+                  {/* Next Button */}
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={!pagination.hasNextPage}
+                    className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      pagination.hasNextPage
+                        ? 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                        : 'text-gray-400 bg-gray-100 border border-gray-200 cursor-not-allowed'
+                    }`}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </button>
+                </nav>
+              </div>
+            )}
+
+            {/* Results Summary */}
+            {pagination && (
+              <div className="mt-4 text-center text-sm text-gray-600">
+                Showing {((currentPage - 1) * 24) + 1}-{Math.min(currentPage * 24, pagination.totalCount)} of {pagination.totalCount} cars
               </div>
             )}
 

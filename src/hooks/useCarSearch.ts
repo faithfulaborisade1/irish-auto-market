@@ -48,6 +48,10 @@ const buildSearchParams = (filters: CarSearchFilters): URLSearchParams => {
   // Sort
   params.set('sort', filters.sortBy)
   
+  // Pagination
+  if (filters.page) params.set('page', filters.page.toString())
+  if (filters.limit) params.set('limit', filters.limit.toString())
+  
   return params
 }
 

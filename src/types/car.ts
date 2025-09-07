@@ -57,12 +57,23 @@ export interface CarSearchFilters {
   seatCount: string
   nctValid: boolean
   sortBy: string
+  page?: number
+  limit?: number
+}
+
+export interface Pagination {
+  currentPage: number
+  totalPages: number
+  totalCount: number
+  limit: number
+  hasNextPage: boolean
+  hasPreviousPage: boolean
 }
 
 export interface CarSearchResponse {
   success: boolean
   cars: Car[]
-  total: number
+  pagination: Pagination
   filters_applied: Record<string, any>
   timestamp: string
 }

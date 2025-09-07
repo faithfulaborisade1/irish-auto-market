@@ -81,6 +81,11 @@ export async function GET(request: NextRequest) {
     const currentUserId = await getCurrentUser(request)
     const searchParams = request.nextUrl.searchParams
     
+    // Pagination parameters
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '24') // 24 cars per page (good for grid layout)
+    const offset = (page - 1) * limit
+    
     // Basic parameters
     const featured = searchParams.get('featured')
     const sortBy = searchParams.get('sort') || 'newest'
@@ -253,6 +258,9 @@ export async function GET(request: NextRequest) {
 
     console.log('🚀 Final query where clause:', JSON.stringify(where, null, 2))
 
+    // Get total count for pagination (before applying offset/limit)
+    const totalCount = await db.car.count({ where })
+
     // Build orderBy clause (existing logic)
     let orderBy: any = { createdAt: 'desc' } // default
 
@@ -284,7 +292,7 @@ export async function GET(request: NextRequest) {
         break
     }
 
-    // Database query (existing structure with enhanced filtering)
+    // Database query (existing structure with enhanced filtering + pagination)
     const cars = await db.car.findMany({
       where,
       include: {
@@ -309,7 +317,8 @@ export async function GET(request: NextRequest) {
         })
       },
       orderBy,
-      take: 50, // Limit results to prevent large responses
+      skip: offset,
+      take: limit,
     })
 
     // Transform data for frontend (existing logic)
@@ -354,12 +363,21 @@ export async function GET(request: NextRequest) {
       },
     }))
 
-    console.log(`✅ Found ${transformedCars.length} cars matching filters`)
+    console.log(`✅ Found ${transformedCars.length} cars on page ${page} of ${Math.ceil(totalCount / limit)} (${totalCount} total)`)
+
+    const totalPages = Math.ceil(totalCount / limit)
 
     return NextResponse.json({
       success: true,
       cars: transformedCars,
-      total: transformedCars.length,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        limit,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
       filters_applied: {
         make: makeFilter,
         model: modelFilter,
