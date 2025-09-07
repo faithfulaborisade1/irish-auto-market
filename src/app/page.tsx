@@ -74,44 +74,34 @@ export default function HomePage() {
  // Replace the existing useEffect in your HomePage component with this:
 
 useEffect(() => {
-  // Fetch count first (fast query, updates search button immediately)
-  async function fetchCount() {
+  async function fetchData() {
     try {
-      const response = await fetch('/api/cars/count')
-      const data = await response.json()
-      if (data.success) {
-        setCarCount(data.count)
+      // Fetch count first (fast query, updates search button immediately)
+      const countResponse = await fetch('/api/cars/count')
+      const countData = await countResponse.json()
+      if (countData.success) {
+        setCarCount(countData.count)
       }
-    } catch (error) {
-      console.error('Error fetching car count:', error)
-      // Fallback: still fetch cars to get count
-    }
-  }
-  
-  // Fetch cars second (slower query, for featured cars display)
-  async function fetchCars() {
-    try {
-      const response = await fetch('/api/cars')
-      const data = await response.json()
-      if (data.success) {
-        setCars(data.cars)
-        // Fallback: if count API failed, use cars length
-        if (carCount === 0) {
-          setCarCount(data.cars.length)
+      
+      // Then fetch cars for display
+      const carsResponse = await fetch('/api/cars')
+      const carsData = await carsResponse.json()
+      if (carsData.success) {
+        setCars(carsData.cars)
+        // Only use cars length as fallback if count API failed
+        if (!countData.success || countData.count === 0) {
+          console.log('Using cars array length as fallback count:', carsData.cars.length)
+          setCarCount(carsData.cars.length)
         }
       }
     } catch (error) {
-      console.error('Error fetching cars:', error)
+      console.error('Error fetching data:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  // Run count fetch immediately (fast)
-  fetchCount()
-  
-  // Run cars fetch after small delay or immediately
-  fetchCars()
+  fetchData()
 }, [])
 
   // Reset model when make changes
