@@ -21,10 +21,18 @@ import {
   Building2,
   FileUp,
   Save,
-  Trash2
+  Trash2,
+  Settings,
+  Palette,
+  Euro,
+  Calendar,
+  Gauge,
+  Fuel,
+  MapPin
 } from 'lucide-react';
 import { getAllCarMakes, getModelsForMake } from '@/data/car-makes-models';
 import { getAllCounties, getAreasForCounty } from '@/data/irish-locations';
+import { SUPPORTED_CURRENCIES, getCurrencySymbol, formatPrice } from '@/utils/currency';
 import ImageUpload from '@/components/ImageUpload';
 
 interface Dealer {
@@ -56,6 +64,7 @@ interface CarFormData {
   model: string;
   year: number | '';
   price: number | '';
+  currency: string;
   title: string;
   description: string;
   county: string;
@@ -76,11 +85,28 @@ interface CarFormData {
   features: string[];
 }
 
+// ✅ COMPLETE COLOR OPTIONS WITH VISUAL SELECTION
+const COLOR_OPTIONS = [
+  { value: 'white', label: 'White', color: '#ffffff', border: '#e5e7eb' },
+  { value: 'black', label: 'Black', color: '#000000', border: '#000000' },
+  { value: 'silver', label: 'Silver', color: '#c0c0c0', border: '#9ca3af' },
+  { value: 'grey', label: 'Grey', color: '#6b7280', border: '#6b7280' },
+  { value: 'blue', label: 'Blue', color: '#3b82f6', border: '#3b82f6' },
+  { value: 'red', label: 'Red', color: '#ef4444', border: '#ef4444' },
+  { value: 'green', label: 'Green', color: '#10b981', border: '#10b981' },
+  { value: 'yellow', label: 'Yellow', color: '#eab308', border: '#eab308' },
+  { value: 'orange', label: 'Orange', color: '#f97316', border: '#f97316' },
+  { value: 'brown', label: 'Brown', color: '#8b4513', border: '#8b4513' },
+  { value: 'purple', label: 'Purple', color: '#8b5cf6', border: '#8b5cf6' },
+  { value: 'gold', label: 'Gold', color: '#d97706', border: '#d97706' }
+];
+
 const defaultCarForm: CarFormData = {
   make: '',
   model: '',
   year: '',
   price: '',
+  currency: 'EUR',
   title: '',
   description: '',
   county: '',
@@ -94,7 +120,7 @@ const defaultCarForm: CarFormData = {
   seats: '',
   color: '',
   condition: 'USED',
-  previousOwners: '',
+  previousOwners: 1,
   nctExpiry: '',
   serviceHistory: false,
   accidentHistory: false,
@@ -135,6 +161,8 @@ export default function AdminAddCarsPage() {
     { value: 'ELECTRIC', label: 'Electric' },
     { value: 'HYBRID', label: 'Hybrid' },
     { value: 'PLUGIN_HYBRID', label: 'Plug-in Hybrid' },
+    { value: 'LPG', label: 'LPG' },
+    { value: 'CNG', label: 'CNG' },
   ];
 
   const transmissions = [
@@ -144,15 +172,19 @@ export default function AdminAddCarsPage() {
     { value: 'CVT', label: 'CVT' }
   ];
 
-  const bodyTypes = [
-    { value: 'HATCHBACK', label: 'Hatchback' },
-    { value: 'SALOON', label: 'Saloon' },
-    { value: 'ESTATE', label: 'Estate' },
-    { value: 'SUV', label: 'SUV' },
-    { value: 'COUPE', label: 'Coupe' },
-    { value: 'CONVERTIBLE', label: 'Convertible' },
-    { value: 'MPV', label: 'MPV' },
-  ];
+// ✅ COMPLETE BODY TYPES (ALL 10 FROM DATABASE)
+const BODY_TYPES = [
+  { value: 'HATCHBACK', label: 'Hatchback', icon: '🚗', description: 'Compact with rear door' },
+  { value: 'SALOON', label: 'Saloon/Sedan', icon: '🚘', description: 'Traditional 4-door car' },
+  { value: 'ESTATE', label: 'Estate/Wagon', icon: '🚐', description: 'Extended rear cargo area' },
+  { value: 'SUV', label: 'SUV', icon: '🚙', description: 'Sport Utility Vehicle' },
+  { value: 'COUPE', label: 'Coupe', icon: '🏎️', description: 'Sporty 2-door' },
+  { value: 'CONVERTIBLE', label: 'Convertible', icon: '🏎️', description: 'Removable/folding roof' },
+  { value: 'MPV', label: 'MPV', icon: '🚌', description: 'Multi-Purpose Vehicle' },
+  { value: 'VAN', label: 'Van', icon: '🚚', description: 'Commercial vehicle' },
+  { value: 'PICKUP', label: 'Pickup Truck', icon: '🛻', description: 'Open cargo bed' },
+  { value: 'OTHER', label: 'Other', icon: '🚗', description: 'Other vehicle type' }
+];
 
   useEffect(() => {
     fetchDealers();
@@ -232,6 +264,14 @@ export default function AdminAddCarsPage() {
       const formData = {
         dealerId: selectedDealer,
         ...carForm,
+        // Convert string/empty values to proper types for submission
+        year: carForm.year ? parseInt(carForm.year.toString()) : new Date().getFullYear(),
+        price: carForm.price ? parseFloat(carForm.price.toString()) : 0,
+        mileage: carForm.mileage ? parseInt(carForm.mileage.toString()) : null,
+        engineSize: carForm.engineSize ? parseFloat(carForm.engineSize.toString()) : null,
+        doors: carForm.doors ? parseInt(carForm.doors.toString()) : null,
+        seats: carForm.seats ? parseInt(carForm.seats.toString()) : null,
+        previousOwners: carForm.previousOwners ? parseInt(carForm.previousOwners.toString()) : 1,
         images
       };
 
@@ -404,6 +444,15 @@ export default function AdminAddCarsPage() {
     setCarForm(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleFeatureToggle = (feature: string) => {
+    setCarForm(prev => ({
+      ...prev,
+      features: prev.features.includes(feature)
+        ? prev.features.filter(f => f !== feature)
+        : [...prev.features, feature]
+    }));
+  };
+
   const selectedDealerData = dealers.find(d => d.id === selectedDealer);
 
   return (
@@ -574,19 +623,46 @@ export default function AdminAddCarsPage() {
                   />
                 </div>
 
+                {/* Price with Currency Selector */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Price (€) *
+                    Price *
                   </label>
-                  <input
-                    type="number"
-                    value={carForm.price}
-                    onChange={(e) => updateCarForm('price', parseFloat(e.target.value) || '')}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="25000"
-                    min="0"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    {/* Currency Selector */}
+                    <select
+                      value={carForm.currency}
+                      onChange={(e) => updateCarForm('currency', e.target.value)}
+                      className="w-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    >
+                      {Object.entries(SUPPORTED_CURRENCIES).map(([code, currency]) => (
+                        <option key={code} value={code}>
+                          {currency.flag} {currency.symbol}
+                        </option>
+                      ))}
+                    </select>
+                    
+                    {/* Price Input */}
+                    <div className="relative flex-1">
+                      <span className="absolute left-3 top-3 text-gray-400 font-medium">
+                        {getCurrencySymbol(carForm.currency)}
+                      </span>
+                      <input
+                        type="number"
+                        value={carForm.price}
+                        onChange={(e) => updateCarForm('price', parseFloat(e.target.value) || '')}
+                        className="w-full pl-12 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder={carForm.currency === 'EUR' ? 'e.g. 25000' : 'e.g. 21000'}
+                        min="0"
+                        required
+                      />
+                    </div>
+                  </div>
+                  {carForm.price && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Price: {formatPrice(parseFloat(carForm.price.toString()), carForm.currency)}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -650,14 +726,69 @@ export default function AdminAddCarsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Mileage (km)
                   </label>
+                  <div className="relative">
+                    <Gauge className="absolute left-3 top-3 text-gray-400" size={20} />
+                    <input
+                      type="number"
+                      value={carForm.mileage}
+                      onChange={(e) => updateCarForm('mileage', parseInt(e.target.value) || '')}
+                      className="w-full pl-12 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      min="0"
+                      placeholder="e.g. 45000"
+                    />
+                  </div>
+                </div>
+
+                {/* Engine Size */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Engine Size (L)
+                  </label>
                   <input
                     type="number"
-                    value={carForm.mileage}
-                    onChange={(e) => updateCarForm('mileage', parseInt(e.target.value) || '')}
+                    step="0.1"
+                    value={carForm.engineSize}
+                    onChange={(e) => updateCarForm('engineSize', parseFloat(e.target.value) || '')}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    min="0"
-                    placeholder="45000"
+                    placeholder="e.g. 2.0"
                   />
+                </div>
+
+                {/* Doors */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Doors
+                  </label>
+                  <select
+                    value={carForm.doors}
+                    onChange={(e) => updateCarForm('doors', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select Doors</option>
+                    <option value="2">2 Doors</option>
+                    <option value="3">3 Doors</option>
+                    <option value="4">4 Doors</option>
+                    <option value="5">5 Doors</option>
+                  </select>
+                </div>
+
+                {/* Seats */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Seats
+                  </label>
+                  <select
+                    value={carForm.seats}
+                    onChange={(e) => updateCarForm('seats', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Select Seats</option>
+                    <option value="2">2 Seats</option>
+                    <option value="4">4 Seats</option>
+                    <option value="5">5 Seats</option>
+                    <option value="7">7 Seats</option>
+                    <option value="8">8+ Seats</option>
+                  </select>
                 </div>
 
                 <div>
@@ -703,7 +834,7 @@ export default function AdminAddCarsPage() {
               </div>
 
               {/* Technical Details */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Fuel Type
@@ -733,20 +864,191 @@ export default function AdminAddCarsPage() {
                     ))}
                   </select>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Body Type
-                  </label>
-                  <select
-                    value={carForm.bodyType}
-                    onChange={(e) => updateCarForm('bodyType', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              {/* ✅ NEW: Body Type Section with Visual Selection */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <Settings className="mr-2 text-blue-600" size={20} />
+                  Body Type
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Choose the type of vehicle you're adding
+                </p>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {BODY_TYPES.map(bodyType => (
+                    <label key={bodyType.value} className="cursor-pointer">
+                      <input
+                        type="radio"
+                        name="bodyType"
+                        value={bodyType.value}
+                        checked={carForm.bodyType === bodyType.value}
+                        onChange={() => updateCarForm('bodyType', bodyType.value)}
+                        className="sr-only"
+                      />
+                      <div className={`
+                        border-2 rounded-lg p-4 text-center transition-all hover:shadow-md
+                        ${carForm.bodyType === bodyType.value
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-gray-200 hover:border-gray-300'
+                        }
+                      `}>
+                        <div className="text-3xl mb-2">{bodyType.icon}</div>
+                        <div className="text-sm font-medium text-gray-900 mb-1">
+                          {bodyType.label}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {bodyType.description}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* ✅ NEW: Color Selection Section */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <Palette className="mr-2 text-blue-600" size={20} />
+                  Car Color
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Select your car's color or leave blank if unsure
+                </p>
+                
+                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {COLOR_OPTIONS.map(colorOption => (
+                    <label key={colorOption.value} className="cursor-pointer">
+                      <input
+                        type="radio"
+                        name="color"
+                        value={colorOption.value}
+                        checked={carForm.color === colorOption.value}
+                        onChange={() => updateCarForm('color', colorOption.value)}
+                        className="sr-only"
+                      />
+                      <div className={`
+                        border-2 rounded-lg p-3 text-center transition-all hover:shadow-md
+                        ${carForm.color === colorOption.value
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-gray-200 hover:border-gray-300'
+                        }
+                      `}>
+                        <div 
+                          className="w-8 h-8 rounded-full border mx-auto mb-2"
+                          style={{ 
+                            backgroundColor: colorOption.color,
+                            borderColor: colorOption.border
+                          }}
+                        />
+                        <div className="text-xs font-medium text-gray-900">
+                          {colorOption.label}
+                        </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                
+                {/* Clear Color Option */}
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={() => updateCarForm('color', '')}
+                    className={`
+                      px-4 py-2 text-sm rounded-lg border transition-colors
+                      ${!carForm.color
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                      }
+                    `}
                   >
-                    {bodyTypes.map(type => (
-                      <option key={type.value} value={type.value}>{type.label}</option>
-                    ))}
-                  </select>
+                    {!carForm.color ? '✓ No Color Selected' : 'Clear Color Selection'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Additional Details */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Additional Details
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Previous Owners */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Previous Owners
+                    </label>
+                    <select
+                      value={carForm.previousOwners}
+                      onChange={(e) => updateCarForm('previousOwners', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="1">1 Owner</option>
+                      <option value="2">2 Owners</option>
+                      <option value="3">3 Owners</option>
+                      <option value="4">4+ Owners</option>
+                    </select>
+                  </div>
+
+                  {/* NCT Expiry */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      NCT Expiry
+                    </label>
+                    <input
+                      type="date"
+                      value={carForm.nctExpiry}
+                      onChange={(e) => updateCarForm('nctExpiry', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Condition */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Condition
+                    </label>
+                    <select
+                      value={carForm.condition}
+                      onChange={(e) => updateCarForm('condition', e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="NEW">New</option>
+                      <option value="USED">Used</option>
+                      <option value="CERTIFIED_PRE_OWNED">Certified Pre-Owned</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Service History & Accident History */}
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="serviceHistory"
+                      checked={carForm.serviceHistory}
+                      onChange={(e) => updateCarForm('serviceHistory', e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="serviceHistory" className="ml-2 block text-sm text-gray-700">
+                      Full Service History Available
+                    </label>
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="accidentHistory"
+                      checked={carForm.accidentHistory}
+                      onChange={(e) => updateCarForm('accidentHistory', e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="accidentHistory" className="ml-2 block text-sm text-gray-700">
+                      Has Been in an Accident
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -763,6 +1065,10 @@ export default function AdminAddCarsPage() {
                   placeholder="Detailed description of the car's condition, features, and any relevant information..."
                   required
                 />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>Be detailed and honest to attract serious buyers</span>
+                  <span>{carForm.description.length}/2000</span>
+                </div>
               </div>
 
               {/* Image Upload */}

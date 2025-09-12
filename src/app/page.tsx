@@ -51,7 +51,7 @@ export default function HomePage() {
   const router = useRouter()
   const [cars, setCars] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [carCount, setCarCount] = useState(0)
+  const [carCount, setCarCount] = useState<number | null>(null)
   const [searchFilters, setSearchFilters] = useState({
     searchText: '',
     make: '',
@@ -336,7 +336,7 @@ useEffect(() => {
                 className="mt-4 flex w-full items-center justify-center rounded-lg bg-primary px-6 py-3 text-base font-bold text-white hover:bg-primary/90 transition-colors"
               >
                 <Search className="mr-2 h-4 w-4" />
-                SEARCH {carCount.toLocaleString()} CARS
+                SEARCH {carCount?.toLocaleString() || '0'} CARS
               </button>
             </form>
           </div>
@@ -349,7 +349,7 @@ useEffect(() => {
           <div className="grid grid-cols-1 gap-8 text-center text-white md:grid-cols-4">
             <div>
               <Car className="mx-auto mb-4 h-12 w-12" />
-              <div className="mb-2 text-3xl font-bold">{carCount}+</div>
+              <div className="mb-2 text-3xl font-bold">{carCount || 0}+</div>
               <div className="text-lg">Cars Available</div>
             </div>
             <div>
