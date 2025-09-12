@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import FavoriteButton from '@/components/FavoriteButton'
+import PromotionalRibbon from '@/components/PromotionalRibbon'
 import { CAR_MAKES_MODELS, getAllCarMakes, getModelsForMake } from '@/data/car-makes-models'
 import { IRISH_LOCATIONS } from '@/data/irish-locations'
 
@@ -161,6 +162,8 @@ useEffect(() => {
 
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-gray-900 to-gray-700 py-20">
+        {/* Promotional Ribbon */}
+        <PromotionalRibbon />
         <div className="absolute inset-0">
           <Image
             src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=1200&h=500&fit=crop"
