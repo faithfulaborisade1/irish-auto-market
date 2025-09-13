@@ -299,11 +299,22 @@ export default function FindDealerPage() {
       </div>
 
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-green-600 to-orange-500 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative bg-gray-900 text-white py-16 overflow-hidden">
+        {/* Background Image */}
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: 'url(https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80)'
+          }}
+        >
+          <div className="absolute inset-0 bg-black bg-opacity-60"></div>
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-4xl font-bold mb-4">Find Dealerships in Ireland</h1>
-            <p className="text-xl text-green-100 mb-8">Connect with trusted car dealers across Ireland</p>
+            <p className="text-xl text-gray-100 mb-8">Connect with trusted car dealers across Ireland</p>
             
             {/* Search Bar */}
             <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-2">
