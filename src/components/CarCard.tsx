@@ -19,7 +19,18 @@ interface CarCardProps {
 
 // ✅ YOUR ENHANCED CarImageCarousel - WITH MOBILE OPTIMIZATIONS
 const CarImageCarousel = React.memo(({ images, title, featured, price, currency, carId }: {
-  images?: Array<{ id: string; url: string; alt: string }>
+  images?: Array<{
+    id: string;
+    originalUrl?: string;
+    thumbnailUrl?: string;
+    mediumUrl?: string;
+    largeUrl?: string;
+    altText?: string;
+    orderIndex?: number;
+    // Legacy support
+    url?: string;
+    alt?: string;
+  }>
   title: string
   featured?: boolean
   price: number
@@ -27,14 +38,20 @@ const CarImageCarousel = React.memo(({ images, title, featured, price, currency,
   carId: string
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  
+
   // TEMPORARY: Force show arrows for testing (normally should be: images && images.length > 1)
   const hasMultipleImages = images && images.length > 1
   const currentImage = images?.[currentImageIndex]
 
-  // ✅ YOUR PROFESSIONAL getOptimizedImageUrl - PRESERVED
-  const getOptimizedImageUrl = (url?: string) => {
+  // ✅ YOUR PROFESSIONAL getOptimizedImageUrl - ENHANCED FOR NEW API FORMAT
+  const getOptimizedImageUrl = (image?: typeof currentImage) => {
+    if (!image) return '/placeholder-car.jpg'
+
+    // Use the best available image URL, prioritizing medium, then large, then original
+    const url = image.mediumUrl || image.largeUrl || image.originalUrl || image.url
+
     if (!url) return '/placeholder-car.jpg'
+
     return url
       .replace(/\/c_fill,w_\d+,h_\d+,g_auto\//, '/')
       .replace(/\/c_thumb,w_\d+,h_\d+,g_auto\//, '/')
@@ -56,8 +73,8 @@ const CarImageCarousel = React.memo(({ images, title, featured, price, currency,
   return (
     <div className="relative aspect-[4/3] bg-gray-100 rounded-t-xl overflow-hidden group">
       <img
-        src={getOptimizedImageUrl(currentImage?.url)}
-        alt={currentImage?.alt || title}
+        src={getOptimizedImageUrl(currentImage)}
+        alt={currentImage?.altText || currentImage?.alt || title}
         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         loading="lazy"
         onError={(e) => {

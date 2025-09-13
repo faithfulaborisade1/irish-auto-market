@@ -23,7 +23,18 @@ export interface Car {
   isLiked: boolean  // ✅ FIXED: Added required isLiked property
   isFavorited: boolean
   slug?: string
-  images: Array<{ id: string; url: string; alt: string }>
+  images: Array<{
+    id: string;
+    originalUrl?: string;
+    thumbnailUrl?: string;
+    mediumUrl?: string;
+    largeUrl?: string;
+    altText?: string;
+    orderIndex?: number;
+    // Legacy support
+    url?: string;
+    alt?: string;
+  }>
   seller: {
     name: string
     type: string
