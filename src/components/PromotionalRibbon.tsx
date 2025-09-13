@@ -4,7 +4,7 @@ import Image from 'next/image'
 
 export default function PromotionalRibbon() {
   return (
-    <div className="absolute top-20 left-8 z-50 transform rotate-[-25deg] w-[400px] h-16">
+    <div className="absolute top-16 left-2 z-50 transform rotate-[-25deg] w-[280px] h-12 sm:top-20 sm:left-8 sm:w-[400px] sm:h-16">
       {/* Ribbon image background */}
       <div className="relative w-full h-full">
         <Image
@@ -21,8 +21,9 @@ export default function PromotionalRibbon() {
         
         {/* Text content */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-white font-bold text-base text-center drop-shadow-lg px-4">
-            🎉 FREE LISTINGS until January 15th!
+          <div className="text-white font-bold text-xs sm:text-base text-center drop-shadow-lg px-2 sm:px-4">
+            <span className="block sm:inline">🎉 FREE LISTINGS</span>
+            <span className="block sm:inline"> until Jan 15th!</span>
           </div>
         </div>
       </div>

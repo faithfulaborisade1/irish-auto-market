@@ -223,23 +223,42 @@ export default function DealerDetailPage() {
 
       {/* Dealer Header */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-start space-x-6">
-            {dealer.logoUrl ? (
-              <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                <img src={dealer.logoUrl} alt={`${dealer.businessName} logo`} className="w-full h-full object-cover" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+          {/* Mobile Layout - Stack vertically */}
+          <div className="flex flex-col sm:flex-row sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
+            {/* Logo and Title Section */}
+            <div className="flex items-start space-x-4 sm:flex-col sm:space-x-0 sm:space-y-4">
+              {dealer.logoUrl ? (
+                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                  <img src={dealer.logoUrl} alt={`${dealer.businessName} logo`} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-lg bg-gradient-to-br from-green-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold text-lg sm:text-2xl">
+                    {dealer.businessName.split(' ').map(word => word[0]).join('').slice(0, 2)}
+                  </span>
+                </div>
+              )}
+
+              {/* Title and verified badge - mobile */}
+              <div className="flex-1 sm:hidden">
+                <div className="flex flex-col space-y-2">
+                  <h1 className="text-xl font-bold text-gray-900 leading-tight">{dealer.businessName}</h1>
+                  {dealer.verified && (
+                    <div className="flex items-center bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs self-start">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Verified
+                    </div>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-green-500 to-orange-500 flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-2xl">
-                  {dealer.businessName.split(' ').map(word => word[0]).join('').slice(0, 2)}
-                </span>
-              </div>
-            )}
-            
+            </div>
+
+            {/* Main Content */}
             <div className="flex-1">
-              <div className="flex items-center space-x-3 mb-2">
-                <h1 className="text-3xl font-bold text-gray-900">{dealer.businessName}</h1>
+              {/* Title and verified badge - desktop */}
+              <div className="hidden sm:flex sm:items-center sm:space-x-3 sm:mb-2">
+                <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">{dealer.businessName}</h1>
                 {dealer.verified && (
                   <div className="flex items-center bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm">
                     <CheckCircle className="w-4 h-4 mr-1" />
@@ -247,69 +266,74 @@ export default function DealerDetailPage() {
                   </div>
                 )}
               </div>
-              
-              <div className="flex items-center space-x-6 text-sm text-gray-600 mb-3">
+
+              {/* Stats - Mobile: Stack, Desktop: Horizontal */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6 space-y-2 sm:space-y-0 text-xs sm:text-sm text-gray-600 mb-3">
                 <div className="flex items-center">
-                  <Star className="w-4 h-4 fill-current text-yellow-400 mr-1" />
+                  <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current text-yellow-400 mr-1" />
                   <span className="font-medium">{dealer.rating}</span>
                   <span className="ml-1">({dealer.reviewCount} reviews)</span>
                 </div>
                 <div className="flex items-center">
-                  <Car className="w-4 h-4 mr-1" />
+                  <Car className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                   <span>{dealer.carCount} cars in stock</span>
                 </div>
                 <div className="flex items-center">
-                  <Clock className="w-4 h-4 mr-1" />
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                   <span>{getCurrentDayStatus()}</span>
                 </div>
               </div>
-              
-              <p className="text-gray-700 mb-4">{dealer.description}</p>
-              
+
+              <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4 leading-relaxed">{dealer.description}</p>
+
               {dealer.specialties.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex flex-wrap gap-1 sm:gap-2 mb-3 sm:mb-4">
                   {dealer.specialties.map((specialty, index) => (
-                    <span key={index} className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
+                    <span key={index} className="px-2 sm:px-3 py-1 bg-gray-100 text-gray-700 text-xs sm:text-sm rounded-full">
                       {specialty}
                     </span>
                   ))}
                 </div>
               )}
-              
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center text-sm text-gray-600">
-                  <MapPin className="w-4 h-4 mr-1 text-gray-400" />
-                 <span>{formatLocation(dealer.location)}</span>
+
+              {/* Contact Info - Stack on mobile */}
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                  <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-gray-400 flex-shrink-0" />
+                  <span className="truncate">{formatLocation(dealer.location)}</span>
                 </div>
                 {dealer.phoneNumber && (
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Phone className="w-4 h-4 mr-1 text-gray-400" />
+                  <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                    <Phone className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-gray-400 flex-shrink-0" />
                     <span>{dealer.phoneNumber}</span>
                   </div>
                 )}
                 {dealer.websiteUrl && (
-                  <div className="flex items-center text-sm">
-                    <Globe className="w-4 h-4 mr-1 text-gray-400" />
-                    <a href={dealer.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline">
+                  <div className="flex items-center text-xs sm:text-sm">
+                    <Globe className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-gray-400 flex-shrink-0" />
+                    <a href={dealer.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline truncate">
                       Visit Website
                     </a>
                   </div>
                 )}
               </div>
             </div>
-            
-            <div className="flex space-x-3">
+
+            {/* Action Buttons - Mobile: Full width, Desktop: Side */}
+            <div className="flex space-x-2 sm:space-x-3 sm:flex-col sm:w-auto">
               {dealer.phoneNumber && (
                 <a
                   href={`tel:${dealer.phoneNumber}`}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-center text-sm sm:text-base"
                 >
-                  <Phone className="w-4 h-4 mr-2 inline" />
-                  Call Dealer
+                  <Phone className="w-4 h-4 mr-1 sm:mr-2 inline" />
+                  <span className="hidden sm:inline">Call Dealer</span>
+                  <span className="sm:hidden">Call</span>
                 </a>
               )}
-              <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+              <button className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center">
                 <Share2 className="w-4 h-4" />
+                <span className="ml-1 sm:hidden text-sm">Share</span>
               </button>
             </div>
           </div>
@@ -320,20 +344,20 @@ export default function DealerDetailPage() {
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Tabs */}
-          <div className="flex space-x-8 border-b border-gray-200">
+          <div className="flex space-x-4 sm:space-x-8 border-b border-gray-200 overflow-x-auto">
             <button
               onClick={() => setActiveTab('all')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === 'all'
                   ? 'border-green-500 text-green-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              All Cars ({dealer.cars.length})
+              All ({dealer.cars.length})
             </button>
             <button
               onClick={() => setActiveTab('active')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === 'active'
                   ? 'border-green-500 text-green-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -343,7 +367,7 @@ export default function DealerDetailPage() {
             </button>
             <button
               onClick={() => setActiveTab('sold')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === 'sold'
                   ? 'border-green-500 text-green-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -352,24 +376,25 @@ export default function DealerDetailPage() {
               Sold ({soldCars})
             </button>
           </div>
-          
-          {/* Filters */}
-          <div className="py-4 flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+
+          {/* Filters - Mobile: Stack, Desktop: Horizontal */}
+          <div className="py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+            {/* Filter Controls */}
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
               <select
                 value={selectedMake}
                 onChange={(e) => setSelectedMake(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-xs sm:text-sm"
               >
                 {makes.map(make => (
                   <option key={make} value={make}>{make}</option>
                 ))}
               </select>
-              
+
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-xs sm:text-sm"
               >
                 <option value="newest">Newest First</option>
                 <option value="price_asc">Price: Low to High</option>
@@ -379,9 +404,10 @@ export default function DealerDetailPage() {
                 <option value="most_viewed">Most Viewed</option>
               </select>
             </div>
-            
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
+
+            {/* Results Count and View Toggle */}
+            <div className="flex items-center justify-between sm:justify-end sm:space-x-4">
+              <span className="text-xs sm:text-sm text-gray-600">
                 {filteredCars.length} car{filteredCars.length !== 1 ? 's' : ''}
               </span>
               <div className="flex border border-gray-300 rounded-lg overflow-hidden">
@@ -389,13 +415,13 @@ export default function DealerDetailPage() {
                   onClick={() => setViewMode('grid')}
                   className={`p-2 ${viewMode === 'grid' ? 'bg-green-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                 >
-                  <Grid className="w-4 h-4" />
+                  <Grid className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
                   className={`p-2 ${viewMode === 'list' ? 'bg-green-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                 >
-                  <List className="w-4 h-4" />
+                  <List className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
               </div>
             </div>
@@ -422,8 +448,8 @@ export default function DealerDetailPage() {
           </div>
         ) : (
           <div className={`grid gap-6 ${
-            viewMode === 'grid' 
-              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+            viewMode === 'grid'
+              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
               : 'grid-cols-1 max-w-4xl mx-auto'
           }`}>
             {filteredCars.map((car) => (

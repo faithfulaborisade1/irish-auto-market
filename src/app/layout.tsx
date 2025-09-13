@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import ReactQueryProvider from '@/components/providers/ReactQueryProvider'
 import { AnalyticsProvider } from '@/components/providers/AnalyticsProvider'
 import { Analytics } from "@vercel/analytics/next"
+import CookieConsent from '@/components/CookieConsent'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -103,6 +104,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
                 {children}
               </div>
             </div>
+            <CookieConsent />
           </AnalyticsProvider>
         </ReactQueryProvider>
         <Analytics />
