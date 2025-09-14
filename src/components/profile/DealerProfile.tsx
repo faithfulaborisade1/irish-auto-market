@@ -183,10 +183,10 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
           {/* Back to Home */}
-          <div className="mb-6">
-            <a 
+          <div className="mb-4 sm:mb-6">
+            <a
               href="/"
               className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
@@ -194,20 +194,20 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
               <span className="font-medium">Back to Home</span>
             </a>
           </div>
-          
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-6">
+
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4 sm:mb-6 space-y-4 lg:space-y-0">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
               {/* Profile Photo */}
-              <div className="relative">
+              <div className="relative self-center sm:self-auto">
                 {user.avatar ? (
-                  <img 
-                    src={user.avatar} 
+                  <img
+                    src={user.avatar}
                     alt={dealerProfile?.businessName || `${user.firstName} ${user.lastName}`}
-                    className="w-24 h-24 rounded-full object-cover ring-4 ring-purple-100"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-4 ring-purple-100"
                   />
                 ) : (
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center ring-4 ring-purple-100">
-                    <Building2 className="w-12 h-12 text-white" />
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center ring-4 ring-purple-100">
+                    <Building2 className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
                   </div>
                 )}
                 <button
@@ -219,12 +219,12 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
               </div>
 
               {/* Profile Info */}
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-2">
-                  <h1 className="text-3xl font-bold text-gray-900">
+              <div className="flex-1 text-center sm:text-left">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                     {dealerProfile?.businessName || `${user.firstName} ${user.lastName}`}
                   </h1>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                     <span className="px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
                       Dealer
                     </span>
@@ -241,17 +241,17 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
                     )}
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-4 text-sm text-gray-500">
-                  <div className="flex items-center space-x-1">
+
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
+                  <div className="flex items-center justify-center sm:justify-start space-x-1">
                     <Car className="w-4 h-4" />
                     <span>{analytics?.activeCars || 0} active listings</span>
                   </div>
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center justify-center sm:justify-start space-x-1">
                     <Eye className="w-4 h-4" />
                     <span>{analytics?.profileVisits || 0} profile visits</span>
                   </div>
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center justify-center sm:justify-start space-x-1">
                     <DollarSign className="w-4 h-4" />
                     <span>€{analytics?.monthlyRevenue?.toLocaleString() || '0'} this month</span>
                   </div>
@@ -259,26 +259,27 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
-              <a 
+            <div className="flex items-center justify-center lg:justify-end space-x-3">
+              <a
                 href="/place-ad"
-                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                className="bg-purple-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Car</span>
               </a>
-              <a 
+              <a
                 href="/profile/edit"
-                className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
+                className="bg-gray-100 text-gray-700 px-4 sm:px-6 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
               >
                 <Settings className="w-4 h-4" />
-                <span>Settings</span>
+                <span className="hidden sm:inline">Settings</span>
+                <Settings className="w-4 h-4 sm:hidden" />
               </a>
             </div>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex space-x-8 border-b border-gray-200">
+          <div className="flex space-x-2 sm:space-x-8 border-b border-gray-200 overflow-x-auto">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
               { id: 'inventory', label: 'Inventory', icon: Car, count: cars.length },
@@ -288,14 +289,14 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
               <button
                 key={id}
                 onClick={() => setActiveTab(id as any)}
-                className={`flex items-center space-x-2 pb-4 border-b-2 transition-colors ${
-                  activeTab === id 
-                    ? 'border-purple-600 text-purple-600' 
+                className={`flex items-center space-x-2 pb-4 border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === id
+                    ? 'border-purple-600 text-purple-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
                 <Icon className="w-4 h-4" />
-                <span className="font-medium">{label}</span>
+                <span className="font-medium text-sm sm:text-base">{label}</span>
                 {count !== undefined && (
                   <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
                     {count}
@@ -308,53 +309,53 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <h3 className="text-sm font-medium text-gray-600">Monthly Revenue</h3>
                   <DollarSign className="w-5 h-5 text-green-600" />
                 </div>
-                <p className="text-3xl font-bold text-gray-900">€{analytics?.monthlyRevenue?.toLocaleString() || '0'}</p>
-                <p className="text-sm text-gray-500">+12% from last month</p>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-medium text-gray-600">Active Listings</h3>
-                  <Car className="w-5 h-5 text-blue-600" />
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{analytics?.activeCars || 0}</p>
-                <p className="text-sm text-gray-500">of {analytics?.totalCars || 0} total</p>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-medium text-gray-600">New Leads</h3>
-                  <Users className="w-5 h-5 text-purple-600" />
-                </div>
-                <p className="text-3xl font-bold text-gray-900">{analytics?.totalLeads || 0}</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">€{analytics?.monthlyRevenue?.toLocaleString() || '0'}</p>
                 <p className="text-sm text-gray-500">this month</p>
               </div>
 
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
+              <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <h3 className="text-sm font-medium text-gray-600">Active Listings</h3>
+                  <Car className="w-5 h-5 text-blue-600" />
+                </div>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{analytics?.activeCars || 0}</p>
+                <p className="text-sm text-gray-500">of {analytics?.totalCars || 0} total</p>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <h3 className="text-sm font-medium text-gray-600">New Leads</h3>
+                  <Users className="w-5 h-5 text-purple-600" />
+                </div>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{analytics?.totalLeads || 0}</p>
+                <p className="text-sm text-gray-500">this month</p>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <h3 className="text-sm font-medium text-gray-600">Conversion Rate</h3>
                   <Target className="w-5 h-5 text-orange-600" />
                 </div>
-                <p className="text-3xl font-bold text-gray-900">{analytics?.conversionRate?.toFixed(1) || '0'}%</p>
+                <p className="text-2xl sm:text-3xl font-bold text-gray-900">{analytics?.conversionRate?.toFixed(1) || '0'}%</p>
                 <p className="text-sm text-gray-500">leads to sales</p>
               </div>
             </div>
 
             {/* Recent Activity & Quick Actions */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Performance Summary */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">Performance Summary</h3>
+              <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Performance Summary</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
@@ -391,8 +392,8 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
               </div>
 
               {/* Recent Activity */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">Recent Activity</h3>
+              <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Recent Activity</h3>
                 <div className="space-y-3 text-gray-600">
                   <p className="text-sm">No recent activity to display.</p>
                   <p className="text-sm">Start listing cars to see your activity here!</p>
@@ -404,11 +405,11 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
 
         {activeTab === 'inventory' && (
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Inventory Management</h2>
-              <a 
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Inventory Management</h2>
+              <a
                 href="/place-ad"
-                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Car</span>
@@ -416,78 +417,140 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
             </div>
 
             {cars.length > 0 ? (
-              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Car</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {cars.map((car) => (
-                        <tr key={car.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="w-16 h-12 bg-gray-200 rounded-lg overflow-hidden">
-                                {car.images.length > 0 ? (
-                                  <img 
-                                    src={car.images[0].thumbnailUrl} 
-                                    alt={car.title}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <Car className="w-6 h-6 text-gray-400" />
-                                  </div>
-                                )}
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block bg-white rounded-lg shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Car</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {cars.map((car) => (
+                          <tr key={car.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="w-16 h-12 bg-gray-200 rounded-lg overflow-hidden">
+                                  {car.images.length > 0 ? (
+                                    <img
+                                      src={car.images[0].thumbnailUrl}
+                                      alt={car.title}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <Car className="w-6 h-6 text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="ml-4">
+                                  <div className="text-sm font-medium text-gray-900">{car.year} {car.make} {car.model}</div>
+                                  <div className="text-sm text-gray-500">Listed {new Date(car.createdAt).toLocaleDateString()}</div>
+                                </div>
                               </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">{car.year} {car.make} {car.model}</div>
-                                <div className="text-sm text-gray-500">Listed {new Date(car.createdAt).toLocaleDateString()}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">€{car.price.toLocaleString()}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(car.status)}`}>
+                                {car.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <div className="flex items-center space-x-4">
+                                <div className="flex items-center">
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  {car.viewsCount}
+                                </div>
+                                <div className="flex items-center">
+                                  <MessageCircle className="w-4 h-4 mr-1" />
+                                  {car.inquiriesCount}
+                                </div>
                               </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex items-center space-x-2">
+                                <a href={`/cars/${car.id}/edit`} className="text-purple-600 hover:text-purple-900">
+                                  Edit
+                                </a>
+                                <a href={`/cars/${car.id}`} className="text-blue-600 hover:text-blue-900">
+                                  View
+                                </a>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-4">
+                  {cars.map((car) => (
+                    <div key={car.id} className="bg-white rounded-lg shadow-sm p-4">
+                      <div className="flex items-start space-x-4 mb-3">
+                        <div className="w-20 h-16 bg-gray-200 rounded-lg overflow-hidden flex-shrink-0">
+                          {car.images.length > 0 ? (
+                            <img
+                              src={car.images[0].thumbnailUrl}
+                              alt={car.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Car className="w-8 h-8 text-gray-400" />
                             </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">€{car.price.toLocaleString()}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-medium text-gray-900 truncate">
+                            {car.year} {car.make} {car.model}
+                          </h3>
+                          <p className="text-lg font-bold text-gray-900 mt-1">€{car.price.toLocaleString()}</p>
+                          <div className="flex items-center mt-2">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(car.status)}`}>
                               {car.status}
                             </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div className="flex items-center space-x-4">
-                              <div className="flex items-center">
-                                <Eye className="w-4 h-4 mr-1" />
-                                {car.viewsCount}
-                              </div>
-                              <div className="flex items-center">
-                                <MessageCircle className="w-4 h-4 mr-1" />
-                                {car.inquiriesCount}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex items-center space-x-2">
-                              <a href={`/cars/${car.id}/edit`} className="text-purple-600 hover:text-purple-900">
-                                Edit
-                              </a>
-                              <a href={`/cars/${car.id}`} className="text-blue-600 hover:text-blue-900">
-                                View
-                              </a>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <div className="flex items-center">
+                            <Eye className="w-4 h-4 mr-1" />
+                            {car.viewsCount}
+                          </div>
+                          <div className="flex items-center">
+                            <MessageCircle className="w-4 h-4 mr-1" />
+                            {car.inquiriesCount}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <a href={`/cars/${car.id}/edit`} className="text-purple-600 hover:text-purple-900 text-sm font-medium">
+                            Edit
+                          </a>
+                          <a href={`/cars/${car.id}`} className="text-blue-600 hover:text-blue-900 text-sm font-medium">
+                            View
+                          </a>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <p className="text-xs text-gray-500">Listed {new Date(car.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              </>
             ) : (
               <div className="text-center py-12">
                 <Car className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -507,18 +570,18 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
 
         {/* Other tabs would go here - Analytics, Leads, Settings */}
         {activeTab === 'analytics' && (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Advanced Analytics</h3>
-            <p className="text-gray-600">Detailed business analytics coming soon!</p>
+          <div className="bg-white rounded-lg shadow-sm p-6 sm:p-8 text-center">
+            <BarChart3 className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Advanced Analytics</h3>
+            <p className="text-sm sm:text-base text-gray-600">Detailed business analytics coming soon!</p>
           </div>
         )}
 
         {activeTab === 'leads' && (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Lead Management</h3>
-            <p className="text-gray-600">Comprehensive lead tracking coming soon!</p>
+          <div className="bg-white rounded-lg shadow-sm p-6 sm:p-8 text-center">
+            <Users className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Lead Management</h3>
+            <p className="text-sm sm:text-base text-gray-600">Comprehensive lead tracking coming soon!</p>
           </div>
         )}
       </div>
@@ -526,8 +589,8 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
       {/* Image Upload Modal */}
       {showImageUpload && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="p-6">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Update Profile Picture</h3>
                 <button
@@ -537,11 +600,11 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              
+
               <ImageUpload
                 onImagesChange={handleAvatarUpload}
                 maxImages={1}
-                className="border-2 border-dashed border-gray-300 rounded-lg p-8"
+                className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8"
               />
             </div>
           </div>
