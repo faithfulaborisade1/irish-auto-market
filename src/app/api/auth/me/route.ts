@@ -33,31 +33,13 @@ export async function GET(request: NextRequest) {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (jwtError: any) {
       console.error('JWT verification failed:', jwtError.message);
-      
-      // Clear invalid cookies
-      const response = NextResponse.json(
+
+      // Don't clear cookies automatically - just return 401
+      // Let the client decide whether to logout
+      return NextResponse.json(
         { success: false, message: 'Invalid or expired token' },
         { status: 401 }
       );
-      
-      // Clear both possible auth cookies
-      response.cookies.set('auth-token', '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        expires: new Date(0)
-      });
-      
-      response.cookies.set('admin-token', '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        expires: new Date(0)
-      });
-      
-      return response;
     }
 
     // Validate decoded token structure

@@ -106,6 +106,25 @@ interface CarFilters {
   priceMax: string;
 }
 
+interface EditFormData {
+  title: string;
+  make: string;
+  model: string;
+  year: number | string;
+  price: number | string;
+  mileage: number | string;
+  fuelType: string;
+  transmission: string;
+  engineSize: number | string;
+  bodyType: string;
+  doors: number | string;
+  seats: number | string;
+  color: string;
+  condition: string;
+  description: string;
+  status: string;
+}
+
 export default function AdminCarsManagement() {
   const [cars, setCars] = useState<AdminCar[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,6 +132,8 @@ export default function AdminCarsManagement() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selectedCar, setSelectedCar] = useState<AdminCar | null>(null);
   const [showCarDetailsModal, setShowCarDetailsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState<EditFormData | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   
   // Pagination
@@ -259,10 +280,14 @@ export default function AdminCarsManagement() {
         case 'moderate':
           endpoint = `/api/admin/cars/${carId}/moderate`;
           method = 'POST';
-          body = { 
+          body = {
             moderationStatus: data.moderationStatus,
-            rejectionReason: data.rejectionReason 
+            rejectionReason: data.rejectionReason
           };
+          break;
+        case 'edit_car':
+          endpoint = `/api/admin/cars/${carId}`;
+          body = data;
           break;
         case 'delete_car':
           endpoint = `/api/admin/cars/${carId}`;
@@ -288,6 +313,10 @@ export default function AdminCarsManagement() {
           alert('Car deleted successfully');
         } else if (action === 'moderate') {
           alert(`Car ${data.moderationStatus.toLowerCase()} successfully`);
+        } else if (action === 'edit_car') {
+          alert('Car updated successfully');
+          setShowEditModal(false);
+          setEditFormData(null);
         }
       } else {
         const errorData = await response.json();
@@ -298,6 +327,50 @@ export default function AdminCarsManagement() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const openEditModal = (car: AdminCar) => {
+    setEditFormData({
+      title: car.title,
+      make: car.make,
+      model: car.model,
+      year: car.year.toString(),
+      price: car.price.toString(),
+      mileage: car.mileage?.toString() || '',
+      fuelType: car.fuelType || '',
+      transmission: car.transmission || '',
+      engineSize: car.engineSize?.toString() || '',
+      bodyType: car.bodyType || '',
+      doors: car.doors?.toString() || '',
+      seats: car.seats?.toString() || '',
+      color: car.color || '',
+      condition: car.condition,
+      description: car.description || '',
+      status: car.status
+    });
+    setSelectedCar(car);
+    setShowEditModal(true);
+  };
+
+  const updateFormField = (field: keyof EditFormData, value: string) => {
+    setEditFormData(prev => prev ? ({ ...prev, [field]: value }) : null);
+  };
+
+  const handleEditSubmit = () => {
+    if (!selectedCar || !editFormData) return;
+
+    // Convert numeric fields
+    const updateData = {
+      ...editFormData,
+      year: parseInt(editFormData.year.toString()),
+      price: parseFloat(editFormData.price.toString()),
+      mileage: editFormData.mileage ? parseInt(editFormData.mileage.toString()) : null,
+      engineSize: editFormData.engineSize ? parseFloat(editFormData.engineSize.toString()) : null,
+      doors: editFormData.doors ? parseInt(editFormData.doors.toString()) : null,
+      seats: editFormData.seats ? parseInt(editFormData.seats.toString()) : null,
+    };
+
+    handleCarAction(selectedCar.id, 'edit_car', updateData);
   };
 
   const fetchCarDetails = async (carId: string) => {
@@ -826,6 +899,15 @@ export default function AdminCarsManagement() {
                             <Eye className="w-4 h-4" />
                           </button>
 
+                          {/* Edit Car */}
+                          <button
+                            onClick={() => openEditModal(car)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                            title="Edit Car"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+
                           {/* View Public Page */}
                           <a
                             href={`/cars/${car.id}`}
@@ -1079,6 +1161,332 @@ export default function AdminCarsManagement() {
           </div>
         )}
       </div>
+
+      {/* Edit Car Modal */}
+      {showEditModal && editFormData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Edit Car: {editFormData.year} {editFormData.make} {editFormData.model}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditFormData(null);
+                    setSelectedCar(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <form onSubmit={(e) => { e.preventDefault(); handleEditSubmit(); }} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Title */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.title}
+                      onChange={(e) => updateFormField('title', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  {/* Make */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Make
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.make}
+                      onChange={(e) => updateFormField('make', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  {/* Model */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Model
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.model}
+                      onChange={(e) => updateFormField('model', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  {/* Year */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Year
+                    </label>
+                    <input
+                      type="number"
+                      min="1900"
+                      max="2030"
+                      value={editFormData.year}
+                      onChange={(e) => updateFormField('year', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  {/* Price */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price (€)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="100"
+                      value={editFormData.price}
+                      onChange={(e) => updateFormField('price', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+
+                  {/* Mileage */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Mileage (km)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editFormData.mileage}
+                      onChange={(e) => updateFormField('mileage', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Fuel Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fuel Type
+                    </label>
+                    <select
+                      value={editFormData.fuelType}
+                      onChange={(e) => updateFormField('fuelType', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Fuel Type</option>
+                      <option value="PETROL">Petrol</option>
+                      <option value="DIESEL">Diesel</option>
+                      <option value="ELECTRIC">Electric</option>
+                      <option value="HYBRID">Hybrid</option>
+                      <option value="PLUGIN_HYBRID">Plug-in Hybrid</option>
+                    </select>
+                  </div>
+
+                  {/* Transmission */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Transmission
+                    </label>
+                    <select
+                      value={editFormData.transmission}
+                      onChange={(e) => updateFormField('transmission', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Transmission</option>
+                      <option value="MANUAL">Manual</option>
+                      <option value="AUTOMATIC">Automatic</option>
+                      <option value="SEMI_AUTOMATIC">Semi-Automatic</option>
+                    </select>
+                  </div>
+
+                  {/* Engine Size */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Engine Size (L)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={editFormData.engineSize}
+                      onChange={(e) => updateFormField('engineSize', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Body Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Body Type
+                    </label>
+                    <select
+                      value={editFormData.bodyType}
+                      onChange={(e) => updateFormField('bodyType', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Body Type</option>
+                      <option value="HATCHBACK">Hatchback</option>
+                      <option value="SALOON">Saloon</option>
+                      <option value="ESTATE">Estate</option>
+                      <option value="SUV">SUV</option>
+                      <option value="COUPE">Coupe</option>
+                      <option value="CONVERTIBLE">Convertible</option>
+                      <option value="VAN">Van</option>
+                      <option value="PICKUP">Pickup</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                  </div>
+
+                  {/* Doors */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Doors
+                    </label>
+                    <select
+                      value={editFormData.doors}
+                      onChange={(e) => updateFormField('doors', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Doors</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                    </select>
+                  </div>
+
+                  {/* Seats */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Seats
+                    </label>
+                    <select
+                      value={editFormData.seats}
+                      onChange={(e) => updateFormField('seats', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Seats</option>
+                      <option value="2">2</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                      <option value="7">7</option>
+                      <option value="8">8</option>
+                      <option value="9">9</option>
+                    </select>
+                  </div>
+
+                  {/* Color */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Color
+                    </label>
+                    <input
+                      type="text"
+                      value={editFormData.color}
+                      onChange={(e) => updateFormField('color', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Condition */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Condition
+                    </label>
+                    <select
+                      value={editFormData.condition}
+                      onChange={(e) => updateFormField('condition', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="NEW">New</option>
+                      <option value="USED">Used</option>
+                      <option value="CERTIFIED_PRE_OWNED">Certified Pre-Owned</option>
+                    </select>
+                  </div>
+
+                  {/* Status */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={editFormData.status}
+                      onChange={(e) => updateFormField('status', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="ACTIVE">Active</option>
+                      <option value="SOLD">Sold</option>
+                      <option value="PENDING">Pending</option>
+                      <option value="EXPIRED">Expired</option>
+                      <option value="DRAFT">Draft</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={editFormData.description}
+                    onChange={(e) => updateFormField('description', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter car description..."
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setEditFormData(null);
+                      setSelectedCar(null);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={actionLoading === `edit_car-${selectedCar?.id}`}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                  >
+                    {actionLoading === `edit_car-${selectedCar?.id}` ? (
+                      <>
+                        <div className="w-4 h-4 animate-spin border-2 border-white border-t-transparent rounded-full"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="w-4 h-4" />
+                        Update Car
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Car Details Modal */}
       {showCarDetailsModal && selectedCar && (

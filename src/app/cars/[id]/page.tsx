@@ -328,6 +328,9 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
       const data = await response.json()
       if (data.success) {
         setUser(data.user)
+      } else {
+        // Don't clear user state on auth failure - just log it
+        console.log('Auth check failed:', data.message)
       }
     } catch (error) {
       console.log('User not logged in')
@@ -408,17 +411,35 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
     }
   }
 
-  const openMessageModal = () => {
+  const openMessageModal = async () => {
     if (!user) {
+      // Double-check auth before redirecting to login
+      try {
+        const response = await fetch('/api/auth/me')
+        const data = await response.json()
+        if (data.success) {
+          setUser(data.user)
+          // User is actually logged in, proceed with modal
+          if (data.user.id === car.userId) {
+            alert("You can't message yourself about your own car!")
+            return
+          }
+          setShowMessageModal(true)
+          setMessageText(`Hi, I'm interested in your ${car.make} ${car.model} ${car.year}. Is it still available?`)
+          return
+        }
+      } catch (error) {
+        console.log('Auth recheck failed')
+      }
       router.push('/login')
       return
     }
-    
+
     if (user.id === car.userId) {
       alert("You can't message yourself about your own car!")
       return
     }
-    
+
     setShowMessageModal(true)
     setMessageText(`Hi, I'm interested in your ${car.make} ${car.model} ${car.year}. Is it still available?`)
   }
