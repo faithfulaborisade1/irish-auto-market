@@ -70,6 +70,7 @@ interface AdminCar {
   color?: string;
   condition: string;
   description?: string;
+  nctExpiry?: string;
   location?: any;
   slug: string;
   status: 'ACTIVE' | 'SOLD' | 'PENDING' | 'EXPIRED' | 'DRAFT';
@@ -123,7 +124,24 @@ interface EditFormData {
   condition: string;
   description: string;
   status: string;
+  nctExpiry: string;
 }
+
+// Color options used in the system
+const COLOR_OPTIONS = [
+  { value: 'white', label: 'White' },
+  { value: 'black', label: 'Black' },
+  { value: 'silver', label: 'Silver' },
+  { value: 'grey', label: 'Grey' },
+  { value: 'blue', label: 'Blue' },
+  { value: 'red', label: 'Red' },
+  { value: 'green', label: 'Green' },
+  { value: 'yellow', label: 'Yellow' },
+  { value: 'orange', label: 'Orange' },
+  { value: 'brown', label: 'Brown' },
+  { value: 'purple', label: 'Purple' },
+  { value: 'gold', label: 'Gold' }
+];
 
 export default function AdminCarsManagement() {
   const [cars, setCars] = useState<AdminCar[]>([]);
@@ -346,7 +364,8 @@ export default function AdminCarsManagement() {
       color: car.color || '',
       condition: car.condition,
       description: car.description || '',
-      status: car.status
+      status: car.status,
+      nctExpiry: car.nctExpiry ? new Date(car.nctExpiry).toISOString().split('T')[0] : ''
     });
     setSelectedCar(car);
     setShowEditModal(true);
@@ -1392,12 +1411,18 @@ export default function AdminCarsManagement() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Color
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={editFormData.color}
                       onChange={(e) => updateFormField('color', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    >
+                      <option value="">Select Color</option>
+                      {COLOR_OPTIONS.map(color => (
+                        <option key={color.value} value={color.value}>
+                          {color.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Condition */}
@@ -1434,6 +1459,19 @@ export default function AdminCarsManagement() {
                       <option value="EXPIRED">Expired</option>
                       <option value="DRAFT">Draft</option>
                     </select>
+                  </div>
+
+                  {/* NCT Expiry */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      NCT Expiry
+                    </label>
+                    <input
+                      type="date"
+                      value={editFormData.nctExpiry}
+                      onChange={(e) => updateFormField('nctExpiry', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
                   </div>
                 </div>
 
