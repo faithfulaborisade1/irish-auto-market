@@ -126,3 +126,4 @@ prisma/replace-cars.ts
 prisma/seed.ts
 
 scripts/
+*.tsbuildinfo
