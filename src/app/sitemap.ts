@@ -120,8 +120,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const counties = await prisma.car.findMany({
       where: {
         status: 'ACTIVE',
-        NOT: {
-          location: null
+        location: {
+          not: null
         }
       },
       select: {
