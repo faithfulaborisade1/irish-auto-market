@@ -1,36 +1,42 @@
 'use client'
 
-import Image from 'next/image'
-
 export default function PromotionalRibbon() {
   return (
-    <div className="absolute top-16 left-2 z-50 transform rotate-[-25deg] w-[280px] h-12 sm:top-20 sm:left-8 sm:w-[400px] sm:h-16">
-      {/* Ribbon image background */}
-      <div className="relative w-full h-full">
-        <Image
-          src="https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400&h=80&fit=crop"
-          alt="Decorative ribbon banner"
-          fill
-          className="object-cover shadow-2xl"
-          style={{ clipPath: 'polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%)' }}
-        />
-        
-        {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-red-600/80 via-red-500/70 to-red-600/80" 
-             style={{ clipPath: 'polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%)' }}></div>
-        
-        {/* Text content */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-white font-bold text-xs sm:text-base text-center drop-shadow-lg px-2 sm:px-4">
-            <span className="block sm:inline">🎉 FREE LISTINGS</span>
-            <span className="block sm:inline"> until Jan 15th!</span>
+    <>
+      {/* Mobile Version - Top Banner */}
+      <div className="block md:hidden absolute top-16 left-4 right-4 z-40 bg-gradient-to-r from-emerald-500 to-green-600 text-white py-3 px-4 rounded-lg shadow-xl">
+        <div className="flex items-center justify-center gap-2 text-sm font-bold">
+          <span className="text-yellow-300">🎉</span>
+          <span>FREE LISTINGS until Jan 15th!</span>
+          <span className="text-yellow-300">🎉</span>
+        </div>
+      </div>
+
+      {/* Desktop Version - Clean Badge */}
+      <div className="hidden md:block absolute top-2 left-4 z-40">
+        <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-4 py-2 rounded-lg shadow-lg border border-white/20 backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <div className="bg-yellow-400 text-emerald-800 px-1.5 py-0.5 rounded-full text-xs font-bold">
+              LIMITED TIME
+            </div>
+            <div className="text-sm font-bold">
+              🎉 FREE LISTINGS until Jan 15th!
+            </div>
+          </div>
+          <div className="text-emerald-100 text-xs mt-0.5 text-center">
+            No fees • No hidden costs • Start selling today
           </div>
         </div>
       </div>
-      
-      {/* Drop shadow */}
-      <div className="absolute top-1 left-1 w-full h-full bg-black/20 -z-10 blur-sm transform rotate-1"
-           style={{ clipPath: 'polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%)' }}></div>
-    </div>
+
+      {/* Tablet Version - Compact Badge */}
+      <div className="hidden sm:block md:hidden absolute top-16 right-4 z-40">
+        <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
+          <div className="text-sm font-bold text-center">
+            🎉 FREE until Jan 15th!
+          </div>
+        </div>
+      </div>
+    </>
   )
 }

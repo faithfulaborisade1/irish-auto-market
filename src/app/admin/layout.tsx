@@ -37,6 +37,16 @@ interface SupportStats {
   totalPending: number;
 }
 
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: any;
+  active: boolean;
+  badge?: number | null;
+  badgeColor?: string;
+  subItems?: { name: string; href: string }[];
+}
+
 export default function AdminLayout({
   children,
 }: {
@@ -46,6 +56,7 @@ export default function AdminLayout({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showContentMenu, setShowContentMenu] = useState(false);
   const [supportStats, setSupportStats] = useState<SupportStats>({ 
     pendingContacts: 0, 
     criticalReports: 0, 
@@ -186,59 +197,68 @@ export default function AdminLayout({
     }
   };
 
-  // Navigation items with icons (UPDATED WITH SUPPORT)
-  const navigationItems = [
-   {
-    name: 'Dashboard',
-    href: '/admin',
-    icon: LayoutDashboard,
-    active: pathname === '/admin'
-  },
-  {
-    name: 'Support',
-    href: '/admin/support',
-    icon: MessageCircle,
-    active: pathname.startsWith('/admin/support'),
-    badge: supportStats.totalPending > 0 ? supportStats.totalPending : null,
-    badgeColor: supportStats.criticalReports > 0 ? 'bg-red-500' : 'bg-orange-500'
-  },
-  // 🆕 NEW: Dealer Invitations (SUPER_ADMIN only)
-  ...(user?.role === 'SUPER_ADMIN' ? [{
-    name: 'Dealer Invitations',
-    href: '/admin/invitations',
-    icon: Mail,
-    active: pathname.startsWith('/admin/invitations'),
-    badge: null, // TODO: Add pending invitations count
-    badgeColor: 'bg-blue-500'
-  }] : []),
-  // 🆕 NEW: Email Messaging (SUPER_ADMIN only)
-  ...(user?.role === 'SUPER_ADMIN' ? [{
-    name: 'Messaging',
-    href: '/admin/messaging',
-    icon: MessageCircle,
-    active: pathname.startsWith('/admin/messaging'),
-    badge: null,
-    badgeColor: 'bg-purple-500'
-  }] : []),
-  {
-    name: 'Users',
-    href: '/admin/users',
-    icon: Users,
-    active: pathname.startsWith('/admin/users')
-  },
-  {
-    name: 'Cars',
-    href: '/admin/cars',
-    icon: Car,
-    active: pathname.startsWith('/admin/cars')
-  },
-  {
-    name: 'Analytics',
-    href: '/admin/analytics',
-    icon: BarChart3,
-    active: pathname.startsWith('/admin/analytics')
-  }
-];
+  // Core navigation items - streamlined for better layout
+  const coreNavigationItems: NavigationItem[] = [
+    {
+      name: 'Dashboard',
+      href: '/admin',
+      icon: LayoutDashboard,
+      active: pathname === '/admin'
+    },
+    {
+      name: 'Content',
+      href: '/admin/cars',
+      icon: Car,
+      active: pathname.startsWith('/admin/cars') || pathname.startsWith('/admin/reviews'),
+      subItems: [
+        { name: 'Cars', href: '/admin/cars' },
+        { name: 'Reviews', href: '/admin/reviews' }
+      ]
+    },
+    {
+      name: 'Users',
+      href: '/admin/users',
+      icon: Users,
+      active: pathname.startsWith('/admin/users')
+    },
+    {
+      name: 'Support',
+      href: '/admin/support',
+      icon: MessageCircle,
+      active: pathname.startsWith('/admin/support'),
+      badge: supportStats.totalPending > 0 ? supportStats.totalPending : null,
+      badgeColor: supportStats.criticalReports > 0 ? 'bg-red-500' : 'bg-orange-500'
+    },
+    {
+      name: 'Analytics',
+      href: '/admin/analytics',
+      icon: BarChart3,
+      active: pathname.startsWith('/admin/analytics')
+    }
+  ];
+
+  // Admin-only items for Super Admin
+  const adminOnlyItems: NavigationItem[] = user?.role === 'SUPER_ADMIN' ? [
+    {
+      name: 'Invitations',
+      href: '/admin/invitations',
+      icon: Mail,
+      active: pathname.startsWith('/admin/invitations'),
+      badge: null,
+      badgeColor: 'bg-blue-500'
+    },
+    {
+      name: 'Messaging',
+      href: '/admin/messaging',
+      icon: MessageCircle,
+      active: pathname.startsWith('/admin/messaging'),
+      badge: null,
+      badgeColor: 'bg-purple-500'
+    }
+  ] : [];
+
+  // Combine navigation items
+  const navigationItems: NavigationItem[] = [...coreNavigationItems, ...adminOnlyItems];
 
   // Only show Settings to SUPER_ADMIN
   if (user?.role === 'SUPER_ADMIN') {
@@ -300,7 +320,7 @@ export default function AdminLayout({
     <div className="min-h-screen bg-gray-50">
       {/* Enhanced Admin Header */}
       <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo & Title */}
             <div className="flex items-center">
@@ -312,21 +332,61 @@ export default function AdminLayout({
             </div>
 
             {/* Navigation */}
-            <nav className="hidden md:flex space-x-1">
+            <nav className="hidden lg:flex space-x-0.5">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
+
+                // Special handling for Content menu with dropdown
+                if (item.name === 'Content' && item.subItems) {
+                  return (
+                    <div key={item.name} className="relative">
+                      <button
+                        onClick={() => setShowContentMenu(!showContentMenu)}
+                        className={`flex items-center gap-1.5 px-2.5 py-2 text-sm font-medium rounded-md transition-colors relative ${
+                          item.active
+                            ? 'bg-green-100 text-green-700 border border-green-200'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span className="whitespace-nowrap">{item.name}</span>
+                        <ChevronDown className="w-3 h-3" />
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      {showContentMenu && (
+                        <div className="absolute top-full left-0 mt-1 w-40 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                          <div className="py-1">
+                            {item.subItems.map((subItem) => (
+                              <a
+                                key={subItem.name}
+                                href={subItem.href}
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                                onClick={() => setShowContentMenu(false)}
+                              >
+                                {subItem.name}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Regular navigation items
                 return (
-                  <a 
+                  <a
                     key={item.name}
-                    href={item.href} 
-                    className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors relative ${
+                    href={item.href}
+                    className={`flex items-center gap-1.5 px-2.5 py-2 text-sm font-medium rounded-md transition-colors relative ${
                       item.active
-                        ? 'bg-green-100 text-green-700 border border-green-200' 
+                        ? 'bg-green-100 text-green-700 border border-green-200'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
-                    {item.name}
+                    <span className="whitespace-nowrap">{item.name}</span>
                     {/* Support Badge */}
                     {item.badge && (
                       <span className={`absolute -top-1 -right-1 h-5 w-5 ${item.badgeColor} text-white text-xs rounded-full flex items-center justify-center font-medium`}>
@@ -336,6 +396,54 @@ export default function AdminLayout({
                   </a>
                 );
               })}
+            </nav>
+
+            {/* Compact Navigation for medium screens */}
+            <nav className="hidden md:flex lg:hidden">
+              <div className="flex items-center space-x-1">
+                {/* Show core navigation items with icons only */}
+                {coreNavigationItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <a
+                      key={item.name}
+                      href={item.href}
+                      title={item.name}
+                      className={`flex items-center justify-center w-10 h-10 rounded-md transition-colors relative ${
+                        item.active
+                          ? 'bg-green-100 text-green-700 border border-green-200'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+                      {item.badge && (
+                        <span className={`absolute -top-1 -right-1 h-4 w-4 ${item.badgeColor} text-white text-xs rounded-full flex items-center justify-center font-medium`}>
+                          {item.badge > 9 ? '9+' : item.badge}
+                        </span>
+                      )}
+                    </a>
+                  );
+                })}
+
+                {/* Admin-only items for super admin */}
+                {user?.role === 'SUPER_ADMIN' && adminOnlyItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <a
+                      key={item.name}
+                      href={item.href}
+                      title={item.name}
+                      className={`flex items-center justify-center w-10 h-10 rounded-md transition-colors relative ${
+                        item.active
+                          ? 'bg-green-100 text-green-700 border border-green-200'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+                    </a>
+                  );
+                })}
+              </div>
             </nav>
 
             {/* User Menu */}
@@ -542,11 +650,17 @@ export default function AdminLayout({
         </div>
       )}
 
-      {/* Click outside to close user menu */}
+      {/* Click outside to close menus */}
       {showUserMenu && (
-        <div 
-          className="fixed inset-0 z-40" 
+        <div
+          className="fixed inset-0 z-40"
           onClick={() => setShowUserMenu(false)}
+        ></div>
+      )}
+      {showContentMenu && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowContentMenu(false)}
         ></div>
       )}
     </div>

@@ -13,17 +13,8 @@ const RegisterSchema = z.object({
   phone: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   confirmPassword: z.string(),
-  // ✅ FIXED: Match your frontend's actual userType values
-  userType: z.enum(['buyer', 'private_seller', 'dealer']).transform((val) => {
-    // Convert frontend userType to database-compatible format
-    if (val === 'buyer' || val === 'private_seller') {
-      return 'user'  // Both buyer and private_seller map to USER role
-    }
-    if (val === 'dealer') {
-      return 'dealer'  // Dealer maps to DEALER role
-    }
-    throw new Error(`Invalid user type: ${val}`)
-  }),
+  // ✅ FIXED: Keep original userType for proper profile differentiation
+  userType: z.enum(['buyer', 'private_seller', 'dealer']),
   businessName: z.string().optional(),
   agreeToTerms: z.boolean(),
   marketingConsent: z.boolean().optional()
@@ -113,7 +104,10 @@ export async function POST(request: NextRequest) {
         phone: validatedData.phone?.trim(),
         password: hashedPassword,
         role: validatedData.userType === 'dealer' ? UserRole.DEALER : UserRole.USER,
-        status: UserStatus.ACTIVE
+        status: UserStatus.ACTIVE,
+        preferences: {
+          userType: validatedData.userType  // Store the specific user type (buyer, private_seller, dealer)
+        }
       }
     })
 

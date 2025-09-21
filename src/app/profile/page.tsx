@@ -14,6 +14,9 @@ interface UserData {
   lastName: string;
   role: 'USER' | 'DEALER' | 'ADMIN' | 'SUPER_ADMIN';
   avatar?: string;
+  preferences?: {
+    userType?: 'buyer' | 'private_seller' | 'dealer';
+  };
   _count?: {
     cars: number;
   };
@@ -75,8 +78,17 @@ export default function ProfilePage() {
 
   // Determine user type and render appropriate profile
   const getUserType = () => {
+    // Always prioritize explicit DEALER role
     if (user.role === 'DEALER') return 'dealer';
+
+    // Check user's registration preference first
+    if (user.preferences?.userType === 'private_seller') return 'seller';
+    if (user.preferences?.userType === 'buyer') return 'buyer';
+
+    // Fall back to behavior-based detection
     if ((user._count?.cars || 0) > 0) return 'seller';
+
+    // Default to buyer
     return 'buyer';
   };
 

@@ -21,7 +21,19 @@ export async function GET(request: NextRequest, { params }: Params) {
         status: 'ACTIVE'
       },
       include: {
-        dealerProfile: true
+        dealerProfile: {
+          include: {
+            reviews: {
+              where: {
+                status: 'APPROVED',
+                isPublic: true
+              },
+              select: {
+                rating: true
+              }
+            }
+          }
+        }
       }
     });
 
@@ -70,12 +82,19 @@ export async function GET(request: NextRequest, { params }: Params) {
     const location = dealer.location as any || {};
     const dealerProfile = dealer.dealerProfile;
 
+    // Calculate real ratings from reviews
+    const reviews = dealerProfile?.reviews || [];
+    const averageRating = reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+      : 0;
+
     // Transform dealer data
     const transformedDealer = {
       id: dealer.id,
       businessName: dealerProfile?.businessName || `${dealer.firstName} ${dealer.lastName}`,
-      description: dealerProfile?.description || `Professional car dealer since ${new Date(dealer.createdAt).getFullYear()}. We specialize in quality used cars and excellent customer service.`,
-      logoUrl: dealerProfile?.logo,
+      description: dealerProfile?.description || dealerProfile?.aboutUs || `Professional car dealer since ${new Date(dealer.createdAt).getFullYear()}. We specialize in quality used cars and excellent customer service.`,
+      aboutUs: dealerProfile?.aboutUs || `Professional car dealer since ${new Date(dealer.createdAt).getFullYear()}. We specialize in quality used cars and excellent customer service.`,
+      logoUrl: dealerProfile?.logo || dealer.avatar,
       websiteUrl: dealerProfile?.website,
       phoneNumber: dealer.phone || '',
       location: {
@@ -83,8 +102,8 @@ export async function GET(request: NextRequest, { params }: Params) {
         city: location.city || '',
         address: location.address || 'Ireland'
       },
-      rating: 4.5, // Default rating
-      reviewCount: 0, // Default review count
+      rating: Math.round(averageRating * 10) / 10, // Real rating from reviews
+      reviewCount: reviews.length, // Real review count
       carCount: cars.filter(car => car.status === 'ACTIVE').length,
       specialties: (dealerProfile?.specialties as string[]) || ['Quality Used Cars', 'Customer Service'],
       verified: dealerProfile?.verified || false,
@@ -100,7 +119,6 @@ export async function GET(request: NextRequest, { params }: Params) {
         saturday: { open: '09:00', close: '17:00' },
         sunday: { open: 'Closed', close: 'Closed' }
       },
-      aboutUs: dealerProfile?.description || 'We are a professional car dealership committed to providing quality vehicles and excellent customer service. Our experienced team is here to help you find the perfect car for your needs and budget.',
       cars: cars.map(car => {
         const stats = carStats.find(s => s.carId === car.id);
         

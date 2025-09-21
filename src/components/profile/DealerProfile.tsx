@@ -21,7 +21,8 @@ import {
   Calendar,
   Award,
   Target,
-  Zap
+  Zap,
+  Clock
 } from 'lucide-react';
 import ImageUpload from '@/components/ImageUpload';
 
@@ -90,7 +91,7 @@ interface DealerProfile {
 
 export default function DealerProfile({ user: initialUser }: DealerProfileProps) {
   const [user, setUser] = useState(initialUser);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'analytics' | 'leads'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'inventory' | 'analytics' | 'leads' | 'settings'>('dashboard');
   const [cars, setCars] = useState<DealerCar[]>([]);
   const [analytics, setAnalytics] = useState<DealerAnalytics | null>(null);
   const [dealerProfile, setDealerProfile] = useState<DealerProfile | null>(null);
@@ -284,7 +285,8 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
               { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
               { id: 'inventory', label: 'Inventory', icon: Car, count: cars.length },
               { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-              { id: 'leads', label: 'Leads', icon: Users, count: analytics?.totalLeads }
+              { id: 'leads', label: 'Leads', icon: Users, count: analytics?.totalLeads },
+              { id: 'settings', label: 'Settings', icon: Settings }
             ].map(({ id, label, icon: Icon, count }) => (
               <button
                 key={id}
@@ -582,6 +584,204 @@ export default function DealerProfile({ user: initialUser }: DealerProfileProps)
             <Users className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Lead Management</h3>
             <p className="text-sm sm:text-base text-gray-600">Comprehensive lead tracking coming soon!</p>
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Dealer Settings</h2>
+
+            {/* Business Profile Settings */}
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Building2 className="w-5 h-5 mr-2" />
+                Business Profile
+              </h3>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Business Name</label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="Your business name"
+                      defaultValue={dealerProfile?.businessName || ''}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Website URL</label>
+                    <input
+                      type="url"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="https://your-website.com"
+                      defaultValue={dealerProfile?.website || ''}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Business Description</label>
+                  <textarea
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Brief description of your business..."
+                    defaultValue={dealerProfile?.description || ''}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">About Us</label>
+                  <textarea
+                    rows={5}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Tell customers about your business, experience, and what makes you special..."
+                    defaultValue={(dealerProfile as any)?.aboutUs || ''}
+                  />
+                  <p className="text-sm text-gray-500 mt-1">This will be displayed on your public dealer page</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Specialties</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="e.g., Luxury Cars, Electric Vehicles, Family Cars"
+                    defaultValue={(dealerProfile as any)?.specialties ? ((dealerProfile as any).specialties as any).join(', ') : ''}
+                  />
+                  <p className="text-sm text-gray-500 mt-1">Separate multiple specialties with commas</p>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <button className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                  Save Business Profile
+                </button>
+              </div>
+            </div>
+
+            {/* Logo & Branding */}
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Camera className="w-5 h-5 mr-2" />
+                Logo & Branding
+              </h3>
+
+              <div className="flex items-start space-x-6">
+                <div>
+                  <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                    {dealerProfile?.logo ? (
+                      <img src={dealerProfile.logo} alt="Logo" className="w-full h-full object-cover rounded-lg" />
+                    ) : (
+                      <div className="text-center">
+                        <Camera className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+                        <p className="text-xs text-gray-500">Logo</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900 mb-2">Business Logo</h4>
+                  <p className="text-sm text-gray-600 mb-4">Upload a logo to represent your dealership. This will be shown on your profile and listings.</p>
+                  <button className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+                    Upload Logo
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Business Hours */}
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <Clock className="w-5 h-5 mr-2" />
+                Business Hours
+              </h3>
+
+              <div className="space-y-3">
+                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+                  <div key={day} className="flex items-center space-x-4">
+                    <div className="w-20 text-sm font-medium text-gray-700">{day}</div>
+                    <select className="px-3 py-1 border border-gray-300 rounded text-sm">
+                      <option value="09:00">09:00</option>
+                      <option value="10:00">10:00</option>
+                      <option value="Closed">Closed</option>
+                    </select>
+                    <span className="text-gray-500">to</span>
+                    <select className="px-3 py-1 border border-gray-300 rounded text-sm">
+                      <option value="17:00">17:00</option>
+                      <option value="18:00">18:00</option>
+                      <option value="19:00">19:00</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <button className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                  Save Business Hours
+                </button>
+              </div>
+            </div>
+
+            {/* Account Settings */}
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <User className="w-5 h-5 mr-2" />
+                Account Settings
+              </h3>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      defaultValue={user.firstName}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      defaultValue={user.lastName}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input
+                      type="email"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50"
+                      defaultValue={user.email}
+                      disabled
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Contact support to change email</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <input
+                      type="tel"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      defaultValue={(user as any).phone || ''}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <button className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                  Save Account Settings
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

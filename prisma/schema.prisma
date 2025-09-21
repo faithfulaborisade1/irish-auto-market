@@ -58,6 +58,9 @@ model User {
   // 🆕 WEB ANALYTICS RELATIONS
   pageViews           PageView[]
 
+  // 🆕 DEALER REVIEW RELATIONS
+  dealerReviews       DealerReview[]   // Reviews written by this user
+
   @@map("users")
 }
 
@@ -220,6 +223,7 @@ model DealerProfile {
   businessRegistration String?
   vatNumber            String?
   description          String?
+  aboutUs              String?          // New field for custom about us section
   logo                 String?
   website              String?
   businessHours        Json?
@@ -231,6 +235,7 @@ model DealerProfile {
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
   user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews              DealerReview[]   // New relation
 
   @@map("dealer_profiles")
 }
@@ -905,6 +910,8 @@ enum AdminAction {
   USER_BANNED
   IP_BLOCKED
   CONTACT_RESPONDED
+  REVIEW_MODERATION
+  REVIEW_DELETION
   FEEDBACK_REVIEWED
   ISSUE_RESOLVED
   DEALER_INVITED      // 🆕 NEW
@@ -915,6 +922,7 @@ enum ResourceType {
   USER
   CAR
   DEALER_PROFILE
+  DEALER_REVIEW
   FEATURED_LISTING
   CONVERSATION
   MESSAGE
@@ -1272,4 +1280,35 @@ model DailyAnalytics {
   
   @@index([date])
   @@map("daily_analytics")
+}
+
+model DealerReview {
+  id                String         @id @default(cuid())
+  dealerId          String
+  reviewerId        String?        // Optional - can be anonymous
+  reviewerName      String         // Name for the review (can be different from user name)
+  reviewerEmail     String?        // Optional email
+  rating            Int            // 1-5 stars
+  title             String?        // Optional review title
+  comment           String         @db.Text
+  isVerifiedPurchase Boolean       @default(false) // If they bought a car from this dealer
+  isPublic          Boolean        @default(true)  // Whether to show publicly
+  status            ReviewStatus   @default(PENDING)
+  moderatorNotes    String?        // Admin notes
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  dealer            DealerProfile  @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+  reviewer          User?          @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([dealerId, status, isPublic])
+  @@index([rating, createdAt])
+  @@map("dealer_reviews")
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
 }

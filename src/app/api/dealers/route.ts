@@ -93,8 +93,9 @@ export async function GET(request: NextRequest) {
         const transformedDealer = {
           id: dealer.id,
           businessName: dealerProfile?.businessName || `${dealer.firstName} ${dealer.lastName}`,
-          description: dealerProfile?.description || `Professional car dealer since ${new Date(dealer.createdAt).getFullYear()}`,
-          logoUrl: dealerProfile?.logo || undefined,
+          description: dealerProfile?.description || dealerProfile?.aboutUs || `Professional car dealer since ${new Date(dealer.createdAt).getFullYear()}`,
+          aboutUs: dealerProfile?.aboutUs || null,
+          logoUrl: dealerProfile?.logo || dealer.avatar || undefined,
           websiteUrl: dealerProfile?.website || undefined,
           phoneNumber: dealer.phone || '',
           location: {

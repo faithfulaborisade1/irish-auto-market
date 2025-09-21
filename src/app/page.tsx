@@ -161,7 +161,7 @@ useEffect(() => {
       <Header currentPage="home" />
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-gray-900 to-gray-700 py-20">
+      <section className="relative bg-gradient-to-r from-gray-900 to-gray-700 py-20 pt-16 md:pt-20">
         {/* Promotional Ribbon */}
         <PromotionalRibbon />
         <div className="absolute inset-0">

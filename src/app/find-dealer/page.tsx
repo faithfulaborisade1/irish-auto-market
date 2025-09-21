@@ -177,7 +177,7 @@ export default function FindDealerPage() {
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-4">
             {dealer.logoUrl ? (
-              <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+              <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-200">
                 <img
                   src={dealer.logoUrl}
                   alt={`${dealer.businessName} logo`}
@@ -185,9 +185,9 @@ export default function FindDealerPage() {
                 />
               </div>
             ) : (
-              <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-green-500 to-orange-500 flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-bold text-lg">
-                  {dealer.businessName.split(' ').map(word => word[0]).join('').slice(0, 2)}
+              <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-green-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+                <span className="text-white font-bold text-lg tracking-wide">
+                  {dealer.businessName.split(' ').map(word => word[0]).join('').slice(0, 2).toUpperCase()}
                 </span>
               </div>
             )}

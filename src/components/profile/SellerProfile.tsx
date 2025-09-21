@@ -67,7 +67,7 @@ interface SellerAnalytics {
 
 export default function SellerProfile({ user: initialUser }: SellerProfileProps) {
   const [user, setUser] = useState(initialUser);
-  const [activeTab, setActiveTab] = useState<'listings' | 'performance' | 'messages' | 'settings'>('listings');
+  const [activeTab, setActiveTab] = useState<'listings' | 'performance' | 'messages'>('listings');
   const [cars, setCars] = useState<SellerCar[]>([]);
   const [analytics, setAnalytics] = useState<SellerAnalytics | null>(null);
   const [loading, setLoading] = useState(false);
@@ -137,10 +137,10 @@ export default function SellerProfile({ user: initialUser }: SellerProfileProps)
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
           {/* Back to Home */}
-          <div className="mb-6">
-            <a 
+          <div className="mb-4 sm:mb-6">
+            <a
               href="/"
               className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
@@ -148,20 +148,20 @@ export default function SellerProfile({ user: initialUser }: SellerProfileProps)
               <span className="font-medium">Back to Home</span>
             </a>
           </div>
-          
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-6">
+
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4 sm:mb-6 space-y-4 lg:space-y-0">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
               {/* Profile Photo */}
-              <div className="relative">
+              <div className="relative self-center sm:self-auto">
                 {user.avatar ? (
-                  <img 
-                    src={user.avatar} 
+                  <img
+                    src={user.avatar}
                     alt={`${user.firstName} ${user.lastName}`}
-                    className="w-24 h-24 rounded-full object-cover ring-4 ring-blue-100"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-4 ring-blue-100"
                   />
                 ) : (
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-4 ring-blue-100">
-                    <User className="w-12 h-12 text-white" />
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center ring-4 ring-blue-100">
+                    <User className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
                   </div>
                 )}
                 <button
@@ -173,22 +173,22 @@ export default function SellerProfile({ user: initialUser }: SellerProfileProps)
               </div>
 
               {/* Profile Info */}
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-2">
-                  <h1 className="text-3xl font-bold text-gray-900">
+              <div className="flex-1 text-center sm:text-left">
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                     {user.firstName} {user.lastName}
                   </h1>
-                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 self-center sm:self-auto">
                     Car Seller
                   </span>
                 </div>
-                
-                <div className="flex items-center space-x-4 text-sm text-gray-500">
-                  <div className="flex items-center space-x-1">
+
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
+                  <div className="flex items-center justify-center sm:justify-start space-x-1">
                     <Car className="w-4 h-4" />
                     <span>{analytics?.activeCars || 0} active listings</span>
                   </div>
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center justify-center sm:justify-start space-x-1">
                     <Eye className="w-4 h-4" />
                     <span>{analytics?.totalViews || 0} total views</span>
                   </div>
@@ -196,86 +196,76 @@ export default function SellerProfile({ user: initialUser }: SellerProfileProps)
               </div>
             </div>
 
-            <div className="flex items-center space-x-3">
-              <a 
+            <div className="flex items-center justify-center lg:justify-end space-x-3">
+              <a
                 href="/place-ad"
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                className="bg-blue-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
                 <span>List a Car</span>
               </a>
-              <a 
+              <a
                 href="/profile/edit"
-                className="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
+                className="bg-gray-100 text-gray-700 px-4 sm:px-6 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center space-x-2"
               >
                 <Settings className="w-4 h-4" />
-                <span>Settings</span>
+                <span className="hidden sm:inline">Settings</span>
+                <Settings className="w-4 h-4 sm:hidden" />
               </a>
             </div>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-blue-50 rounded-lg p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4 sm:mb-6">
+            <div className="bg-blue-50 rounded-lg p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-600">Active</p>
-                  <p className="text-2xl font-bold text-blue-900">{analytics?.activeCars || 0}</p>
+                  <p className="text-sm font-medium text-blue-600">Active Cars</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-blue-900">{analytics?.activeCars || 0}</p>
                 </div>
-                <Car className="w-8 h-8 text-blue-600" />
+                <Car className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
               </div>
             </div>
-            
-            <div className="bg-green-50 rounded-lg p-4">
+
+            <div className="bg-green-50 rounded-lg p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-green-600">Total Views</p>
-                  <p className="text-2xl font-bold text-green-900">{analytics?.totalViews || 0}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-green-900">{analytics?.totalViews || 0}</p>
                 </div>
-                <Eye className="w-8 h-8 text-green-600" />
+                <Eye className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
               </div>
             </div>
-            
-            <div className="bg-purple-50 rounded-lg p-4">
+
+            <div className="bg-purple-50 rounded-lg p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-purple-600">Inquiries</p>
-                  <p className="text-2xl font-bold text-purple-900">{analytics?.totalInquiries || 0}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-purple-900">{analytics?.totalInquiries || 0}</p>
                 </div>
-                <MessageCircle className="w-8 h-8 text-purple-600" />
-              </div>
-            </div>
-            
-            <div className="bg-orange-50 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-orange-600">Avg Price</p>
-                  <p className="text-2xl font-bold text-orange-900">€{analytics?.averagePrice?.toLocaleString() || '0'}</p>
-                </div>
-                <DollarSign className="w-8 h-8 text-orange-600" />
+                <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
               </div>
             </div>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="flex space-x-8 border-b border-gray-200">
+          <div className="flex space-x-2 sm:space-x-8 border-b border-gray-200 overflow-x-auto">
             {[
               { id: 'listings', label: 'My Listings', icon: Car, count: cars.length },
               { id: 'performance', label: 'Performance', icon: TrendingUp },
-              { id: 'messages', label: 'Messages', icon: MessageCircle },
-              { id: 'settings', label: 'Settings', icon: Settings }
+              { id: 'messages', label: 'Messages', icon: MessageCircle }
             ].map(({ id, label, icon: Icon, count }) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id as any)}
-                className={`flex items-center space-x-2 pb-4 border-b-2 transition-colors ${
-                  activeTab === id 
-                    ? 'border-blue-600 text-blue-600' 
+                className={`flex items-center space-x-2 pb-4 border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === id
+                    ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
               >
                 <Icon className="w-4 h-4" />
-                <span className="font-medium">{label}</span>
+                <span className="font-medium text-sm sm:text-base">{label}</span>
                 {count !== undefined && (
                   <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full">
                     {count}
@@ -288,14 +278,14 @@ export default function SellerProfile({ user: initialUser }: SellerProfileProps)
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {activeTab === 'listings' && (
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Your Car Listings</h2>
-              <a 
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 space-y-4 sm:space-y-0">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Your Car Listings</h2>
+              <a
                 href="/place-ad"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add New Car</span>
@@ -384,58 +374,58 @@ export default function SellerProfile({ user: initialUser }: SellerProfileProps)
         )}
 
         {activeTab === 'performance' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Performance Analytics</h2>
+          <div className="space-y-4 sm:space-y-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Performance Analytics</h2>
             
             {analytics ? (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Performance Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Average Views</h3>
-                      <BarChart3 className="w-6 h-6 text-blue-600" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">Average Views</h3>
+                      <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                     </div>
-                    <p className="text-3xl font-bold text-blue-600">{Math.round(analytics.averageViewsPerCar || 0)}</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-blue-600">{Math.round(analytics.averageViewsPerCar || 0)}</p>
                     <p className="text-sm text-gray-500">per listing</p>
                   </div>
 
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Conversion Rate</h3>
-                      <TrendingUp className="w-6 h-6 text-green-600" />
+                  <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">Conversion Rate</h3>
+                      <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
                     </div>
-                    <p className="text-3xl font-bold text-green-600">{(analytics.conversionRate || 0).toFixed(1)}%</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-green-600">{(analytics.conversionRate || 0).toFixed(1)}%</p>
                     <p className="text-sm text-gray-500">views to inquiries</p>
                   </div>
 
-                  <div className="bg-white rounded-lg shadow-sm p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold text-gray-900">Cars Sold</h3>
-                      <DollarSign className="w-6 h-6 text-purple-600" />
+                  <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 sm:col-span-2 lg:col-span-1">
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                      <h3 className="text-base sm:text-lg font-semibold text-gray-900">Cars Sold</h3>
+                      <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" />
                     </div>
-                    <p className="text-3xl font-bold text-purple-600">{analytics.soldCars || 0}</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-purple-600">{analytics.soldCars || 0}</p>
                     <p className="text-sm text-gray-500">out of {analytics.totalCars}</p>
                   </div>
                 </div>
 
                 {/* Monthly Performance Chart */}
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-6">Monthly Performance</h3>
-                  <div className="space-y-4">
+                <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">Monthly Performance</h3>
+                  <div className="space-y-3 sm:space-y-4">
                     {analytics.monthlyPerformance?.map((month, index) => (
-                      <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg space-y-3 sm:space-y-0">
                         <div className="flex-1">
                           <h4 className="font-medium text-gray-900">{month.month}</h4>
                           <p className="text-sm text-gray-500">{month.listings} listings</p>
                         </div>
-                        <div className="flex items-center space-x-6">
+                        <div className="flex items-center justify-around sm:justify-end sm:space-x-6">
                           <div className="text-center">
-                            <p className="text-lg font-semibold text-blue-600">{month.views}</p>
+                            <p className="text-base sm:text-lg font-semibold text-blue-600">{month.views}</p>
                             <p className="text-xs text-gray-500">Views</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-lg font-semibold text-purple-600">{month.inquiries}</p>
+                            <p className="text-base sm:text-lg font-semibold text-purple-600">{month.inquiries}</p>
                             <p className="text-xs text-gray-500">Inquiries</p>
                           </div>
                         </div>
@@ -445,23 +435,23 @@ export default function SellerProfile({ user: initialUser }: SellerProfileProps)
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-                <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">No data available</h3>
-                <p className="text-gray-600">List some cars to see your performance analytics!</p>
+              <div className="bg-white rounded-lg shadow-sm p-6 sm:p-8 text-center">
+                <BarChart3 className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No data available</h3>
+                <p className="text-sm sm:text-base text-gray-600">List some cars to see your performance analytics!</p>
               </div>
             )}
           </div>
         )}
 
         {activeTab === 'messages' && (
-          <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-            <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Your Messages</h3>
-            <p className="text-gray-600 mb-6">
+          <div className="bg-white rounded-lg shadow-sm p-6 sm:p-8 text-center">
+            <MessageCircle className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Your Messages</h3>
+            <p className="text-sm sm:text-base text-gray-600 mb-6">
               Manage conversations with potential buyers
             </p>
-            <a 
+            <a
               href="/messages"
               className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center space-x-2"
             >
@@ -471,37 +461,13 @@ export default function SellerProfile({ user: initialUser }: SellerProfileProps)
           </div>
         )}
 
-        {activeTab === 'settings' && (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Settings</h3>
-            
-            <div className="space-y-4">
-              <div className="p-4 border border-gray-200 rounded-lg">
-                <h4 className="font-medium text-gray-900 mb-2 flex items-center">
-                  <User className="w-4 h-4 mr-2" />
-                  Personal Information
-                </h4>
-                <p className="text-gray-600 text-sm mb-3">
-                  Update your name, email, phone number, and location.
-                </p>
-                <a 
-                  href="/profile/edit" 
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Edit3 className="w-4 h-4 mr-2" />
-                  Edit Profile
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Image Upload Modal */}
       {showImageUpload && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="p-6">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Update Profile Picture</h3>
                 <button
@@ -511,11 +477,11 @@ export default function SellerProfile({ user: initialUser }: SellerProfileProps)
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              
+
               <ImageUpload
                 onImagesChange={handleAvatarUpload}
                 maxImages={1}
-                className="border-2 border-dashed border-gray-300 rounded-lg p-8"
+                className="border-2 border-dashed border-gray-300 rounded-lg p-4 sm:p-8"
               />
             </div>
           </div>
