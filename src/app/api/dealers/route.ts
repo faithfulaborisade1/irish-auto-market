@@ -19,7 +19,15 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '12');
 
-    console.log('API received params:', { search, county, page, limit });
+    // New filter parameters
+    const subscription = searchParams.get('subscription') || '';
+    const verified = searchParams.get('verified') || '';
+    const minRating = parseFloat(searchParams.get('minRating') || '0');
+    const minCars = parseInt(searchParams.get('minCars') || '0');
+    const specialties = searchParams.get('specialties')?.split(',').filter(Boolean) || [];
+    const sortBy = searchParams.get('sortBy') || 'newest';
+
+    console.log('API received params:', { search, county, page, limit, subscription, verified, minRating, minCars, specialties, sortBy });
 
     // Build where clause for dealers
     const where: any = {
@@ -60,7 +68,53 @@ export async function GET(request: NextRequest) {
       };
     }
 
+    // Add subscription type filter
+    if (subscription && subscription !== 'all') {
+      where.dealerProfile = {
+        ...where.dealerProfile,
+        subscriptionType: subscription.toUpperCase()
+      };
+    }
+
+    // Add verified filter
+    if (verified === 'true') {
+      where.dealerProfile = {
+        ...where.dealerProfile,
+        verified: true
+      };
+    }
+
+    // Add specialties filter
+    if (specialties.length > 0) {
+      where.dealerProfile = {
+        ...where.dealerProfile,
+        specialties: {
+          hasEvery: specialties
+        }
+      };
+    }
+
     console.log('Database where clause:', JSON.stringify(where, null, 2));
+
+    // Define sort order
+    let orderBy: any = {};
+    switch (sortBy) {
+      case 'rating':
+        // We'll sort by rating after fetching since rating is calculated
+        orderBy = { createdAt: 'desc' };
+        break;
+      case 'cars':
+        // We'll sort by car count after fetching since it's calculated
+        orderBy = { createdAt: 'desc' };
+        break;
+      case 'name':
+        orderBy = { dealerProfile: { businessName: 'asc' } };
+        break;
+      case 'newest':
+      default:
+        orderBy = { createdAt: 'desc' };
+        break;
+    }
 
     // Fetch dealers with their profiles
     const dealers = await prisma.user.findMany({
@@ -69,24 +123,26 @@ export async function GET(request: NextRequest) {
         dealerProfile: true
       },
       skip: (page - 1) * limit,
-      take: limit,
-      orderBy: {
-        createdAt: 'desc'
-      }
+      take: limit * 2, // Fetch more to account for car count filtering
+      orderBy
     });
 
     console.log(`Found ${dealers.length} dealers`);
 
-    // Transform dealers data
+    // Transform dealers data and apply post-processing filters
     const transformedDealers = await Promise.all(
       dealers.map(async (dealer: DealerWithProfile) => {
         // Get car count for this dealer
         const carCount = await prisma.car.count({
-          where: { 
+          where: {
             userId: dealer.id,
             status: 'ACTIVE'
           }
         });
+
+        // Calculate actual rating from reviews (you can implement this later)
+        const rating = 4.5; // Default rating - you can calculate this from reviews later
+        const reviewCount = 0; // Default - you can calculate this from reviews later
 
         const location = dealer.location as any || {};
         const dealerProfile = dealer.dealerProfile;
@@ -104,8 +160,8 @@ export async function GET(request: NextRequest) {
             city: location.city || '',
             address: location.address || ''
           },
-          rating: 4.5, // Default rating - you can calculate this from reviews later
-          reviewCount: 0, // Default - you can calculate this from reviews later
+          rating: rating,
+          reviewCount: reviewCount,
           carCount: carCount,
           specialties: (dealerProfile?.specialties as string[]) || [],
           verified: dealerProfile?.verified || false,
@@ -118,6 +174,29 @@ export async function GET(request: NextRequest) {
         return transformedDealer;
       })
     );
+
+    // Apply post-processing filters
+    let filteredDealers = transformedDealers;
+
+    // Filter by minimum car count
+    if (minCars > 0) {
+      filteredDealers = filteredDealers.filter(dealer => dealer.carCount >= minCars);
+    }
+
+    // Filter by minimum rating
+    if (minRating > 0) {
+      filteredDealers = filteredDealers.filter(dealer => dealer.rating >= minRating);
+    }
+
+    // Apply sorting for calculated fields
+    if (sortBy === 'rating') {
+      filteredDealers.sort((a, b) => b.rating - a.rating);
+    } else if (sortBy === 'cars') {
+      filteredDealers.sort((a, b) => b.carCount - a.carCount);
+    }
+
+    // Apply pagination after filtering
+    const paginatedDealers = filteredDealers.slice(0, limit);
 
     // Get total count for pagination
     // Note: For count queries with nested searches, we need to build a simpler where clause
@@ -151,12 +230,12 @@ export async function GET(request: NextRequest) {
     console.log(`Total dealers found: ${totalCount}`);
 
     const response = {
-      dealers: transformedDealers,
+      dealers: paginatedDealers,
       pagination: {
         page,
         limit,
-        total: totalCount,
-        pages: Math.ceil(totalCount / limit)
+        total: filteredDealers.length,
+        pages: Math.ceil(filteredDealers.length / limit)
       }
     };
 

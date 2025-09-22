@@ -42,6 +42,14 @@ export default function FindDealerPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Enhanced filter states
+  const [selectedSubscription, setSelectedSubscription] = useState('all');
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [minRating, setMinRating] = useState(0);
+  const [minCars, setMinCars] = useState(0);
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState('newest');
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 12,
@@ -89,17 +97,39 @@ export default function FindDealerPage() {
       try {
         const params = new URLSearchParams({
           page: pagination.page.toString(),
-          limit: pagination.limit.toString()
+          limit: pagination.limit.toString(),
+          sortBy: sortBy
         });
 
         // Add search parameter if exists
         if (searchTerm && searchTerm.trim()) {
           params.append('search', searchTerm.trim());
         }
-        
+
         // Add county filter if not "All Counties"
         if (selectedCounty !== 'All Counties') {
           params.append('county', selectedCounty);
+        }
+
+        // Add enhanced filters
+        if (selectedSubscription !== 'all') {
+          params.append('subscription', selectedSubscription);
+        }
+
+        if (verifiedOnly) {
+          params.append('verified', 'true');
+        }
+
+        if (minRating > 0) {
+          params.append('minRating', minRating.toString());
+        }
+
+        if (minCars > 0) {
+          params.append('minCars', minCars.toString());
+        }
+
+        if (selectedSpecialties.length > 0) {
+          params.append('specialties', selectedSpecialties.join(','));
         }
 
         console.log('Fetching dealers with params:', params.toString());
@@ -130,7 +160,7 @@ export default function FindDealerPage() {
     };
 
     fetchDealers();
-  }, [searchTerm, selectedCounty, pagination.page]);
+  }, [searchTerm, selectedCounty, selectedSubscription, verifiedOnly, minRating, minCars, selectedSpecialties, sortBy, pagination.page]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -163,8 +193,35 @@ export default function FindDealerPage() {
     setSearchInput('');
     setSearchTerm('');
     setSelectedCounty('All Counties');
+    setSelectedSubscription('all');
+    setVerifiedOnly(false);
+    setMinRating(0);
+    setMinCars(0);
+    setSelectedSpecialties([]);
+    setSortBy('newest');
     setPagination(prev => ({ ...prev, page: 1 }));
   };
+
+  // Helper function to check if any filters are active
+  const hasActiveFilters = () => {
+    return searchTerm || selectedCounty !== 'All Counties' || selectedSubscription !== 'all' ||
+           verifiedOnly || minRating > 0 || minCars > 0 || selectedSpecialties.length > 0 || sortBy !== 'newest';
+  };
+
+  // Toggle specialty filter
+  const toggleSpecialty = (specialty: string) => {
+    setSelectedSpecialties(prev =>
+      prev.includes(specialty)
+        ? prev.filter(s => s !== specialty)
+        : [...prev, specialty]
+    );
+  };
+
+  // Common specialties list
+  const commonSpecialties = [
+    'Luxury Cars', 'Electric Vehicles', 'Family Cars', 'Sports Cars',
+    'Commercial Vehicles', 'Classic Cars', 'Hybrid Vehicles', 'Convertibles'
+  ];
 
   const DealerCard = ({ dealer }: { dealer: Dealer }) => (
     <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden">
@@ -336,7 +393,7 @@ export default function FindDealerPage() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Enhanced Filters */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
@@ -347,19 +404,65 @@ export default function FindDealerPage() {
               >
                 <Filter className="w-4 h-4" />
                 <span>Filters</span>
+                {hasActiveFilters() && (
+                  <span className="bg-green-600 text-white text-xs rounded-full w-2 h-2"></span>
+                )}
               </button>
-              
+
+              {/* Desktop Filters - First Row */}
               <div className="hidden lg:flex items-center space-x-4">
                 <select
                   value={selectedCounty}
                   onChange={(e) => setSelectedCounty(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                 >
                   {counties.map(county => (
                     <option key={county} value={county}>{county}</option>
                   ))}
                 </select>
+
+                <select
+                  value={selectedSubscription}
+                  onChange={(e) => setSelectedSubscription(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                >
+                  <option value="all">All Subscriptions</option>
+                  <option value="basic">Basic</option>
+                  <option value="premium">Premium</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={verifiedOnly}
+                    onChange={(e) => setVerifiedOnly(e.target.checked)}
+                    className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                  />
+                  <span className="text-sm text-gray-700">Verified Only</span>
+                </label>
+
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="rating">Highest Rated</option>
+                  <option value="cars">Most Cars</option>
+                  <option value="name">A-Z</option>
+                </select>
               </div>
+
+              {/* Clear Filters Button */}
+              {hasActiveFilters() && (
+                <button
+                  onClick={clearAllFilters}
+                  className="hidden lg:block px-3 py-2 text-sm text-green-600 hover:text-green-700 hover:underline"
+                >
+                  Clear All
+                </button>
+              )}
             </div>
 
             <div className="flex items-center space-x-4">
@@ -383,18 +486,177 @@ export default function FindDealerPage() {
             </div>
           </div>
 
+          {/* Advanced Filters - Desktop Second Row */}
+          <div className="hidden lg:block mt-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center space-x-6">
+              {/* Minimum Rating */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">Min Rating:</span>
+                <select
+                  value={minRating}
+                  onChange={(e) => setMinRating(parseFloat(e.target.value))}
+                  className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                >
+                  <option value={0}>Any</option>
+                  <option value={3}>3+ Stars</option>
+                  <option value={4}>4+ Stars</option>
+                  <option value={4.5}>4.5+ Stars</option>
+                </select>
+              </div>
+
+              {/* Minimum Cars */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">Min Cars:</span>
+                <select
+                  value={minCars}
+                  onChange={(e) => setMinCars(parseInt(e.target.value))}
+                  className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                >
+                  <option value={0}>Any</option>
+                  <option value={5}>5+ Cars</option>
+                  <option value={10}>10+ Cars</option>
+                  <option value={25}>25+ Cars</option>
+                  <option value={50}>50+ Cars</option>
+                </select>
+              </div>
+
+              {/* Specialties */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">Specialties:</span>
+                <div className="flex flex-wrap gap-2">
+                  {commonSpecialties.slice(0, 4).map((specialty) => (
+                    <button
+                      key={specialty}
+                      onClick={() => toggleSpecialty(specialty)}
+                      className={`px-2 py-1 text-xs rounded-full border transition-colors ${
+                        selectedSpecialties.includes(specialty)
+                          ? 'bg-green-600 text-white border-green-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-green-500'
+                      }`}
+                    >
+                      {specialty}
+                    </button>
+                  ))}
+                  {selectedSpecialties.length > 0 && (
+                    <button
+                      onClick={() => setSelectedSpecialties([])}
+                      className="px-2 py-1 text-xs text-green-600 hover:text-green-700 hover:underline"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Mobile Filters */}
           {showFilters && (
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden">
-              <select
-                value={selectedCounty}
-                onChange={(e) => setSelectedCounty(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                {counties.map(county => (
-                  <option key={county} value={county}>{county}</option>
-                ))}
-              </select>
+            <div className="mt-4 space-y-4 lg:hidden">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <select
+                  value={selectedCounty}
+                  onChange={(e) => setSelectedCounty(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  {counties.map(county => (
+                    <option key={county} value={county}>{county}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={selectedSubscription}
+                  onChange={(e) => setSelectedSubscription(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="all">All Subscriptions</option>
+                  <option value="basic">Basic</option>
+                  <option value="premium">Premium</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="rating">Highest Rated</option>
+                  <option value="cars">Most Cars</option>
+                  <option value="name">A-Z</option>
+                </select>
+
+                <div className="flex items-center space-x-4">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={verifiedOnly}
+                      onChange={(e) => setVerifiedOnly(e.target.checked)}
+                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    <span className="text-sm text-gray-700">Verified Only</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Min Rating</label>
+                  <select
+                    value={minRating}
+                    onChange={(e) => setMinRating(parseFloat(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value={0}>Any</option>
+                    <option value={3}>3+ Stars</option>
+                    <option value={4}>4+ Stars</option>
+                    <option value={4.5}>4.5+ Stars</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-700 mb-1">Min Cars</label>
+                  <select
+                    value={minCars}
+                    onChange={(e) => setMinCars(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value={0}>Any</option>
+                    <option value={5}>5+ Cars</option>
+                    <option value={10}>10+ Cars</option>
+                    <option value={25}>25+ Cars</option>
+                    <option value={50}>50+ Cars</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">Specialties</label>
+                <div className="flex flex-wrap gap-2">
+                  {commonSpecialties.map((specialty) => (
+                    <button
+                      key={specialty}
+                      onClick={() => toggleSpecialty(specialty)}
+                      className={`px-3 py-1 text-sm rounded-full border transition-colors ${
+                        selectedSpecialties.includes(specialty)
+                          ? 'bg-green-600 text-white border-green-600'
+                          : 'bg-white text-gray-700 border-gray-300 hover:border-green-500'
+                      }`}
+                    >
+                      {specialty}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {hasActiveFilters() && (
+                <button
+                  onClick={clearAllFilters}
+                  className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Clear All Filters
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -428,12 +690,12 @@ export default function FindDealerPage() {
             <Car className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No dealers found</h3>
             <p className="text-gray-600 mb-4">
-              {searchTerm || selectedCounty !== 'All Counties' 
-                ? 'Try adjusting your search criteria or filters' 
+              {hasActiveFilters()
+                ? 'Try adjusting your search criteria or filters'
                 : 'No dealers are currently available'
               }
             </p>
-            {(searchTerm || selectedCounty !== 'All Counties') && (
+            {hasActiveFilters() && (
               <button
                 onClick={clearAllFilters}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
