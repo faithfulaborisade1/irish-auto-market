@@ -16,6 +16,8 @@ const RegisterSchema = z.object({
   // ✅ FIXED: Keep original userType for proper profile differentiation
   userType: z.enum(['buyer', 'private_seller', 'dealer']),
   businessName: z.string().optional(),
+  county: z.string().optional(),
+  city: z.string().optional(),
   agreeToTerms: z.boolean(),
   marketingConsent: z.boolean().optional()
 }).refine((data) => data.password === data.confirmPassword, {
@@ -105,6 +107,10 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         role: validatedData.userType === 'dealer' ? UserRole.DEALER : UserRole.USER,
         status: UserStatus.ACTIVE,
+        location: validatedData.county || validatedData.city ? {
+          county: validatedData.county || null,
+          city: validatedData.city || null
+        } : null,
         preferences: {
           userType: validatedData.userType  // Store the specific user type (buyer, private_seller, dealer)
         }

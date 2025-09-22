@@ -4,11 +4,11 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { z } from 'zod';
-import { 
-  Car, 
-  CheckCircle, 
-  AlertTriangle, 
-  Eye, 
+import {
+  Car,
+  CheckCircle,
+  AlertTriangle,
+  Eye,
   EyeOff,
   Mail,
   User,
@@ -17,6 +17,7 @@ import {
   MapPin,
   ArrowLeft
 } from 'lucide-react';
+import { IRISH_COUNTIES } from '@/data/counties';
 
 // Validation schema
 const DealerRegistrationSchema = z.object({
@@ -27,7 +28,8 @@ const DealerRegistrationSchema = z.object({
   confirmPassword: z.string(),
   phone: z.string().optional(),
   businessName: z.string().min(1, 'Business name is required'),
-  location: z.string().optional(),
+  county: z.string().optional(),
+  city: z.string().optional(),
   acceptTerms: z.boolean().refine(val => val === true, 'You must accept the terms and conditions')
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -40,7 +42,8 @@ interface InvitationData {
   businessName?: string;
   contactName?: string;
   phone?: string;
-  location?: string;
+  county?: string;
+  city?: string;
   sentAt: string;
   invitedBy: {
     name: string;
@@ -68,7 +71,8 @@ function DealerRegistrationForm() {
     confirmPassword: '',
     phone: '',
     businessName: '',
-    location: '',
+    county: '',
+    city: '',
     acceptTerms: false
   });
 
@@ -107,7 +111,8 @@ function DealerRegistrationForm() {
           email: data.invitation.email,
           businessName: data.invitation.businessName || '',
           phone: data.invitation.phone || '',
-          location: data.invitation.location || '',
+          county: data.invitation.county || '',
+          city: data.invitation.city || '',
           firstName: data.invitation.contactName?.split(' ')[0] || '',
           lastName: data.invitation.contactName?.split(' ').slice(1).join(' ') || ''
         }));
@@ -374,18 +379,36 @@ function DealerRegistrationForm() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Location
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    County
+                  </label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <select
+                      value={formData.county}
+                      onChange={(e) => setFormData({ ...formData, county: e.target.value })}
+                      className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    >
+                      <option value="">Select County</option>
+                      {IRISH_COUNTIES.map(county => (
+                        <option key={county} value={county}>{county}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    City/Town
+                  </label>
                   <input
                     type="text"
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Dublin, Ireland"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Dublin City, Cork City, etc."
                   />
                 </div>
               </div>

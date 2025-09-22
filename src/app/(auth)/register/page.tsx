@@ -2,7 +2,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, User, Phone, Car, Building, Users, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Phone, Car, Building, Users, ArrowLeft, MapPin } from 'lucide-react';
+import { IRISH_COUNTIES } from '@/data/counties';
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -16,6 +17,8 @@ export default function RegisterPage() {
     confirmPassword: '',
     userType: 'buyer',
     businessName: '',
+    county: '',
+    city: '',
     agreeToTerms: false,
     marketingConsent: false
   });
@@ -305,6 +308,46 @@ export default function RegisterPage() {
                       placeholder="+353 87 123 4567"
                     />
                     <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+
+                {/* County Field */}
+                <div>
+                  <label htmlFor="county" className="block text-sm font-medium text-gray-700">
+                    County
+                  </label>
+                  <div className="mt-1 relative">
+                    <select
+                      id="county"
+                      name="county"
+                      value={formData.county}
+                      onChange={handleInputChange}
+                      className="appearance-none block w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-green-500 focus:border-green-500"
+                    >
+                      <option value="">Select County</option>
+                      {IRISH_COUNTIES.map(county => (
+                        <option key={county} value={county}>{county}</option>
+                      ))}
+                    </select>
+                    <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+
+                {/* City Field */}
+                <div>
+                  <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+                    City/Town
+                  </label>
+                  <div className="mt-1">
+                    <input
+                      id="city"
+                      name="city"
+                      type="text"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      placeholder="Dublin City, Cork City, etc."
+                    />
                   </div>
                 </div>
 

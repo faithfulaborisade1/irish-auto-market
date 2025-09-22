@@ -116,15 +116,53 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }))
 
-    // Add common Irish counties for location pages
-    const irishCounties = [
-      'dublin', 'cork', 'galway', 'limerick', 'waterford', 'kerry', 'clare', 'mayo',
-      'donegal', 'meath', 'kildare', 'wicklow', 'tipperary', 'laois', 'offaly',
-      'carlow', 'kilkenny', 'wexford', 'westmeath', 'longford', 'louth', 'cavan',
-      'monaghan', 'roscommon', 'sligo', 'leitrim'
-    ]
+    // Get unique counties from users and cars with location data
+    const [usersWithLocation, carsWithLocation] = await Promise.all([
+      prisma.user.findMany({
+        where: {
+          location: {
+            not: null
+          }
+        },
+        select: {
+          location: true,
+          updatedAt: true,
+        }
+      }),
+      prisma.car.findMany({
+        where: {
+          status: 'ACTIVE',
+          location: {
+            not: null
+          }
+        },
+        select: {
+          location: true,
+          updatedAt: true,
+        }
+      })
+    ])
 
-    const locationPages: MetadataRoute.Sitemap = irishCounties.map((county) => ({
+    // Extract unique counties from all location data
+    const uniqueCounties = new Set<string>()
+    const locationData = [...usersWithLocation, ...carsWithLocation]
+
+    locationData.forEach((item) => {
+      const location = item.location as any
+      if (location?.county && typeof location.county === 'string') {
+        const countySlug = location.county.toLowerCase().replace(/\s+/g, '-')
+        uniqueCounties.add(countySlug)
+      }
+    })
+
+    // If no counties found in data, fall back to major Irish counties
+    if (uniqueCounties.size === 0) {
+      ['dublin', 'cork', 'galway', 'limerick', 'waterford'].forEach(county => {
+        uniqueCounties.add(county)
+      })
+    }
+
+    const locationPages: MetadataRoute.Sitemap = Array.from(uniqueCounties).map((county) => ({
       url: `${baseUrl}/location/${county}`,
       lastModified: new Date(),
       changeFrequency: 'daily' as const,
@@ -143,7 +181,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.log(`- Static pages: ${staticPages.length}`)
     console.log(`- Car pages: ${carPages.length}`)
     console.log(`- Dealer pages: ${dealerPages.length}`)
-    console.log(`- Location pages: ${locationPages.length} (all Irish counties)`)
+    console.log(`- Location pages: ${locationPages.length} (from actual user/car data)`)
 
     return allPages
 
