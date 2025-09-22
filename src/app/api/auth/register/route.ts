@@ -108,9 +108,9 @@ export async function POST(request: NextRequest) {
         role: validatedData.userType === 'dealer' ? UserRole.DEALER : UserRole.USER,
         status: UserStatus.ACTIVE,
         location: validatedData.county || validatedData.city ? {
-          county: validatedData.county || null,
-          city: validatedData.city || null
-        } : null,
+          county: validatedData.county || undefined,
+          city: validatedData.city || undefined
+        } : undefined,
         preferences: {
           userType: validatedData.userType  // Store the specific user type (buyer, private_seller, dealer)
         }

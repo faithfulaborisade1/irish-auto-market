@@ -53,9 +53,10 @@ export async function GET(request: NextRequest) {
     // Add county filter if provided
     if (county && county !== 'All Counties') {
       // Since location is stored as JSON, we need to search within it
+      // For now, use exact match - case-insensitive JSON filtering is complex in Prisma
       where.location = {
         path: ['county'],
-        string_contains: county
+        equals: county
       };
     }
 
@@ -99,7 +100,7 @@ export async function GET(request: NextRequest) {
           websiteUrl: dealerProfile?.website || undefined,
           phoneNumber: dealer.phone || '',
           location: {
-            county: location.county || 'Ireland',
+            county: location.county && location.county !== 'Ireland' ? location.county : null,
             city: location.city || '',
             address: location.address || ''
           },
@@ -141,7 +142,7 @@ export async function GET(request: NextRequest) {
     if (county && county !== 'All Counties') {
       countWhere.location = {
         path: ['county'],
-        string_contains: county
+        equals: county
       };
     }
 

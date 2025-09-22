@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { formatLocation } from '@/lib/utils';
+import { IRISH_COUNTIES } from '@/data/counties';
 
 interface Dealer {
   id: string;
@@ -30,12 +31,7 @@ interface Dealer {
   responseTime: string;
 }
 
-const counties = [
-  'All Counties', 'Antrim', 'Armagh', 'Carlow', 'Cavan', 'Clare', 'Cork', 'Derry', 'Donegal', 'Down',
-  'Dublin', 'Fermanagh', 'Galway', 'Kerry', 'Kildare', 'Kilkenny', 'Laois', 'Leitrim', 'Limerick',
-  'Longford', 'Louth', 'Mayo', 'Meath', 'Monaghan', 'Offaly', 'Roscommon', 'Sligo', 'Tipperary',
-  'Tyrone', 'Waterford', 'Westmeath', 'Wexford', 'Wicklow'
-];
+const counties = ['All Counties', ...IRISH_COUNTIES];
 
 export default function FindDealerPage() {
   const [dealers, setDealers] = useState<Dealer[]>([]);

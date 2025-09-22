@@ -1,6 +1,7 @@
 // src/app/sitemap.ts
 import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/database'
+import { Prisma } from '@prisma/client'
 
 // Base URL - replace with your actual domain
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://irishautomarket.com'
@@ -121,7 +122,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       prisma.user.findMany({
         where: {
           location: {
-            not: null
+            not: Prisma.JsonNull
           }
         },
         select: {
@@ -133,7 +134,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         where: {
           status: 'ACTIVE',
           location: {
-            not: null
+            not: Prisma.JsonNull
           }
         },
         select: {
