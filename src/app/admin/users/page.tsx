@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { getAllCounties, getAreasForCounty } from '@/data/irish-locations';
 import { 
   Users, 
   Plus, 
@@ -102,6 +103,10 @@ interface EditUserData {
   role: 'USER' | 'DEALER' | 'ADMIN' | 'SUPER_ADMIN' | 'CONTENT_MOD' | 'FINANCE_ADMIN' | 'SUPPORT_ADMIN';
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING_VERIFICATION';
   emailVerified: boolean;
+  location?: {
+    county: string;
+    area: string;
+  };
   // Dealer specific fields
   dealerProfile?: {
     businessName: string;
@@ -148,8 +153,15 @@ export default function UnifiedUserManagement() {
     bio: '',
     role: 'USER',
     status: 'ACTIVE',
-    emailVerified: false
+    emailVerified: false,
+    location: undefined
   });
+
+  // Location state for edit modal
+  const counties = getAllCounties();
+  const [selectedCounty, setSelectedCounty] = useState('');
+  const [selectedArea, setSelectedArea] = useState('');
+  const [availableAreas, setAvailableAreas] = useState<string[]>([]);
   
   // UI states
   const [searchTerm, setSearchTerm] = useState('');
@@ -266,6 +278,19 @@ export default function UnifiedUserManagement() {
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
+
+    // Set location state
+    const userLocation = user.location;
+    if (userLocation?.county && userLocation?.area) {
+      setSelectedCounty(userLocation.county);
+      setSelectedArea(userLocation.area);
+      setAvailableAreas(getAreasForCounty(userLocation.county));
+    } else {
+      setSelectedCounty('');
+      setSelectedArea('');
+      setAvailableAreas([]);
+    }
+
     setEditUserForm({
       firstName: user.firstName,
       lastName: user.lastName,
@@ -275,6 +300,7 @@ export default function UnifiedUserManagement() {
       role: user.role,
       status: user.status,
       emailVerified: user.emailVerified,
+      location: userLocation || undefined,
       dealerProfile: user.dealerProfile ? {
         businessName: user.dealerProfile.businessName,
         description: user.dealerProfile.description || '',
@@ -299,13 +325,22 @@ export default function UnifiedUserManagement() {
       setError(null);
       setActionLoading('save-user');
 
+      // Prepare form data with location
+      const submissionData = {
+        ...editUserForm,
+        location: selectedCounty && selectedArea ? {
+          county: selectedCounty,
+          area: selectedArea
+        } : null,
+      };
+
       const response = await fetch(`/api/admin/users/${selectedUser.id}/edit`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify(editUserForm)
+        body: JSON.stringify(submissionData)
       });
 
       if (response.ok) {
@@ -323,6 +358,23 @@ export default function UnifiedUserManagement() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  // Location change handlers
+  const handleCountyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCounty = e.target.value;
+    setSelectedCounty(newCounty);
+    setSelectedArea(''); // Reset area when county changes
+
+    if (newCounty) {
+      setAvailableAreas(getAreasForCounty(newCounty));
+    } else {
+      setAvailableAreas([]);
+    }
+  };
+
+  const handleAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedArea(e.target.value);
   };
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
@@ -1582,6 +1634,52 @@ export default function UnifiedUserManagement() {
                       />
                       <span className="text-sm font-medium text-gray-700">Email Verified</span>
                     </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  Location
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      County
+                    </label>
+                    <select
+                      value={selectedCounty}
+                      onChange={handleCountyChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select a county...</option>
+                      {counties.map((county) => (
+                        <option key={county} value={county}>
+                          {county}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Area
+                    </label>
+                    <select
+                      value={selectedArea}
+                      onChange={handleAreaChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={!selectedCounty}
+                    >
+                      <option value="">Select an area...</option>
+                      {availableAreas.map((area) => (
+                        <option key={area} value={area}>
+                          {area}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

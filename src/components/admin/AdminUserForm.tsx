@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { useCSRFToken } from '@/hooks/useCSRFToken';
+import { getAllCounties, getAreasForCounty } from '@/data/irish-locations';
 
 interface UserFormData {
   firstName: string;
@@ -10,6 +11,10 @@ interface UserFormData {
   email: string;
   role: 'USER' | 'DEALER' | 'ADMIN';
   isActive: boolean;
+  location?: {
+    county: string;
+    area: string;
+  };
 }
 
 interface AdminUserFormProps {
@@ -19,11 +24,11 @@ interface AdminUserFormProps {
   onCancel?: () => void;
 }
 
-export function AdminUserForm({ 
-  userId, 
-  initialData, 
-  onSuccess, 
-  onCancel 
+export function AdminUserForm({
+  userId,
+  initialData,
+  onSuccess,
+  onCancel
 }: AdminUserFormProps) {
   const { makeSecureRequest, loading: csrfLoading, error: csrfError } = useCSRFToken();
   const [formData, setFormData] = useState<UserFormData>({
@@ -32,14 +37,23 @@ export function AdminUserForm({
     email: initialData?.email || '',
     role: initialData?.role || 'USER',
     isActive: initialData?.isActive ?? true,
+    location: initialData?.location || undefined,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Location state
+  const counties = getAllCounties();
+  const [selectedCounty, setSelectedCounty] = useState(initialData?.location?.county || '');
+  const [selectedArea, setSelectedArea] = useState(initialData?.location?.area || '');
+  const [availableAreas, setAvailableAreas] = useState<string[]>(
+    selectedCounty ? getAreasForCounty(selectedCounty) : []
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (csrfLoading) {
       setError('Security token is loading. Please wait.');
       return;
@@ -55,15 +69,24 @@ export function AdminUserForm({
     setSuccess(false);
 
     try {
-      const url = userId 
+      // Prepare form data with location
+      const submissionData = {
+        ...formData,
+        location: selectedCounty && selectedArea ? {
+          county: selectedCounty,
+          area: selectedArea
+        } : null,
+      };
+
+      const url = userId
         ? `/api/admin/users/${userId}`
         : '/api/admin/users';
-      
+
       const method = userId ? 'PUT' : 'POST';
 
       const response = await makeSecureRequest(url, {
         method,
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submissionData),
       });
 
       if (!response.ok) {
@@ -93,13 +116,29 @@ export function AdminUserForm({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value, type } = e.target;
-    
+
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' 
-        ? (e.target as HTMLInputElement).checked 
+      [name]: type === 'checkbox'
+        ? (e.target as HTMLInputElement).checked
         : value
     }));
+  };
+
+  const handleCountyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCounty = e.target.value;
+    setSelectedCounty(newCounty);
+    setSelectedArea(''); // Reset area when county changes
+
+    if (newCounty) {
+      setAvailableAreas(getAreasForCounty(newCounty));
+    } else {
+      setAvailableAreas([]);
+    }
+  };
+
+  const handleAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedArea(e.target.value);
   };
 
   return (
@@ -224,6 +263,50 @@ export function AdminUserForm({
           </label>
         </div>
 
+        {/* Location - County */}
+        <div>
+          <label htmlFor="county" className="block text-sm font-medium text-gray-700 mb-1">
+            County
+          </label>
+          <select
+            id="county"
+            name="county"
+            value={selectedCounty}
+            onChange={handleCountyChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            disabled={loading || csrfLoading}
+          >
+            <option value="">Select a county...</option>
+            {counties.map((county) => (
+              <option key={county} value={county}>
+                {county}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Location - Area */}
+        <div>
+          <label htmlFor="area" className="block text-sm font-medium text-gray-700 mb-1">
+            Area
+          </label>
+          <select
+            id="area"
+            name="area"
+            value={selectedArea}
+            onChange={handleAreaChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            disabled={loading || csrfLoading || !selectedCounty}
+          >
+            <option value="">Select an area...</option>
+            {availableAreas.map((area) => (
+              <option key={area} value={area}>
+                {area}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Form Actions */}
         <div className="flex space-x-3 pt-4">
           <button
@@ -332,7 +415,7 @@ export function AdminUserFormExample() {
           <h2 className="font-semibold mb-2">Example Users:</h2>
           <div className="space-y-2">
             <div className="flex justify-between items-center p-2 border rounded">
-              <span>John Doe (john@example.com)</span>
+              <span>John Doe (john@example.com) - Dublin, Dublin City</span>
               <button
                 onClick={() => handleEditUser({
                   id: 'user1',
@@ -340,7 +423,8 @@ export function AdminUserFormExample() {
                   lastName: 'Doe',
                   email: 'john@example.com',
                   role: 'USER',
-                  isActive: true
+                  isActive: true,
+                  location: { county: 'Dublin', area: 'Dublin City' }
                 })}
                 className="text-blue-600 hover:text-blue-800"
               >
@@ -348,7 +432,7 @@ export function AdminUserFormExample() {
               </button>
             </div>
             <div className="flex justify-between items-center p-2 border rounded">
-              <span>Jane Smith (jane@example.com)</span>
+              <span>Jane Smith (jane@example.com) - Cork, Cork City</span>
               <button
                 onClick={() => handleEditUser({
                   id: 'user2',
@@ -356,7 +440,8 @@ export function AdminUserFormExample() {
                   lastName: 'Smith',
                   email: 'jane@example.com',
                   role: 'DEALER',
-                  isActive: true
+                  isActive: true,
+                  location: { county: 'Cork', area: 'Cork City' }
                 })}
                 className="text-blue-600 hover:text-blue-800"
               >
