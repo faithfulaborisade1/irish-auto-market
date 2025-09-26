@@ -93,6 +93,31 @@ interface CreateAdminData {
   role: 'SUPER_ADMIN' | 'ADMIN';
 }
 
+interface EditUserData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  bio: string;
+  role: 'USER' | 'DEALER' | 'ADMIN' | 'SUPER_ADMIN' | 'CONTENT_MOD' | 'FINANCE_ADMIN' | 'SUPPORT_ADMIN';
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PENDING_VERIFICATION';
+  emailVerified: boolean;
+  // Dealer specific fields
+  dealerProfile?: {
+    businessName: string;
+    description?: string;
+    website?: string;
+    subscriptionType: string;
+    verified: boolean;
+  };
+  // Admin specific fields
+  adminProfile?: {
+    title?: string;
+    department?: string;
+    adminRole: string;
+  };
+}
+
 export default function UnifiedUserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +128,7 @@ export default function UnifiedUserManagement() {
   // Modal states
   const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
   const [showUserDetailsModal, setShowUserDetailsModal] = useState(false);
+  const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   
@@ -112,6 +138,17 @@ export default function UnifiedUserManagement() {
     firstName: '',
     lastName: '',
     role: 'ADMIN'
+  });
+
+  const [editUserForm, setEditUserForm] = useState<EditUserData>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    bio: '',
+    role: 'USER',
+    status: 'ACTIVE',
+    emailVerified: false
   });
   
   // UI states
@@ -225,6 +262,67 @@ export default function UnifiedUserManagement() {
   const handleRetry = () => {
     setRetryCount(prev => prev + 1);
     fetchUsers();
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    setEditUserForm({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      phone: user.phone || '',
+      bio: user.bio || '',
+      role: user.role,
+      status: user.status,
+      emailVerified: user.emailVerified,
+      dealerProfile: user.dealerProfile ? {
+        businessName: user.dealerProfile.businessName,
+        description: user.dealerProfile.description || '',
+        website: user.dealerProfile.website || '',
+        subscriptionType: user.dealerProfile.subscriptionType,
+        verified: user.dealerProfile.verified
+      } : undefined,
+      adminProfile: user.adminProfile ? {
+        title: user.adminProfile.title || '',
+        department: user.adminProfile.department || '',
+        adminRole: user.adminProfile.adminRole
+      } : undefined
+    });
+    setShowEditUserModal(true);
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+
+    try {
+      setError(null);
+      setActionLoading('save-user');
+
+      const response = await fetch(`/api/admin/users/${selectedUser.id}/edit`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(editUserForm)
+      });
+
+      if (response.ok) {
+        setShowEditUserModal(false);
+        setSelectedUser(null);
+        fetchUsers(); // Refresh the list
+        alert('User updated successfully');
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to update user');
+      }
+    } catch (error: any) {
+      setError('Network error updating user');
+      console.error('Error updating user:', error);
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
@@ -752,6 +850,15 @@ export default function UnifiedUserManagement() {
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
+                          </button>
+
+                          {/* Edit User */}
+                          <button
+                            onClick={() => handleEditUser(user)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                            title="Edit User"
+                          >
+                            <Edit className="w-4 h-4" />
                           </button>
 
                           {/* Role-specific actions */}
@@ -1331,6 +1438,357 @@ export default function UnifiedUserManagement() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {showEditUserModal && selectedUser && canManageUsers && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Edit User</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Update user details for {selectedUser.firstName} {selectedUser.lastName}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowEditUserModal(false);
+                    setSelectedUser(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveUser} className="p-6 space-y-6">
+              {/* Basic Information */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                  <UserCog className="w-4 h-4" />
+                  Basic Information
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editUserForm.firstName}
+                      onChange={(e) => setEditUserForm(prev => ({ ...prev, firstName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editUserForm.lastName}
+                      onChange={(e) => setEditUserForm(prev => ({ ...prev, lastName: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={editUserForm.email}
+                      onChange={(e) => setEditUserForm(prev => ({ ...prev, email: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={editUserForm.phone}
+                      onChange={(e) => setEditUserForm(prev => ({ ...prev, phone: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Role
+                    </label>
+                    <select
+                      value={editUserForm.role}
+                      onChange={(e) => setEditUserForm(prev => ({ ...prev, role: e.target.value as any }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="USER">User</option>
+                      <option value="DEALER">Dealer</option>
+                      <option value="ADMIN">Admin</option>
+                      <option value="SUPER_ADMIN">Super Admin</option>
+                      <option value="CONTENT_MOD">Content Moderator</option>
+                      <option value="FINANCE_ADMIN">Finance Admin</option>
+                      <option value="SUPPORT_ADMIN">Support Admin</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={editUserForm.status}
+                      onChange={(e) => setEditUserForm(prev => ({ ...prev, status: e.target.value as any }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                      <option value="SUSPENDED">Suspended</option>
+                      <option value="PENDING_VERIFICATION">Pending Verification</option>
+                    </select>
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Bio
+                    </label>
+                    <textarea
+                      value={editUserForm.bio}
+                      onChange={(e) => setEditUserForm(prev => ({ ...prev, bio: e.target.value }))}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={editUserForm.emailVerified}
+                        onChange={(e) => setEditUserForm(prev => ({ ...prev, emailVerified: e.target.checked }))}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Email Verified</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dealer Profile */}
+              {editUserForm.role === 'DEALER' && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                    <Building className="w-4 h-4" />
+                    Dealer Information
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Business Name
+                      </label>
+                      <input
+                        type="text"
+                        value={editUserForm.dealerProfile?.businessName || ''}
+                        onChange={(e) => setEditUserForm(prev => ({
+                          ...prev,
+                          dealerProfile: {
+                            ...prev.dealerProfile,
+                            businessName: e.target.value,
+                            description: prev.dealerProfile?.description || '',
+                            website: prev.dealerProfile?.website || '',
+                            subscriptionType: prev.dealerProfile?.subscriptionType || 'BASIC',
+                            verified: prev.dealerProfile?.verified || false
+                          }
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Subscription Type
+                      </label>
+                      <select
+                        value={editUserForm.dealerProfile?.subscriptionType || 'BASIC'}
+                        onChange={(e) => setEditUserForm(prev => ({
+                          ...prev,
+                          dealerProfile: {
+                            ...prev.dealerProfile,
+                            subscriptionType: e.target.value,
+                            businessName: prev.dealerProfile?.businessName || '',
+                            description: prev.dealerProfile?.description || '',
+                            website: prev.dealerProfile?.website || '',
+                            verified: prev.dealerProfile?.verified || false
+                          }
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="BASIC">Basic</option>
+                        <option value="PREMIUM">Premium</option>
+                        <option value="ENTERPRISE">Enterprise</option>
+                      </select>
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Website
+                      </label>
+                      <input
+                        type="url"
+                        value={editUserForm.dealerProfile?.website || ''}
+                        onChange={(e) => setEditUserForm(prev => ({
+                          ...prev,
+                          dealerProfile: {
+                            ...prev.dealerProfile,
+                            website: e.target.value,
+                            businessName: prev.dealerProfile?.businessName || '',
+                            description: prev.dealerProfile?.description || '',
+                            subscriptionType: prev.dealerProfile?.subscriptionType || 'BASIC',
+                            verified: prev.dealerProfile?.verified || false
+                          }
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Description
+                      </label>
+                      <textarea
+                        value={editUserForm.dealerProfile?.description || ''}
+                        onChange={(e) => setEditUserForm(prev => ({
+                          ...prev,
+                          dealerProfile: {
+                            ...prev.dealerProfile,
+                            description: e.target.value,
+                            businessName: prev.dealerProfile?.businessName || '',
+                            website: prev.dealerProfile?.website || '',
+                            subscriptionType: prev.dealerProfile?.subscriptionType || 'BASIC',
+                            verified: prev.dealerProfile?.verified || false
+                          }
+                        }))}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={editUserForm.dealerProfile?.verified || false}
+                          onChange={(e) => setEditUserForm(prev => ({
+                            ...prev,
+                            dealerProfile: {
+                              ...prev.dealerProfile,
+                              verified: e.target.checked,
+                              businessName: prev.dealerProfile?.businessName || '',
+                              description: prev.dealerProfile?.description || '',
+                              website: prev.dealerProfile?.website || '',
+                              subscriptionType: prev.dealerProfile?.subscriptionType || 'BASIC'
+                            }
+                          }))}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Verified Dealer</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Admin Profile */}
+              {['ADMIN', 'SUPER_ADMIN', 'CONTENT_MOD', 'FINANCE_ADMIN', 'SUPPORT_ADMIN'].includes(editUserForm.role) && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                    <Shield className="w-4 h-4" />
+                    Admin Information
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Title
+                      </label>
+                      <input
+                        type="text"
+                        value={editUserForm.adminProfile?.title || ''}
+                        onChange={(e) => setEditUserForm(prev => ({
+                          ...prev,
+                          adminProfile: {
+                            ...prev.adminProfile,
+                            title: e.target.value,
+                            department: prev.adminProfile?.department || '',
+                            adminRole: prev.adminProfile?.adminRole || editUserForm.role
+                          }
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Department
+                      </label>
+                      <input
+                        type="text"
+                        value={editUserForm.adminProfile?.department || ''}
+                        onChange={(e) => setEditUserForm(prev => ({
+                          ...prev,
+                          adminProfile: {
+                            ...prev.adminProfile,
+                            department: e.target.value,
+                            title: prev.adminProfile?.title || '',
+                            adminRole: prev.adminProfile?.adminRole || editUserForm.role
+                          }
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditUserModal(false);
+                    setSelectedUser(null);
+                  }}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading === 'save-user'}
+                  className="flex-1 px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {actionLoading === 'save-user' ? (
+                    <>
+                      <div className="w-4 h-4 animate-spin border-2 border-white border-t-transparent rounded-full"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

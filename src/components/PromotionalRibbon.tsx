@@ -4,7 +4,7 @@ export default function PromotionalRibbon() {
   return (
     <>
       {/* Mobile Version - Top Banner */}
-      <div className="block md:hidden absolute top-16 left-4 right-4 z-40 bg-gradient-to-r from-emerald-500 to-green-600 text-white py-3 px-4 rounded-lg shadow-xl">
+      <div className="block md:hidden absolute top-4 left-4 right-4 z-40 bg-gradient-to-r from-emerald-500 to-green-600 text-white py-3 px-4 rounded-lg shadow-xl">
         <div className="flex items-center justify-center gap-2 text-sm font-bold">
           <span className="text-yellow-300">🎉</span>
           <span>FREE LISTINGS until Jan 15th!</span>
