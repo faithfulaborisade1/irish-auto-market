@@ -120,6 +120,13 @@ async function downloadAndUploadImage(imageUrl: string): Promise<ProcessedImage>
 
 export async function POST(request: NextRequest) {
   try {
+    // Log environment variables for debugging (will show in Vercel logs)
+    console.log('[DEBUG] Cloudinary Config Check:', {
+      cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ? 'SET' : 'MISSING',
+      apiKey: process.env.CLOUDINARY_API_KEY ? 'SET' : 'MISSING',
+      apiSecret: process.env.CLOUDINARY_API_SECRET ? 'SET' : 'MISSING',
+    });
+
     const body: ImageUrlRequest = await request.json();
 
     if (!body.imageUrls || !Array.isArray(body.imageUrls) || body.imageUrls.length === 0) {
