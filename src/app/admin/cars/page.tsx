@@ -1304,7 +1304,7 @@ export default function AdminCarsManagement() {
                     <input
                       type="number"
                       min="0"
-                      step="100"
+                      step="1"
                       value={editFormData.price}
                       onChange={(e) => updateFormField('price', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
