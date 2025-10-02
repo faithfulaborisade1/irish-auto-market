@@ -296,9 +296,12 @@ export async function POST(request: NextRequest) {
                 // Process image URLs if provided
                 let processedImages = carData.images || [];
                 if (carData.imageUrls && carData.imageUrls.length > 0) {
+                  console.log(`[DEBUG] Processing ${carData.imageUrls.length} image URLs for car: ${carData.title}`);
                   try {
                     processedImages = await processImageUrls(carData.imageUrls, requestUrl);
+                    console.log(`[DEBUG] Successfully processed ${processedImages.length} images`);
                   } catch (imageError) {
+                    console.error(`[DEBUG] Image processing error:`, imageError);
                     throw new Error(`Failed to process images: ${imageError instanceof Error ? imageError.message : 'Unknown error'}`);
                   }
                 }
