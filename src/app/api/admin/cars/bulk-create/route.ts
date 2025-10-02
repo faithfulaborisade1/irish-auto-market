@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 
 // Helper function to download and process image URLs
-async function processImageUrls(imageUrls: string[]): Promise<Array<{
+async function processImageUrls(imageUrls: string[], requestUrl?: string): Promise<Array<{
   originalUrl: string;
   thumbnailUrl: string;
   mediumUrl: string;
@@ -14,14 +14,41 @@ async function processImageUrls(imageUrls: string[]): Promise<Array<{
   size: number;
 }>> {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/cars/process-image-urls`, {
+    // Determine the base URL from the request or environment
+    let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL;
+
+    if (!baseUrl && requestUrl) {
+      // Extract base URL from the current request
+      const url = new URL(requestUrl);
+      baseUrl = url.origin;
+    }
+
+    if (!baseUrl) {
+      baseUrl = 'http://localhost:3000';
+    }
+
+    // Ensure baseUrl has protocol
+    if (!baseUrl.startsWith('http')) {
+      baseUrl = `https://${baseUrl}`;
+    }
+
+    console.log('[DEBUG] Calling process-image-urls with baseUrl:', baseUrl);
+
+    const response = await fetch(`${baseUrl}/api/admin/cars/process-image-urls`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageUrls, maxImages: 10 }),
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      const errorText = await response.text();
+      console.error('[DEBUG] Image processing failed:', response.status, errorText);
+      let error;
+      try {
+        error = JSON.parse(errorText);
+      } catch {
+        error = { error: errorText || `HTTP ${response.status}` };
+      }
       throw new Error(error.error || 'Failed to process image URLs');
     }
 
@@ -154,6 +181,9 @@ async function generateSlug(title: string, attempt = 0): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
+    // Get request URL for processImageUrls
+    const requestUrl = request.url;
+
     // Check content length
     const contentLength = request.headers.get('content-length');
     if (contentLength && parseInt(contentLength) > 5000000) { // 5MB limit
@@ -267,7 +297,7 @@ export async function POST(request: NextRequest) {
                 let processedImages = carData.images || [];
                 if (carData.imageUrls && carData.imageUrls.length > 0) {
                   try {
-                    processedImages = await processImageUrls(carData.imageUrls);
+                    processedImages = await processImageUrls(carData.imageUrls, requestUrl);
                   } catch (imageError) {
                     throw new Error(`Failed to process images: ${imageError instanceof Error ? imageError.message : 'Unknown error'}`);
                   }
