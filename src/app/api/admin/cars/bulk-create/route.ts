@@ -1,64 +1,10 @@
 // src/app/api/admin/cars/bulk-create/route.ts - Admin bulk creates cars for specific dealer
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { processImageUrls } from '@/lib/image-processor';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
-
-// Helper function to download and process image URLs
-async function processImageUrls(imageUrls: string[], requestUrl?: string): Promise<Array<{
-  originalUrl: string;
-  thumbnailUrl: string;
-  mediumUrl: string;
-  largeUrl: string;
-  size: number;
-}>> {
-  try {
-    // Determine the base URL from the request or environment
-    let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL;
-
-    if (!baseUrl && requestUrl) {
-      // Extract base URL from the current request
-      const url = new URL(requestUrl);
-      baseUrl = url.origin;
-    }
-
-    if (!baseUrl) {
-      baseUrl = 'http://localhost:3000';
-    }
-
-    // Ensure baseUrl has protocol
-    if (!baseUrl.startsWith('http')) {
-      baseUrl = `https://${baseUrl}`;
-    }
-
-    console.log('[DEBUG] Calling process-image-urls with baseUrl:', baseUrl);
-
-    const response = await fetch(`${baseUrl}/api/admin/cars/process-image-urls`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageUrls, maxImages: 10 }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[DEBUG] Image processing failed:', response.status, errorText);
-      let error;
-      try {
-        error = JSON.parse(errorText);
-      } catch {
-        error = { error: errorText || `HTTP ${response.status}` };
-      }
-      throw new Error(error.error || 'Failed to process image URLs');
-    }
-
-    const result = await response.json();
-    return result.images || [];
-  } catch (error) {
-    console.error('Error processing image URLs:', error);
-    throw error;
-  }
-}
 
 interface BulkCarData {
   dealerId: string;
@@ -181,9 +127,6 @@ async function generateSlug(title: string, attempt = 0): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get request URL for processImageUrls
-    const requestUrl = request.url;
-
     // Check content length
     const contentLength = request.headers.get('content-length');
     if (contentLength && parseInt(contentLength) > 5000000) { // 5MB limit
@@ -298,7 +241,7 @@ export async function POST(request: NextRequest) {
                 if (carData.imageUrls && carData.imageUrls.length > 0) {
                   console.log(`[DEBUG] Processing ${carData.imageUrls.length} image URLs for car: ${carData.title}`);
                   try {
-                    processedImages = await processImageUrls(carData.imageUrls, requestUrl);
+                    processedImages = await processImageUrls(carData.imageUrls, 10);
                     console.log(`[DEBUG] Successfully processed ${processedImages.length} images`);
                   } catch (imageError) {
                     console.error(`[DEBUG] Image processing error:`, imageError);
