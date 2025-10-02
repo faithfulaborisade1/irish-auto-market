@@ -369,15 +369,37 @@ const BODY_TYPES = [
     window.URL.revokeObjectURL(url);
   };
 
+  // Proper CSV parser that handles quoted fields with commas
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+
   const parseCSV = (text: string) => {
     const lines = text.split('\n').filter(line => line.trim());
     if (lines.length < 2) return [];
 
-    const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+    const headers = parseCSVLine(lines[0]);
     const data = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+      const values = parseCSVLine(lines[i]);
       if (values.length < headers.length) continue;
 
       const row: any = {};
@@ -443,8 +465,8 @@ const BODY_TYPES = [
         condition: row.condition || 'USED',
         previousOwners: row.previousOwners ? parseInt(row.previousOwners) : 1,
         nctExpiry: row.nctExpiry || undefined,
-        serviceHistory: row.serviceHistory === 'true' || row.serviceHistory === '1',
-        accidentHistory: row.accidentHistory === 'true' || row.accidentHistory === '1',
+        serviceHistory: row.serviceHistory === 'true' || row.serviceHistory === 'TRUE' || row.serviceHistory === '1',
+        accidentHistory: row.accidentHistory === 'true' || row.accidentHistory === 'TRUE' || row.accidentHistory === '1',
         features: row.features ? row.features.split('|').map((f: string) => f.trim()) : [],
         // Store raw image URLs - backend will download and process them
         imageUrls: row.image_urls ? row.image_urls.split('|').map((url: string) => url.trim()).filter(Boolean) : []
