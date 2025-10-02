@@ -101,6 +101,30 @@ function sanitizeText(text: string): string {
     .trim();
 }
 
+// Parse date in DD/MM/YYYY or ISO format
+function parseDate(dateString: string): Date | null {
+  if (!dateString) return null;
+
+  // Try DD/MM/YYYY format first
+  const ddmmyyyyMatch = dateString.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (ddmmyyyyMatch) {
+    const [, day, month, year] = ddmmyyyyMatch;
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    // Validate the date is valid
+    if (!isNaN(date.getTime())) {
+      return date;
+    }
+  }
+
+  // Try ISO format or other standard formats
+  const date = new Date(dateString);
+  if (!isNaN(date.getTime())) {
+    return date;
+  }
+
+  return null;
+}
+
 // Generate unique slug
 async function generateSlug(title: string, attempt = 0): Promise<string> {
   const baseSlug = title
@@ -282,7 +306,7 @@ export async function POST(request: NextRequest) {
                     color: sanitizedData.color,
                     condition: (carData.condition && ['NEW', 'USED', 'CERTIFIED_PRE_OWNED'].includes(carData.condition)) ? carData.condition as any : 'USED',
                     previousOwners: carData.previousOwners ? parseInt(carData.previousOwners.toString()) : 1,
-                    nctExpiry: carData.nctExpiry ? new Date(carData.nctExpiry) : null,
+                    nctExpiry: carData.nctExpiry ? parseDate(carData.nctExpiry.toString()) : null,
                     serviceHistory: Boolean(carData.serviceHistory),
                     accidentHistory: Boolean(carData.accidentHistory),
                     description: sanitizedData.description,
