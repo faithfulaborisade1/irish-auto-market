@@ -1394,7 +1394,7 @@ const BODY_TYPES = [
                 </div>
 
                 {results.errors && results.errors.length > 0 && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                     <h4 className="font-medium text-red-900 mb-2">Errors:</h4>
                     <ul className="text-sm text-red-800 space-y-1">
                       {results.errors.slice(0, 10).map((error: string, index: number) => (
@@ -1406,6 +1406,25 @@ const BODY_TYPES = [
                     </ul>
                   </div>
                 )}
+
+                {/* Upload Another Button */}
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => {
+                      setResults(null);
+                      setCsvFile(null);
+                      setCsvData([]);
+                      setCsvPreview([]);
+                      setShowPreview(false);
+                      setError(null);
+                      setSuccess(null);
+                    }}
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    <Upload className="w-5 h-5" />
+                    Upload Another CSV
+                  </button>
+                </div>
               </div>
             )}
           </div>
