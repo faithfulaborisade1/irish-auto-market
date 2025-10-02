@@ -73,7 +73,7 @@ async function downloadAndUploadImage(imageUrl: string): Promise<ProcessedImage>
     }
 
     // Check Cloudinary config before attempting upload
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dmynffe63';
     const apiKey = process.env.CLOUDINARY_API_KEY;
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
@@ -102,7 +102,6 @@ async function downloadAndUploadImage(imageUrl: string): Promise<ProcessedImage>
       uploadStream.end(buffer);
     });
 
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dmynffe63';
     const baseUrl = `https://res.cloudinary.com/${cloudName}/image/upload`;
 
     return {
