@@ -88,8 +88,7 @@ export async function downloadAndUploadImage(imageUrl: string): Promise<Processe
         {
           folder: 'irish_auto_market/cars',
           resource_type: 'image',
-          quality: 'auto',
-          format: 'auto',
+          quality: 'auto:good',
         },
         (error, result) => {
           if (error) {
