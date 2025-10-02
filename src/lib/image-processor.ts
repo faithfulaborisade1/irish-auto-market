@@ -23,7 +23,16 @@ function isValidImageUrl(url: string): boolean {
     const parsedUrl = new URL(url);
     const pathname = parsedUrl.pathname.toLowerCase();
     const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
-    return validExtensions.some(ext => pathname.endsWith(ext));
+
+    // Check if path ends with valid extension OR contains known image CDNs
+    const hasValidExtension = validExtensions.some(ext => pathname.includes(ext));
+    const isImageCDN = parsedUrl.hostname.includes('unsplash.com') ||
+                       parsedUrl.hostname.includes('cloudinary.com') ||
+                       parsedUrl.hostname.includes('donedeal.ie') ||
+                       parsedUrl.hostname.includes('imgur.com') ||
+                       parsedUrl.hostname.includes('pexels.com');
+
+    return hasValidExtension || isImageCDN;
   } catch {
     return false;
   }
