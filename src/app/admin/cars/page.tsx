@@ -113,6 +113,7 @@ interface EditFormData {
   model: string;
   year: number | string;
   price: number | string;
+  currency: string;
   mileage: number | string;
   fuelType: string;
   transmission: string;
@@ -125,6 +126,9 @@ interface EditFormData {
   description: string;
   status: string;
   nctExpiry: string;
+  locationCounty: string;
+  locationCity: string;
+  locationEircode: string;
 }
 
 // Color options used in the system
@@ -348,12 +352,16 @@ export default function AdminCarsManagement() {
   };
 
   const openEditModal = (car: AdminCar) => {
+    // Parse location data if it exists
+    const location = car.location as any;
+
     setEditFormData({
       title: car.title,
       make: car.make,
       model: car.model,
       year: car.year.toString(),
       price: car.price.toString(),
+      currency: car.currency || 'EUR',
       mileage: car.mileage?.toString() || '',
       fuelType: car.fuelType || '',
       transmission: car.transmission || '',
@@ -365,7 +373,10 @@ export default function AdminCarsManagement() {
       condition: car.condition,
       description: car.description || '',
       status: car.status,
-      nctExpiry: car.nctExpiry ? new Date(car.nctExpiry).toISOString().split('T')[0] : ''
+      nctExpiry: car.nctExpiry ? (car.nctExpiry.includes('T') ? car.nctExpiry.split('T')[0] : car.nctExpiry.split(' ')[0]) : '',
+      locationCounty: location?.county || '',
+      locationCity: location?.city || location?.town || '',
+      locationEircode: location?.eircode || location?.postalCode || ''
     });
     setSelectedCar(car);
     setShowEditModal(true);
@@ -378,15 +389,36 @@ export default function AdminCarsManagement() {
   const handleEditSubmit = () => {
     if (!selectedCar || !editFormData) return;
 
+    // Build location object
+    const location = editFormData.locationCounty ? {
+      county: editFormData.locationCounty,
+      city: editFormData.locationCity || undefined,
+      town: editFormData.locationCity || undefined,
+      eircode: editFormData.locationEircode || undefined,
+      postalCode: editFormData.locationEircode || undefined
+    } : null;
+
     // Convert numeric fields
-    const updateData = {
-      ...editFormData,
+    const updateData: any = {
+      title: editFormData.title,
+      make: editFormData.make,
+      model: editFormData.model,
       year: parseInt(editFormData.year.toString()),
       price: parseFloat(editFormData.price.toString()),
+      currency: editFormData.currency,
+      condition: editFormData.condition,
+      description: editFormData.description,
+      status: editFormData.status,
+      nctExpiry: editFormData.nctExpiry || null,
+      location: location,
       mileage: editFormData.mileage ? parseInt(editFormData.mileage.toString()) : null,
       engineSize: editFormData.engineSize ? parseFloat(editFormData.engineSize.toString()) : null,
       doors: editFormData.doors ? parseInt(editFormData.doors.toString()) : null,
       seats: editFormData.seats ? parseInt(editFormData.seats.toString()) : null,
+      fuelType: editFormData.fuelType || null,
+      transmission: editFormData.transmission || null,
+      bodyType: editFormData.bodyType || null,
+      color: editFormData.color || null
     };
 
     handleCarAction(selectedCar.id, 'edit_car', updateData);
@@ -1267,7 +1299,7 @@ export default function AdminCarsManagement() {
                   {/* Price */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Price (€)
+                      Price
                     </label>
                     <input
                       type="number"
@@ -1278,6 +1310,23 @@ export default function AdminCarsManagement() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
+                  </div>
+
+                  {/* Currency */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Currency
+                    </label>
+                    <select
+                      value={editFormData.currency}
+                      onChange={(e) => updateFormField('currency', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="EUR">EUR (€)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="USD">USD ($)</option>
+                    </select>
                   </div>
 
                   {/* Mileage */}
@@ -1472,6 +1521,54 @@ export default function AdminCarsManagement() {
                       onChange={(e) => updateFormField('nctExpiry', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
+                  </div>
+                </div>
+
+                {/* Location Fields */}
+                <div className="pt-4 border-t border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Location Information</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* County */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        County
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.locationCounty}
+                        onChange={(e) => updateFormField('locationCounty', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="e.g., Dublin"
+                      />
+                    </div>
+
+                    {/* City/Town */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        City/Town
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.locationCity}
+                        onChange={(e) => updateFormField('locationCity', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="e.g., Ballsbridge"
+                      />
+                    </div>
+
+                    {/* Eircode */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Eircode
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.locationEircode}
+                        onChange={(e) => updateFormField('locationEircode', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="e.g., D04 E5W8"
+                      />
+                    </div>
                   </div>
                 </div>
 
