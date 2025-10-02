@@ -5,6 +5,34 @@ import { prisma } from '@/lib/prisma';
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
+// Helper function to download and process image URLs
+async function processImageUrls(imageUrls: string[]): Promise<Array<{
+  originalUrl: string;
+  thumbnailUrl: string;
+  mediumUrl: string;
+  largeUrl: string;
+  size: number;
+}>> {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/admin/cars/process-image-urls`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageUrls, maxImages: 10 }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to process image URLs');
+    }
+
+    const result = await response.json();
+    return result.images || [];
+  } catch (error) {
+    console.error('Error processing image URLs:', error);
+    throw error;
+  }
+}
+
 interface BulkCarData {
   dealerId: string;
   cars: Array<{
@@ -12,6 +40,7 @@ interface BulkCarData {
     model: string;
     year: number;
     price: number;
+    currency?: string;
     title: string;
     description: string;
     county: string;
@@ -30,7 +59,9 @@ interface BulkCarData {
     serviceHistory?: boolean;
     accidentHistory?: boolean;
     features?: string[];
-    images: Array<{
+    // Support both image URLs (new) and already-processed images (old)
+    imageUrls?: string[];
+    images?: Array<{
       originalUrl: string;
       thumbnailUrl: string;
       mediumUrl: string;
@@ -62,11 +93,17 @@ function validateSingleCar(car: any, index: number) {
   }
   if (!car.county?.trim()) errors.push(`${prefix} County is required`);
   
-  // Images validation
-  if (!car.images || !Array.isArray(car.images) || car.images.length === 0) {
-    errors.push(`${prefix} At least one image is required`);
+  // Images validation - support both imageUrls and images
+  const hasImageUrls = car.imageUrls && Array.isArray(car.imageUrls) && car.imageUrls.length > 0;
+  const hasImages = car.images && Array.isArray(car.images) && car.images.length > 0;
+
+  if (!hasImageUrls && !hasImages) {
+    errors.push(`${prefix} At least one image URL is required`);
   }
-  if (car.images && car.images.length > 10) {
+  if (hasImageUrls && car.imageUrls.length > 10) {
+    errors.push(`${prefix} Maximum 10 images allowed`);
+  }
+  if (hasImages && car.images.length > 10) {
     errors.push(`${prefix} Maximum 10 images allowed`);
   }
   
@@ -224,8 +261,18 @@ export async function POST(request: NextRequest) {
             for (let batchIndex = 0; batchIndex < batch.length; batchIndex++) {
               const carData = batch[batchIndex];
               const globalIndex = i + batchIndex;
-              
+
               try {
+                // Process image URLs if provided
+                let processedImages = carData.images || [];
+                if (carData.imageUrls && carData.imageUrls.length > 0) {
+                  try {
+                    processedImages = await processImageUrls(carData.imageUrls);
+                  } catch (imageError) {
+                    throw new Error(`Failed to process images: ${imageError instanceof Error ? imageError.message : 'Unknown error'}`);
+                  }
+                }
+
                 // Sanitize text inputs
                 const sanitizedData = {
                   make: sanitizeText(carData.make),
@@ -279,10 +326,10 @@ export async function POST(request: NextRequest) {
                   },
                 });
 
-                // Create car images
-                if (carData.images && carData.images.length > 0) {
+                // Create car images from processed images
+                if (processedImages && processedImages.length > 0) {
                   await Promise.all(
-                    carData.images.slice(0, 10).map((image: any, imageIndex: number) =>
+                    processedImages.slice(0, 10).map((image: any, imageIndex: number) =>
                       tx.carImage.create({
                         data: {
                           carId: car.id,

@@ -354,11 +354,12 @@ const BODY_TYPES = [
 
   const downloadCSVTemplate = () => {
     const csvContent = [
-      'title,make,model,year,price,mileage,fuelType,transmission,color,county,area,description,image_urls',
-      '"2020 BMW 320i",BMW,320i,2020,25000,45000,PETROL,AUTOMATIC,Black,Dublin,"Dublin City","Great condition car in excellent state","https://image1.jpg,https://image2.jpg"',
-      '"2019 Toyota Corolla",Toyota,Corolla,2019,18000,32000,HYBRID,AUTOMATIC,White,Cork,"Cork City","Reliable hybrid with low mileage","https://image1.jpg,https://image2.jpg"'
+      'title,make,model,year,price,currency,mileage,fuelType,transmission,engineSize,bodyType,doors,seats,color,county,area,description,condition,previousOwners,nctExpiry,serviceHistory,accidentHistory,features,image_urls',
+      '"2020 BMW 320i M Sport",BMW,320i,2020,25000,EUR,45000,PETROL,AUTOMATIC,2.0,SALOON,4,5,Black,Dublin,"Dublin City","Excellent condition BMW 320i with full service history. Recently serviced with new tyres.",USED,1,2025-12-31,true,false,"Leather Seats|Parking Sensors|Bluetooth|Cruise Control","https://example.com/img1.jpg|https://example.com/img2.jpg|https://example.com/img3.jpg"',
+      '"2019 Toyota Corolla Hybrid",Toyota,Corolla,2019,18000,EUR,32000,HYBRID,AUTOMATIC,1.8,HATCHBACK,5,5,White,Cork,"Cork City","Reliable hybrid with excellent fuel economy. Perfect for daily commute.",USED,2,2025-06-30,true,false,"Reversing Camera|Climate Control|Heated Seats","https://example.com/img4.jpg|https://example.com/img5.jpg"',
+      '"2021 Volkswagen Golf GTI",Volkswagen,Golf,2021,32000,EUR,15000,PETROL,MANUAL,2.0,HATCHBACK,5,5,Red,Galway,Galway,"Stunning Golf GTI in pristine condition. Full VW service history.",CERTIFIED_PRE_OWNED,1,2026-03-15,true,false,"Sport Seats|Touchscreen|Apple CarPlay|LED Headlights","https://example.com/img6.jpg|https://example.com/img7.jpg|https://example.com/img8.jpg"'
     ].join('\n');
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -384,33 +385,72 @@ const BODY_TYPES = [
         row[header] = values[index] || '';
       });
 
-      // Transform to expected format
+      // Transform to expected format with smart defaults
+      const make = row.make || '';
+      const model = row.model || '';
+      const year = parseInt(row.year) || new Date().getFullYear();
+
+      // Smart defaults based on make/model/year
+      let defaultBodyType = 'HATCHBACK';
+      let defaultDoors = undefined;
+      let defaultSeats = undefined;
+
+      // Detect SUVs
+      if (model.toLowerCase().includes('suv') || model.toLowerCase().includes('x3') ||
+          model.toLowerCase().includes('x5') || model.toLowerCase().includes('qashqai') ||
+          model.toLowerCase().includes('tucson') || model.toLowerCase().includes('sportage')) {
+        defaultBodyType = 'SUV';
+        defaultDoors = 5;
+        defaultSeats = 5;
+      }
+      // Detect vans
+      else if (model.toLowerCase().includes('van') || model.toLowerCase().includes('transit') ||
+               model.toLowerCase().includes('sprinter') || make.toLowerCase().includes('mercedes-benz')) {
+        defaultBodyType = 'VAN';
+      }
+      // Detect saloons
+      else if (model.toLowerCase().includes('3 series') || model.toLowerCase().includes('a4') ||
+               model.toLowerCase().includes('camry') || model.toLowerCase().includes('accord')) {
+        defaultBodyType = 'SALOON';
+        defaultDoors = 4;
+        defaultSeats = 5;
+      }
+
+      // Smart transmission default - newer cars tend to be automatic
+      let defaultTransmission = 'MANUAL';
+      if (year >= 2020) {
+        defaultTransmission = 'AUTOMATIC';
+      }
+
       const car = {
-        title: row.title || '',
-        make: row.make || '',
-        model: row.model || '',
-        year: parseInt(row.year) || new Date().getFullYear(),
+        title: row.title || `${year} ${make} ${model}`,
+        make: make,
+        model: model,
+        year: year,
         price: parseFloat(row.price) || 0,
+        currency: row.currency || 'EUR',
         mileage: row.mileage ? parseInt(row.mileage) : undefined,
         fuelType: row.fuelType || 'PETROL',
-        transmission: row.transmission || 'MANUAL',
+        transmission: row.transmission || defaultTransmission,
+        engineSize: row.engineSize ? parseFloat(row.engineSize) : undefined,
+        bodyType: row.bodyType || defaultBodyType,
+        doors: row.doors ? parseInt(row.doors) : defaultDoors,
+        seats: row.seats ? parseInt(row.seats) : defaultSeats,
         color: row.color || '',
         county: row.county || '',
         area: row.area || '',
-        description: row.description || '',
-        condition: 'USED',
-        serviceHistory: false,
-        accidentHistory: false,
-        features: [],
-        images: row.image_urls ? row.image_urls.split(',').map((url: string) => ({
-          originalUrl: url.trim(),
-          thumbnailUrl: url.trim(),
-          mediumUrl: url.trim(),
-          largeUrl: url.trim()
-        })) : []
+        description: row.description || `${year} ${make} ${model} in ${row.condition || 'good'} condition.`,
+        condition: row.condition || 'USED',
+        previousOwners: row.previousOwners ? parseInt(row.previousOwners) : 1,
+        nctExpiry: row.nctExpiry || undefined,
+        serviceHistory: row.serviceHistory === 'true' || row.serviceHistory === '1',
+        accidentHistory: row.accidentHistory === 'true' || row.accidentHistory === '1',
+        features: row.features ? row.features.split('|').map((f: string) => f.trim()) : [],
+        // Store raw image URLs - backend will download and process them
+        imageUrls: row.image_urls ? row.image_urls.split('|').map((url: string) => url.trim()).filter(Boolean) : []
       };
 
-      if (car.make && car.model && car.year && car.price && car.title) {
+      if (car.make && car.model && car.year && car.price && car.title && car.imageUrls.length > 0) {
         data.push(car);
       }
     }
@@ -1127,19 +1167,61 @@ const BODY_TYPES = [
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center gap-2 mb-4">
                 <FileText className="w-5 h-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-900">CSV Template</h2>
+                <h2 className="text-lg font-semibold text-gray-900">CSV Template & Instructions</h2>
               </div>
-              <div className="flex items-center justify-between">
+
+              {/* Instructions */}
+              <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <Info className="w-4 h-4" />
+                  How to Use Bulk Upload with Image URLs
+                </h3>
+                <ul className="text-sm text-blue-800 space-y-2 ml-6 list-disc">
+                  <li>Copy image URLs directly from DoneDeal, Cars.ie, or any car listing site</li>
+                  <li>Separate multiple image URLs with a pipe symbol <code className="bg-blue-100 px-1 rounded">|</code></li>
+                  <li>Example: <code className="bg-blue-100 px-1 rounded text-xs">https://site.com/img1.jpg|https://site.com/img2.jpg</code></li>
+                  <li>Images will be automatically downloaded and uploaded to your account</li>
+                  <li>You can add up to 10 images per car</li>
+                  <li>No need to manually download images anymore! ⚡</li>
+                </ul>
+              </div>
+
+              <div className="space-y-3">
                 <p className="text-gray-600">
-                  Download the CSV template to see the required format for bulk uploads
+                  Download a CSV template to get started with bulk uploads
                 </p>
-                <button
-                  onClick={downloadCSVTemplate}
-                  className="px-4 py-2 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors flex items-center gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Download Template
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={downloadCSVTemplate}
+                    className="px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Full Template
+                  </button>
+                  <button
+                    onClick={() => {
+                      const csvContent = [
+                        'title,make,model,year,price,county,description,image_urls',
+                        '"2020 BMW 320i",BMW,320i,2020,25000,Dublin,"Great car in excellent condition","https://example.com/1.jpg|https://example.com/2.jpg"',
+                        '"2019 Toyota Corolla",Toyota,Corolla,2019,18000,Cork,"Reliable hybrid with low mileage","https://example.com/3.jpg|https://example.com/4.jpg"'
+                      ].join('\n');
+                      const blob = new Blob([csvContent], { type: 'text/csv' });
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = 'simple-car-template.csv';
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                    }}
+                    className="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-lg transition-colors flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Simple Template
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  💡 Use Simple Template for quick uploads (only essential fields). Smart defaults will fill in the rest!
+                </p>
               </div>
             </div>
 
@@ -1229,11 +1311,15 @@ const BODY_TYPES = [
                           <td className="px-3 py-2 text-gray-900">{car.title}</td>
                           <td className="px-3 py-2 text-gray-600">{car.make} {car.model}</td>
                           <td className="px-3 py-2 text-gray-600">{car.year}</td>
-                          <td className="px-3 py-2 text-gray-600">€{car.price.toLocaleString()}</td>
+                          <td className="px-3 py-2 text-gray-600">
+                            {car.currency === 'GBP' ? '£' : '€'}{car.price.toLocaleString()}
+                          </td>
                           <td className="px-3 py-2 text-gray-600">
                             {car.area ? `${car.area}, ${car.county}` : car.county}
                           </td>
-                          <td className="px-3 py-2 text-gray-600">{car.images.length} images</td>
+                          <td className="px-3 py-2 text-gray-600">
+                            {car.imageUrls?.length || 0} image URLs
+                          </td>
                         </tr>
                       ))}
                     </tbody>
