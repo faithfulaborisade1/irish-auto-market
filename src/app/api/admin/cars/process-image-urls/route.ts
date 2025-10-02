@@ -53,13 +53,13 @@ async function downloadAndUploadImage(imageUrl: string): Promise<ProcessedImage>
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to download image: ${response.statusText}`);
+      throw new Error(`Failed to download image from ${imageUrl}: ${response.status} ${response.statusText}`);
     }
 
     // Check content type
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.startsWith('image/')) {
-      throw new Error(`URL does not point to an image: ${contentType}`);
+      throw new Error(`URL does not point to an image (content-type: ${contentType}): ${imageUrl}`);
     }
 
     // Get image buffer
@@ -69,7 +69,16 @@ async function downloadAndUploadImage(imageUrl: string): Promise<ProcessedImage>
 
     // Check file size (max 10MB)
     if (size > 10 * 1024 * 1024) {
-      throw new Error('Image size exceeds 10MB limit');
+      throw new Error(`Image size exceeds 10MB limit: ${(size / 1024 / 1024).toFixed(2)}MB`);
+    }
+
+    // Check Cloudinary config before attempting upload
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      throw new Error(`Cloudinary configuration missing! Cloud Name: ${cloudName ? '✓' : '✗'}, API Key: ${apiKey ? '✓' : '✗'}, API Secret: ${apiSecret ? '✓' : '✗'}`);
     }
 
     // Upload to Cloudinary using upload stream
@@ -82,8 +91,11 @@ async function downloadAndUploadImage(imageUrl: string): Promise<ProcessedImage>
           format: 'auto',
         },
         (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
+          if (error) {
+            reject(new Error(`Cloudinary upload failed: ${error.message || JSON.stringify(error)}`));
+          } else {
+            resolve(result);
+          }
         }
       );
 
