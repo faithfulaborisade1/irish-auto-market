@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, Phone, Mail, MapPin, Calendar, Gauge, Fuel, Settings, Eye, MessageCircle, X, ChevronLeft, ChevronRight, Star, Shield, Clock, Heart, Share2, Car, Zap, Users } from 'lucide-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import LoanittFinanceButton from '@/components/LoanittFinanceButton'
 import { formatPrice } from '@/utils/currency'
 
 interface CarDetailPageProps {
@@ -593,33 +594,51 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
 
                   {/* Action Buttons */}
                   <div className="space-y-3 mb-6">
-                    <button 
+                    <button
                       onClick={openMessageModal}
                       className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 font-medium transition-colors"
                     >
                       Contact Seller
                     </button>
-                    
-                    <button 
+
+                    <button
                       onClick={() => setShowPhoneNumber(!showPhoneNumber)}
                       className="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 font-medium transition-colors"
                     >
                       {showPhoneNumber ? (car.seller?.phone || 'No phone available') : 'Show Phone Number'}
                     </button>
 
+                    {/* Finance Button */}
+                    <LoanittFinanceButton
+                      car={{
+                        make: car.make,
+                        model: car.model,
+                        year: car.year,
+                        price: Number(car.price),
+                        mileage: car.mileage || undefined
+                      }}
+                      dealer={car.userId ? {
+                        id: car.userId,
+                        name: car.seller?.businessName || car.seller?.name || 'Dealer'
+                      } : undefined}
+                      variant="secondary"
+                      size="md"
+                      fullWidth
+                    />
+
                     <div className="flex space-x-3">
-                      <button 
+                      <button
                         onClick={handleShare}
                         className="flex-1 border border-gray-300 text-gray-700 py-2.5 px-4 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center"
                       >
                         <Share2 className="w-4 h-4 mr-1" />
                         Share
                       </button>
-                      <button 
+                      <button
                         onClick={handleFavorite}
                         className={`flex-1 border py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center ${
-                          isFavorited 
-                            ? 'border-red-300 text-red-600 bg-red-50 hover:bg-red-100' 
+                          isFavorited
+                            ? 'border-red-300 text-red-600 bg-red-50 hover:bg-red-100'
                             : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                         }`}
                       >

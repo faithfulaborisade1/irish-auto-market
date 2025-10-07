@@ -9,6 +9,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import FavoriteButton from '@/components/FavoriteButton'
 import PromotionalRibbon from '@/components/PromotionalRibbon'
+import LoanittFinanceButton from '@/components/LoanittFinanceButton'
 import { CAR_MAKES_MODELS, getAllCarMakes, getModelsForMake } from '@/data/car-makes-models'
 import { IRISH_LOCATIONS } from '@/data/irish-locations'
 
@@ -334,13 +335,22 @@ useEffect(() => {
                 </div>
               </div>
 
-              <button 
+              <button
                 type="submit"
                 className="mt-4 flex w-full items-center justify-center rounded-lg bg-primary px-6 py-3 text-base font-bold text-white hover:bg-primary/90 transition-colors"
               >
                 <Search className="mr-2 h-4 w-4" />
                 SEARCH {carCount?.toLocaleString() || '0'} CARS
               </button>
+
+              {/* Finance Button */}
+              <div className="mt-3">
+                <LoanittFinanceButton
+                  variant="secondary"
+                  size="lg"
+                  fullWidth
+                />
+              </div>
             </form>
           </div>
         </div>
