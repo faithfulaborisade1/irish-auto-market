@@ -27,7 +27,6 @@ import {
   XCircle,
   AlertCircle
 } from 'lucide-react';
-import notificationSoundManager from '@/lib/notification-sound';
 
 interface DashboardStats {
   totalUsers?: number;
@@ -39,23 +38,31 @@ interface DashboardStats {
   monthlyRevenue?: number;
   recentUsers?: any[];
   recentCars?: any[];
-  pendingActions?: any[];
-  securityEvents?: any[];
+  recentSupport?: any[];
+  urgentActions?: any[];
+  supportStats?: {
+    totalContacts: number;
+    pendingContacts: number;
+    totalFeedback: number;
+    totalReports: number;
+    criticalReports: number;
+    averageRating: number;
+  };
+  todayStats?: {
+    newUsers: number;
+    newCars: number;
+    newContacts: number;
+    newFeedback: number;
+    newReports: number;
+    totalActivity: number;
+  };
   systemHealth?: {
     uptime: string;
     errorRate: number;
     responseTime: number;
+    supportResponseRate?: number;
+    userSatisfaction?: number;
   };
-}
-
-interface ActionItem {
-  id: string;
-  type: 'car_pending' | 'user_verification' | 'security_alert' | 'payment_issue';
-  title: string;
-  description: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  timestamp: string;
-  actionUrl: string;
 }
 
 export default function AdminDashboardPage() {
@@ -114,26 +121,6 @@ export default function AdminDashboardPage() {
       } else {
         console.warn(`⚠️ Dashboard API error: ${response.status}`);
         setError(`Failed to load dashboard data (${response.status})`);
-        
-        // Mock data for development - your existing fallback
-        setStats({
-          totalUsers: 247,
-          totalCars: 1834,
-          activeCars: 1456,
-          pendingCars: 23,
-          totalDealers: 89,
-          totalRevenue: 45230,
-          monthlyRevenue: 8940,
-          recentUsers: [],
-          recentCars: [],
-          pendingActions: [],
-          securityEvents: [],
-          systemHealth: {
-            uptime: '99.8%',
-            errorRate: 0.02,
-            responseTime: 245
-          }
-        });
       }
     } catch (error: any) {
       console.error('❌ Dashboard fetch error:', error);
@@ -189,51 +176,25 @@ export default function AdminDashboardPage() {
   const safeNumber = (value: number | undefined): number => value ?? 0;
   const safeArray = (value: any[] | undefined): any[] => value ?? [];
 
-  // Mock urgent actions that need admin attention
-  const urgentActions: ActionItem[] = [
-    {
-      id: '1',
-      type: 'car_pending',
-      title: 'Car Approval Required',
-      description: '23 cars waiting for moderation approval',
-      priority: 'high',
-      timestamp: '2 hours ago',
-      actionUrl: '/admin/cars/pending'
-    },
-    {
-      id: '2',
-      type: 'user_verification',
-      title: 'Dealer Verification',
-      description: '5 dealers awaiting business verification',
-      priority: 'medium',
-      timestamp: '4 hours ago',
-      actionUrl: '/admin/users/dealers/pending'
-    },
-    {
-      id: '3',
-      type: 'security_alert',
-      title: 'Suspicious Login Activity',
-      description: 'Multiple failed login attempts detected',
-      priority: 'critical',
-      timestamp: '15 minutes ago',
-      actionUrl: '/admin/security/events'
-    }
-  ];
+  // Get urgent actions from API data
+  const urgentActions = safeArray(stats.urgentActions);
 
   const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical': return 'text-red-600 bg-red-100';
-      case 'high': return 'text-orange-600 bg-orange-100';
-      case 'medium': return 'text-yellow-600 bg-yellow-100';
+    const normalizedPriority = priority?.toUpperCase();
+    switch (normalizedPriority) {
+      case 'CRITICAL': return 'text-red-600 bg-red-100';
+      case 'HIGH': return 'text-orange-600 bg-orange-100';
+      case 'MEDIUM': return 'text-yellow-600 bg-yellow-100';
       default: return 'text-green-600 bg-green-100';
     }
   };
 
   const getPriorityIcon = (priority: string) => {
-    switch (priority) {
-      case 'critical': return <XCircle className="w-4 h-4" />;
-      case 'high': return <AlertCircle className="w-4 h-4" />;
-      case 'medium': return <Clock className="w-4 h-4" />;
+    const normalizedPriority = priority?.toUpperCase();
+    switch (normalizedPriority) {
+      case 'CRITICAL': return <XCircle className="w-4 h-4" />;
+      case 'HIGH': return <AlertCircle className="w-4 h-4" />;
+      case 'MEDIUM': return <Clock className="w-4 h-4" />;
       default: return <CheckCircle className="w-4 h-4" />;
     }
   };
@@ -298,21 +259,21 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Critical Actions Alert Bar */}
-        {urgentActions.filter(a => a.priority === 'critical').length > 0 && (
+        {urgentActions.filter(a => a.priority?.toUpperCase() === 'CRITICAL').length > 0 && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle className="w-5 h-5 text-red-600" />
               <h3 className="font-semibold text-red-800">Critical Actions Required</h3>
             </div>
             <div className="space-y-2">
-              {urgentActions.filter(a => a.priority === 'critical').map(action => (
-                <div key={action.id} className="flex items-center justify-between bg-white rounded p-3">
+              {urgentActions.filter(a => a.priority?.toUpperCase() === 'CRITICAL').map((action, index) => (
+                <div key={action.id || index} className="flex items-center justify-between bg-white rounded p-3">
                   <div>
                     <p className="font-medium text-gray-900">{action.title}</p>
                     <p className="text-sm text-gray-600">{action.description}</p>
                   </div>
                   <a
-                    href={action.actionUrl}
+                    href={action.url}
                     className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors text-sm"
                   >
                     Resolve Now
@@ -333,10 +294,10 @@ export default function AdminDashboardPage() {
               </div>
               <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Live</span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">{stats.systemHealth?.uptime || '99.8%'}</h3>
+            <h3 className="text-2xl font-bold text-gray-900">{stats.systemHealth?.uptime || '--'}</h3>
             <p className="text-gray-600 text-sm">Platform Uptime</p>
             <div className="mt-3 pt-3 border-t border-gray-100">
-              <p className="text-xs text-gray-500">Response: {stats.systemHealth?.responseTime || 245}ms</p>
+              <p className="text-xs text-gray-500">Response: {stats.systemHealth?.responseTime ? `${stats.systemHealth.responseTime}ms` : '--'}</p>
             </div>
           </div>
 
@@ -404,29 +365,39 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
               <div className="p-6">
-                <div className="space-y-4">
-                  {urgentActions.map(action => (
-                    <div key={action.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${getPriorityColor(action.priority)}`}>
-                          {getPriorityIcon(action.priority)}
+                {urgentActions.length > 0 ? (
+                  <div className="space-y-4">
+                    {urgentActions.map((action, index) => (
+                      <div key={action.id || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${getPriorityColor(action.priority)}`}>
+                            {getPriorityIcon(action.priority)}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{action.title}</p>
+                            <p className="text-sm text-gray-600">{action.description}</p>
+                            {action.count && (
+                              <p className="text-xs text-gray-500 mt-1">{action.count} items</p>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{action.title}</p>
-                          <p className="text-sm text-gray-600">{action.description}</p>
-                          <p className="text-xs text-gray-500">{action.timestamp}</p>
-                        </div>
+                        <a
+                          href={action.url}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
+                        >
+                          <Eye className="w-4 h-4" />
+                          Review
+                        </a>
                       </div>
-                      <a
-                        href={action.actionUrl}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center gap-2"
-                      >
-                        <Eye className="w-4 h-4" />
-                        Review
-                      </a>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <CheckCircle className="w-12 h-12 mx-auto mb-2 text-green-500" />
+                    <p>No urgent actions required</p>
+                    <p className="text-sm">Everything is up to date!</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -492,120 +463,41 @@ export default function AdminDashboardPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Error Rate</span>
                   <span className="text-xs text-green-600">
-                    {((stats.systemHealth?.errorRate || 0.02) * 100).toFixed(2)}%
+                    {stats.systemHealth?.errorRate ? `${(stats.systemHealth.errorRate * 100).toFixed(2)}%` : '--'}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Recent Activity */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-              <div className="p-4 border-b border-gray-100">
-                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-blue-600" />
-                  Recent Activity
-                </h3>
-              </div>
-              <div className="p-4">
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-gray-600">New car listing approved</span>
-                    <span className="text-xs text-gray-400 ml-auto">2m ago</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-gray-600">New dealer registered</span>
-                    <span className="text-xs text-gray-400 ml-auto">15m ago</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                    <span className="text-gray-600">Payment processed</span>
-                    <span className="text-xs text-gray-400 ml-auto">1h ago</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                    <span className="text-gray-600">User verification completed</span>
-                    <span className="text-xs text-gray-400 ml-auto">2h ago</span>
-                  </div>
+            {/* Recent Support Activity */}
+            {safeArray(stats.recentSupport).length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+                <div className="p-4 border-b border-gray-100">
+                  <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-blue-600" />
+                    Recent Activity
+                  </h3>
                 </div>
-                <a href="/admin/activity" className="block text-center text-blue-600 hover:text-blue-700 text-sm mt-4 pt-3 border-t border-gray-100">
-                  View All Activity
-                </a>
-              </div>
-            </div>
-
-            {/* Performance Metrics */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-              <div className="p-4 border-b border-gray-100">
-                <h3 className="font-semibold text-gray-900">Performance</h3>
-              </div>
-              <div className="p-4 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Page Views Today</span>
-                  <span className="text-sm font-medium">12,456</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Search Queries</span>
-                  <span className="text-sm font-medium">3,892</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Messages Sent</span>
-                  <span className="text-sm font-medium">567</span>
+                <div className="p-4">
+                  <div className="space-y-3 text-sm">
+                    {safeArray(stats.recentSupport).slice(0, 5).map((activity: any, index: number) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${activity.type === 'report' ? 'bg-red-500' : 'bg-blue-500'}`}></div>
+                        <span className="text-gray-600 flex-1 truncate">{activity.title}</span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <a href="/admin/support" className="block text-center text-blue-600 hover:text-blue-700 text-sm mt-4 pt-3 border-t border-gray-100">
+                    View All Activity
+                  </a>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
-        
-
- {/* Replace the existing test button with this enhanced debug panel */}
-<div className="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-  <h3 className="text-sm font-semibold text-yellow-800 mb-3">🔊 Sound Debug Panel</h3>
-  
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-<button 
-  onClick={async () => {
-    try {
-      // This would call your server to broadcast a test notification
-      const response = await fetch('/api/admin/notifications/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          type: 'TEST',
-          title: 'SSE Test Notification',
-          message: 'Testing real SSE notification with sound',
-          priority: 'medium',
-          playSound: true
-        })
-      });
-      
-      if (response.ok) {
-        console.log('✅ SSE test notification sent');
-        alert('✅ SSE test notification sent - check if sound plays!');
-      } else {
-        console.log('❌ SSE test failed:', response.status);
-        alert('❌ SSE test failed: ' + response.status);
-      }
-    } catch (error: any) {
-      console.error('❌ SSE test error:', error);
-      alert('❌ SSE test error: ' + error.message);
-    }
-  }}
-  className="bg-red-600 text-white px-4 py-2 rounded"
->
-  Test Real SSE Notification
-</button>
-  </div>
-
-  <div className="mt-3 text-xs text-yellow-700">
-    <p>✅ Simple beep worked - browser audio is enabled</p>
-    <p>🔍 Testing notification sound manager components...</p>
-  </div>
-</div>
-
-
         {/* Debug Info (Development Only) */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-8 bg-gray-900 rounded-lg p-4">

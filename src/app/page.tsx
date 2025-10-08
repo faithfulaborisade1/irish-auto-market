@@ -73,38 +73,40 @@ export default function HomePage() {
   const availableAreas = searchFilters.county ? IRISH_LOCATIONS[searchFilters.county as keyof typeof IRISH_LOCATIONS] || [] : []
 
   // Fetch cars and count on client side only
- // Replace the existing useEffect in your HomePage component with this:
-
-useEffect(() => {
-  async function fetchData() {
-    try {
-      // Fetch count first (fast query, updates search button immediately)
-      const countResponse = await fetch('/api/cars/count')
-      const countData = await countResponse.json()
-      if (countData.success) {
-        setCarCount(countData.count)
-      }
-      
-      // Then fetch cars for display
-      const carsResponse = await fetch('/api/cars')
-      const carsData = await carsResponse.json()
-      if (carsData.success) {
-        setCars(carsData.cars)
-        // Only use cars length as fallback if count API failed
-        if (!countData.success || countData.count === 0) {
-          console.log('Using cars array length as fallback count:', carsData.cars.length)
-          setCarCount(carsData.cars.length)
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Fetch count first (fast query, updates search button immediately)
+        const countResponse = await fetch('/api/cars/count')
+        const countData = await countResponse.json()
+        if (countData.success) {
+          setCarCount(countData.count)
         }
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  fetchData()
-}, [])
+        // Fetch featured cars specifically for homepage display
+        const carsResponse = await fetch('/api/cars?featured=true&limit=6')
+        const carsData = await carsResponse.json()
+        if (carsData.success) {
+          console.log('Featured cars fetched:', carsData.cars.length)
+          setCars(carsData.cars)
+        } else {
+          // Fallback: fetch regular cars if no featured cars
+          const regularCarsResponse = await fetch('/api/cars?limit=6')
+          const regularCarsData = await regularCarsResponse.json()
+          if (regularCarsData.success) {
+            console.log('No featured cars, showing regular cars:', regularCarsData.cars.length)
+            setCars(regularCarsData.cars)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   // Reset model when make changes
   useEffect(() => {
@@ -120,7 +122,9 @@ useEffect(() => {
     }
   }, [searchFilters.county])
 
-  const featuredCars = cars.filter((car: any) => car.featured)
+  // Cars are already filtered (either featured or latest 6)
+  const displayCars = cars
+  const hasFeaturedCars = cars.some((car: any) => car.featured)
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -542,17 +546,23 @@ useEffect(() => {
         </div>
       </section>
 
-      {/* Featured Cars */}
-      {featuredCars.length > 0 && (
+      {/* Featured/Latest Cars */}
+      {!loading && displayCars.length > 0 && (
         <section className="bg-gray-50 py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="mb-12 text-center">
-              <h2 className="mb-4 text-3xl font-bold text-gray-900">Featured Cars</h2>
-              <p className="text-gray-600">Hand-picked premium vehicles from trusted dealers</p>
+              <h2 className="mb-4 text-3xl font-bold text-gray-900">
+                {hasFeaturedCars ? 'Featured Cars' : 'Latest Cars'}
+              </h2>
+              <p className="text-gray-600">
+                {hasFeaturedCars
+                  ? 'Hand-picked premium vehicles from trusted dealers'
+                  : 'Recently listed vehicles from our marketplace'}
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredCars.map((car: any) => (
+              {displayCars.map((car: any) => (
                 <div key={car.id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                   <div className="relative h-48">
                     <img
@@ -560,11 +570,13 @@ useEffect(() => {
                       alt={car.images[0]?.alt || car.title}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute top-4 left-4">
-                      <span className="bg-primary text-white px-3 py-1 rounded-full text-sm font-medium">
-                        Featured
-                      </span>
-                    </div>
+                    {car.featured && (
+                      <div className="absolute top-4 left-4">
+                        <span className="bg-primary text-white px-3 py-1 rounded-full text-sm font-medium">
+                          Featured
+                        </span>
+                      </div>
+                    )}
                     <div className="absolute top-4 right-4 flex items-center space-x-2">
                       <span className="bg-white bg-opacity-90 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
                         €{car.price.toLocaleString()}

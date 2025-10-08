@@ -1312,3 +1312,42 @@ enum ReviewStatus {
   REJECTED
   FLAGGED
 }
+
+// Finance button click tracking
+model FinanceClick {
+  id            String    @id @default(cuid())
+
+  // User information (optional - can be anonymous)
+  userId        String?
+  userEmail     String?
+  userName      String?
+
+  // Car information (if clicked from a car listing page)
+  carId         String?
+  carMake       String?
+  carModel      String?
+  carYear       Int?
+  carPrice      Decimal?  @db.Decimal(10, 2)
+
+  // Dealer information (if applicable)
+  dealerId      String?
+  dealerName    String?
+
+  // Click context
+  sourceUrl     String?   // Page where the button was clicked
+  referrer      String?   // HTTP referrer
+  device        String?   // mobile, tablet, desktop
+  browser       String?   // Browser info
+  location      Json?     // IP geolocation data
+
+  // Metadata
+  createdAt     DateTime  @default(now())
+  ipAddress     String?
+  userAgent     String?
+
+  @@index([carId])
+  @@index([dealerId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("finance_clicks")
+}

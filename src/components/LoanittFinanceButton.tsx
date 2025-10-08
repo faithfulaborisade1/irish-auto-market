@@ -1,6 +1,6 @@
 'use client'
 
-import { DollarSign } from 'lucide-react'
+import { Euro } from 'lucide-react'
 
 interface LoanittFinanceButtonProps {
   // Optional car details to pre-fill the form
@@ -61,7 +61,28 @@ export default function LoanittFinanceButton({
     return `${baseUrl}?${params.toString()}`
   }
 
-  const handleClick = () => {
+  const handleClick = async () => {
+    // Track the click (non-blocking)
+    try {
+      fetch('/api/analytics/finance-click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          carId: car && car.make && car.model ? String(car.make + car.model + car.year) : undefined,
+          carMake: car?.make,
+          carModel: car?.model,
+          carYear: car?.year,
+          carPrice: car?.price,
+          dealerId: dealer?.id,
+          dealerName: dealer?.name,
+          sourceUrl: window.location.href
+        })
+      }).catch(err => console.log('Click tracking failed:', err));
+    } catch (err) {
+      // Silently fail - don't block the user
+    }
+
+    // Open finance application (this happens immediately)
     const url = buildLoanittUrl()
     window.open(url, '_blank', 'noopener,noreferrer')
   }
@@ -99,7 +120,7 @@ export default function LoanittFinanceButton({
         ${className}
       `}
     >
-      <DollarSign className={`${iconSizes[size]} mr-2`} />
+      <Euro className={`${iconSizes[size]} mr-2`} />
       Apply for Finance
     </button>
   )
