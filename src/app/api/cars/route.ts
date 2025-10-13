@@ -152,19 +152,34 @@ export async function GET(request: NextRequest) {
       where.model = { equals: modelFilter, mode: 'insensitive' }
     }
 
-    // 🔧 FIXED: Location filtering logic - cleaner approach
-    const locationFilters = []
+    // 🔧 FIXED: Location filtering logic - handle both county and area properly
     if (countyFilter) {
-      locationFilters.push({ location: { path: ['county'], equals: countyFilter } })
+      // Use case-insensitive matching for county
+      where.location = {
+        path: ['county'],
+        string_contains: countyFilter,
+        mode: 'insensitive'
+      }
     }
-    if (areaFilter) {
-      locationFilters.push({ location: { path: ['area'], equals: areaFilter } })
-    }
-    
-    // Add location filters to AND clause if any exist
-    if (locationFilters.length > 0) {
+
+    // Only apply area filter if county is also selected
+    if (areaFilter && countyFilter) {
+      // If area is specified, we need BOTH county and area to match
+      // Create a more complex filter that checks both
       if (!where.AND) where.AND = []
-      where.AND.push(...locationFilters)
+      where.AND.push(
+        { location: { path: ['county'], string_contains: countyFilter, mode: 'insensitive' } },
+        { location: { path: ['area'], string_contains: areaFilter, mode: 'insensitive' } }
+      )
+      // Remove the simple county filter since we're using AND now
+      delete where.location
+    } else if (areaFilter && !countyFilter) {
+      // If only area is selected (shouldn't happen but handle it)
+      where.location = {
+        path: ['area'],
+        string_contains: areaFilter,
+        mode: 'insensitive'
+      }
     }
 
     // 🔧 EXISTING: Price range
