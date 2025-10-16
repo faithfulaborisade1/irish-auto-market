@@ -74,9 +74,57 @@ export async function GET(
       },
     }
 
+    // 🚗 NEW: Fetch other cars from the same dealer if seller is a dealer
+    let otherDealerCars = []
+    if (car.user.role === 'DEALER') {
+      try {
+        const otherCars = await db.car.findMany({
+          where: {
+            userId: car.userId,
+            status: 'ACTIVE',
+            NOT: {
+              id: params.id // Exclude the current car
+            }
+          },
+          include: {
+            images: {
+              orderBy: { orderIndex: 'asc' },
+              take: 1 // Only get the first image for thumbnail
+            }
+          },
+          orderBy: {
+            createdAt: 'desc'
+          },
+          take: 6 // Limit to 6 other cars
+        })
+
+        otherDealerCars = otherCars.map(otherCar => ({
+          id: otherCar.id,
+          title: otherCar.title,
+          make: otherCar.make,
+          model: otherCar.model,
+          year: otherCar.year,
+          price: Number(otherCar.price),
+          mileage: otherCar.mileage,
+          fuelType: otherCar.fuelType,
+          transmission: otherCar.transmission,
+          location: otherCar.location,
+          image: otherCar.images.length > 0 ? {
+            id: otherCar.images[0].id,
+            url: otherCar.images[0].largeUrl,
+            alt: otherCar.images[0].altText || `${otherCar.make} ${otherCar.model}`
+          } : null
+        }))
+      } catch (error) {
+        console.error('Error fetching other dealer cars:', error)
+        // Don't fail the main request if other cars fetch fails
+      }
+    }
+
     return NextResponse.json({
       success: true,
       car: transformedCar,
+      otherDealerCars: otherDealerCars
     })
   } catch (error) {
     console.error('Database error:', error)
@@ -140,6 +188,11 @@ export async function PUT(
       )
     }
 
+    // 💰 PRICE DROP DETECTION: Check if price has dropped
+    const oldPrice = Number(existingCar.price)
+    const newPrice = parseFloat(updateData.price)
+    const priceHasDropped = newPrice < oldPrice
+
     // Prepare update data
     const carUpdateData: any = {
       title: updateData.title,
@@ -166,18 +219,73 @@ export async function PUT(
       updatedAt: new Date()
     }
 
-    // Update car in database
-    const updatedCar = await db.car.update({
-      where: { id: params.id },
-      data: carUpdateData,
-      include: {
-        images: true,
-        user: {
-          include: {
-            dealerProfile: true
+    // Update car in database using transaction
+    const updatedCar = await db.$transaction(async (tx) => {
+      // Update the car
+      const car = await tx.car.update({
+        where: { id: params.id },
+        data: carUpdateData,
+        include: {
+          images: true,
+          user: {
+            include: {
+              dealerProfile: true
+            }
           }
         }
+      })
+
+      // 🔔 PRICE DROP NOTIFICATIONS: If price dropped, create notifications
+      if (priceHasDropped) {
+        // Create price history record
+        await tx.priceHistory.create({
+          data: {
+            carId: params.id,
+            oldPrice: oldPrice,
+            newPrice: newPrice,
+            changedAt: new Date()
+          }
+        })
+
+        // Find all users who have favorited this car
+        const favorites = await tx.favorite.findMany({
+          where: {
+            carId: params.id
+          },
+          select: {
+            userId: true
+          }
+        })
+
+        // Calculate price drop percentage
+        const dropPercentage = Math.round(((oldPrice - newPrice) / oldPrice) * 100)
+        const dropAmount = oldPrice - newPrice
+
+        // Create notifications for each user who favorited the car
+        if (favorites.length > 0) {
+          await tx.notification.createMany({
+            data: favorites.map(fav => ({
+              userId: fav.userId,
+              type: 'PRICE_DROP',
+              title: 'Price Drop Alert!',
+              message: `${car.make} ${car.model} ${car.year} price dropped by €${dropAmount.toFixed(0)} (${dropPercentage}%)! Now €${newPrice.toFixed(0)}`,
+              carId: params.id,
+              read: false,
+              actionUrl: `/cars/${params.id}`,
+              metadata: {
+                oldPrice: oldPrice,
+                newPrice: newPrice,
+                dropAmount: dropAmount,
+                dropPercentage: dropPercentage
+              }
+            }))
+          })
+
+          console.log(`✅ Created ${favorites.length} price drop notifications for car ${params.id}`)
+        }
       }
+
+      return car
     })
 
     return NextResponse.json({

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Phone, Mail, MapPin, Calendar, Gauge, Fuel, Settings, Eye, MessageCircle, X, ChevronLeft, ChevronRight, Star, Shield, Clock, Heart, Share2, Car, Zap, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Phone, Mail, MapPin, Calendar, Gauge, Fuel, Settings, Eye, MessageCircle, X, ChevronLeft, ChevronRight, Star, Shield, Clock, Heart, Share2, Car, Zap, Users } from 'lucide-react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import LoanittFinanceButton from '@/components/LoanittFinanceButton'
@@ -243,6 +243,7 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
   const [showPhoneNumber, setShowPhoneNumber] = useState(false)
   const [isFavorited, setIsFavorited] = useState(false)
   const [favoritesCount, setFavoritesCount] = useState(0)
+  const [otherDealerCars, setOtherDealerCars] = useState<any[]>([])
 
   // Share functionality
   const handleShare = async () => {
@@ -351,14 +352,19 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
     const data = await response.json()
     if (data.success && data.car) {
       setCar(data.car)
-      
+
+      // Set other dealer cars if available
+      if (data.otherDealerCars && data.otherDealerCars.length > 0) {
+        setOtherDealerCars(data.otherDealerCars)
+      }
+
       // 🆕 ADD THIS: Increment view count
       fetch(`/api/cars/${params.id}/view`, {
         method: 'POST'
       }).catch(error => {
         console.log('Failed to track view:', error)
       })
-      
+
     } else {
       setError(true)
     }
@@ -742,6 +748,97 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
               </div>
             </div>
           </div>
+
+          {/* Other Dealer Cars Section */}
+          {otherDealerCars.length > 0 && (
+            <div className="mt-12 pb-8">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                  More from {car.seller?.name || 'this dealer'}
+                </h2>
+                <p className="text-gray-600">
+                  Check out other vehicles from this {car.seller?.type === 'dealer' ? 'dealership' : 'seller'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {otherDealerCars.map((otherCar) => (
+                  <Link
+                    key={otherCar.id}
+                    href={`/cars/${otherCar.id}`}
+                    className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow group"
+                  >
+                    {/* Car Image */}
+                    <div className="relative aspect-[4/3] bg-gray-100 overflow-hidden">
+                      {otherCar.image ? (
+                        <img
+                          src={otherCar.image.url}
+                          alt={otherCar.image.alt}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.src = '/placeholder-car.jpg'
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                          <Car className="w-16 h-16 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Car Info */}
+                    <div className="p-4">
+                      <h3 className="font-semibold text-lg text-gray-900 mb-2 group-hover:text-green-600 transition-colors line-clamp-1">
+                        {otherCar.make} {otherCar.model}
+                      </h3>
+
+                      <div className="text-2xl font-bold text-green-600 mb-3">
+                        {formatPrice(otherCar.price, 'EUR')}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
+                        <div className="flex items-center">
+                          <Calendar className="w-4 h-4 mr-1 flex-shrink-0" />
+                          <span>{otherCar.year}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Gauge className="w-4 h-4 mr-1 flex-shrink-0" />
+                          <span>{otherCar.mileage ? `${otherCar.mileage.toLocaleString()} km` : 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Fuel className="w-4 h-4 mr-1 flex-shrink-0" />
+                          <span className="capitalize">{otherCar.fuelType?.toLowerCase() || 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Settings className="w-4 h-4 mr-1 flex-shrink-0" />
+                          <span className="capitalize">{otherCar.transmission?.toLowerCase() || 'N/A'}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center text-sm text-gray-500">
+                        <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                        <span className="truncate">{getLocationDisplay(otherCar.location)}</span>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* View All Button */}
+              {otherDealerCars.length >= 6 && (
+                <div className="mt-6 text-center">
+                  <Link
+                    href={`/dealers/${car.userId}`}
+                    className="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    View All Cars from {car.seller?.name || 'this dealer'}
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

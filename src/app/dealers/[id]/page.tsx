@@ -410,15 +410,6 @@ export default function DealerDetailPage() {
                   <span className="sm:hidden">Call</span>
                 </a>
               )}
-              <LoanittFinanceButton
-                dealer={{
-                  id: dealer.id,
-                  name: dealer.businessName
-                }}
-                variant="secondary"
-                size="md"
-                className="flex-1 sm:flex-initial"
-              />
               <button className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center">
                 <Share2 className="w-4 h-4" />
                 <span className="ml-1 sm:hidden text-sm">Share</span>

@@ -13,7 +13,7 @@ const NotificationBell = dynamic(() => import('./NotificationBell'), {
 })
 
 interface HeaderProps {
-  currentPage?: 'home' | 'cars' | 'sell' | 'dealers' | 'about' | 'messages' | 'place-ad' | 'profile' | 'my-ads' | 'saved-cars' | 'find-dealer'
+  currentPage?: 'home' | 'cars' | 'sell' | 'dealers' | 'about' | 'messages' | 'place-ad' | 'profile' | 'my-ads' | 'saved-cars' | 'find-dealer' | 'blog'
 }
 
 // 🚀 AUTHENTICATION CACHE: Prevent repeated API calls
@@ -239,8 +239,8 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
 
           {/* Desktop Navigation - Always render */}
           <nav className="hidden space-x-8 md:flex">
-            <Link 
-              href="/cars" 
+            <Link
+              href="/cars"
               className={`font-medium hover:text-green-600 transition-colors flex items-center space-x-1 ${
                 currentPage === 'cars' ? 'text-green-600' : 'text-gray-700'
               }`}
@@ -256,13 +256,22 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
             >
               SELL
             </button>
-            <Link 
-              href="/find-dealer" 
+            <Link
+              href="/find-dealer"
               className={`font-medium hover:text-green-600 transition-colors ${
                 currentPage === 'find-dealer' ? 'text-green-600' : 'text-gray-700'
               }`}
             >
               DEALERS
+            </Link>
+            <Link
+              href="/blog"
+              className={`font-medium hover:text-green-600 transition-colors flex items-center space-x-1 ${
+                currentPage === 'blog' ? 'text-green-600' : 'text-gray-700'
+              }`}
+            >
+              <FileText size={18} />
+              <span>BLOG</span>
             </Link>
           </nav>
 
@@ -505,8 +514,8 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                 <span>SELL</span>
               </button>
 
-              <Link 
-                href="/find-dealer" 
+              <Link
+                href="/find-dealer"
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                   currentPage === 'find-dealer' ? 'text-green-600 bg-green-50' : 'text-gray-700 hover:bg-gray-100'
                 }`}
@@ -514,6 +523,17 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
               >
                 <UserCircle size={18} />
                 <span>DEALERS</span>
+              </Link>
+
+              <Link
+                href="/blog"
+                className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  currentPage === 'blog' ? 'text-green-600 bg-green-50' : 'text-gray-700 hover:bg-gray-100'
+                }`}
+                onClick={() => setShowMobileMenu(false)}
+              >
+                <FileText size={18} />
+                <span>BLOG</span>
               </Link>
 
               {user && (

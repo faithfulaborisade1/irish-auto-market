@@ -157,38 +157,37 @@ export async function POST(request: NextRequest) {
 
     console.log(`📧 Welcome email result:`, welcomeEmailResult)
 
-    // ✅ Send admin notification using your exact function signature  
-    let adminResult: { success: boolean; error?: string; emailId?: string } = { 
-      success: false, 
-      error: 'Admin notification not needed for regular users' 
+    // ✅ Send admin notification for ALL user registrations
+    let adminResult: { success: boolean; error?: string; emailId?: string } = {
+      success: false,
+      error: 'Email service not available'
     }
-    
-    // Only notify admins for dealer registrations (they need verification)
-    if (validatedData.userType === 'dealer') {
-      try {
-        if (process.env.RESEND_API_KEY) {
-          const { sendAdminNotification } = await import('@/lib/email')
-          
-          // Using your exact function signature: sendAdminNotification(notification: { type, data })
-          adminResult = await sendAdminNotification({
-            type: 'new_dealer',
-            data: {
-              firstName: newUser.firstName,
-              lastName: newUser.lastName,
-              email: newUser.email,
-              phone: newUser.phone,
-              businessName: validatedData.businessName,
-              role: newUser.role
-            }
-          })
-        }
-      } catch (adminEmailError: any) {
-        console.error('❌ Admin notification failed:', adminEmailError.message)
-        adminResult = { success: false, error: adminEmailError.message }
-      }
 
-      console.log(`🔔 Admin notification result:`, adminResult)
+    try {
+      if (process.env.RESEND_API_KEY) {
+        const { sendAdminNotification } = await import('@/lib/email')
+
+        // Notify admins based on user type
+        const notificationType = validatedData.userType === 'dealer' ? 'new_dealer' : 'new_user'
+
+        adminResult = await sendAdminNotification({
+          type: notificationType,
+          data: {
+            firstName: newUser.firstName,
+            lastName: newUser.lastName,
+            email: newUser.email,
+            phone: newUser.phone,
+            businessName: validatedData.businessName,
+            role: newUser.role
+          }
+        })
+      }
+    } catch (adminEmailError: any) {
+      console.error('❌ Admin notification failed:', adminEmailError.message)
+      adminResult = { success: false, error: adminEmailError.message }
     }
+
+    console.log(`🔔 Admin notification result:`, adminResult)
 
     // Create in-app notifications for admins
     try {
@@ -257,7 +256,7 @@ export async function POST(request: NextRequest) {
           },
           adminNotification: {
             sent: adminResult.success,
-            reason: adminResult.error || 'Sent successfully'
+            error: adminResult.error
           }
         }
       }
