@@ -75,7 +75,7 @@ export async function GET(
     }
 
     // 🚗 NEW: Fetch other cars from the same dealer if seller is a dealer
-    let otherDealerCars = []
+    let otherDealerCars: any[] = []
     if (car.user.role === 'DEALER') {
       try {
         const otherCars = await db.car.findMany({
