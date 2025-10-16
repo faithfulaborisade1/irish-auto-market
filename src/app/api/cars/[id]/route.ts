@@ -248,7 +248,7 @@ export async function PUT(
         })
 
         // Find all users who have favorited this car
-        const favorites = await tx.favorite.findMany({
+        const favorites = await tx.favoriteCar.findMany({
           where: {
             carId: params.id
           },
