@@ -3,19 +3,21 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
-import { 
-  BarChart3, 
-  Car, 
-  Users, 
-  LayoutDashboard, 
-  Shield, 
+import {
+  BarChart3,
+  Car,
+  Users,
+  LayoutDashboard,
+  Shield,
   Settings,
   Bell,
   ChevronDown,
   MessageCircle,
   Headphones,
   AlertTriangle,
-  X,Mail
+  X,
+  Mail,
+  FileText
 } from 'lucide-react';
 
 // 🔔 NEW IMPORTS FOR NOTIFICATION SYSTEM
@@ -209,10 +211,11 @@ export default function AdminLayout({
       name: 'Content',
       href: '/admin/cars',
       icon: Car,
-      active: pathname.startsWith('/admin/cars') || pathname.startsWith('/admin/reviews'),
+      active: pathname.startsWith('/admin/cars') || pathname.startsWith('/admin/reviews') || pathname.startsWith('/admin/blog'),
       subItems: [
         { name: 'Cars', href: '/admin/cars' },
-        { name: 'Reviews', href: '/admin/reviews' }
+        { name: 'Reviews', href: '/admin/reviews' },
+        { name: 'Blog', href: '/admin/blog' }
       ]
     },
     {

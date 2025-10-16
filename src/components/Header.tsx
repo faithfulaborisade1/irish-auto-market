@@ -271,7 +271,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
               }`}
             >
               <FileText size={18} />
-              <span>BLOG</span>
+              <span>AutoMarket News</span>
             </Link>
           </nav>
 
