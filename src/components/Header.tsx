@@ -271,7 +271,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
               }`}
             >
               <FileText size={18} />
-              <span>AutoMarket News</span>
+              <span>AUTOMARKET NEWS</span>
             </Link>
           </nav>
 
@@ -533,7 +533,7 @@ export default function Header({ currentPage = 'home' }: HeaderProps) {
                 onClick={() => setShowMobileMenu(false)}
               >
                 <FileText size={18} />
-                <span>BLOG</span>
+                <span>AUTOMARKET NEWS</span>
               </Link>
 
               {user && (

@@ -71,8 +71,8 @@ export async function GET(request: NextRequest) {
 // POST /api/blog - Create a new blog post (Admin only)
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const token = request.cookies.get('token')?.value;
+    // Check authentication (support both token and admin-token)
+    const token = request.cookies.get('admin-token')?.value || request.cookies.get('token')?.value;
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
