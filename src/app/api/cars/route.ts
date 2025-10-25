@@ -416,7 +416,7 @@ export async function GET(request: NextRequest) {
       isLiked: currentUserId ? car.likes.length > 0 : false,
       
       // Robust image handling
-      images: car.images.length > 0 ? car.images.map(img => ({
+      images: car.images.length > 0 ? car.images.map((img: any) => ({
         id: img.id,
         url: img.largeUrl,
         alt: img.altText || `${car.make} ${car.model}`,
