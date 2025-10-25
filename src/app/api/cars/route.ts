@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     const bodyTypes = searchParams.get('bodyType')?.split(',').filter(Boolean) || []
     const sellerTypes = searchParams.get('sellerType')?.split(',').filter(Boolean) || []
 
-    console.log('🔍 Received filters:', {
+    console.log('🔍 [v2] Received filters:', {
       basic: { make: makeFilter, model: modelFilter, county: countyFilter, area: areaFilter },
       ranges: { price: priceRangeFilter, year: yearFilter, mileage: `${mileageFrom}-${mileageTo}` },
       arrays: { fuelTypes, transmissions, bodyTypes, sellerTypes },
@@ -152,34 +152,22 @@ export async function GET(request: NextRequest) {
       where.model = { equals: modelFilter, mode: 'insensitive' }
     }
 
-    // 🔧 FIXED: Location filtering logic - handle both county and area properly
-    if (countyFilter) {
-      // Use case-insensitive matching for county
-      where.location = {
-        path: ['county'],
-        string_contains: countyFilter,
-        mode: 'insensitive'
-      }
+    // 🔧 FIXED: Location filtering logic - Use simple null checks then filter in-memory
+    // Store filters for post-fetch filtering (since Prisma doesn't support case-insensitive JSON contains well)
+    const locationFilters = {
+      county: countyFilter,
+      area: areaFilter
     }
 
-    // Only apply area filter if county is also selected
-    if (areaFilter && countyFilter) {
-      // If area is specified, we need BOTH county and area to match
-      // Create a more complex filter that checks both
-      if (!where.AND) where.AND = []
-      where.AND.push(
-        { location: { path: ['county'], string_contains: countyFilter, mode: 'insensitive' } },
-        { location: { path: ['area'], string_contains: areaFilter, mode: 'insensitive' } }
-      )
-      // Remove the simple county filter since we're using AND now
-      delete where.location
-    } else if (areaFilter && !countyFilter) {
-      // If only area is selected (shouldn't happen but handle it)
-      where.location = {
-        path: ['area'],
-        string_contains: areaFilter,
-        mode: 'insensitive'
-      }
+    // Add basic location existence check to narrow down results
+    if (countyFilter) {
+      where.AND = where.AND || []
+      where.AND.push({
+        location: {
+          path: ['county'],
+          not: null
+        }
+      })
     }
 
     // 🔧 EXISTING: Price range
@@ -273,8 +261,9 @@ export async function GET(request: NextRequest) {
 
     console.log('🚀 Final query where clause:', JSON.stringify(where, null, 2))
 
-    // Get total count for pagination (before applying offset/limit)
-    const totalCount = await db.car.count({ where })
+    // 🔧 IMPORTANT: We need to count after location filtering for accurate pagination
+    // For now, we'll get the count before filtering and adjust after
+    let totalCount = await db.car.count({ where })
 
     // Build orderBy clause (existing logic)
     let orderBy: any = { createdAt: 'desc' } // default
@@ -307,37 +296,103 @@ export async function GET(request: NextRequest) {
         break
     }
 
-    // Database query (existing structure with enhanced filtering + pagination)
-    const cars = await db.car.findMany({
-      where,
-      include: {
-        images: {
-          orderBy: { orderIndex: 'asc' },
-        },
-        user: {
-          include: {
-            dealerProfile: true,
+    // 🔧 OPTIMIZED: Handle location filtering properly
+    // When location filters are active, we need to fetch all matching cars, filter in-memory, then paginate
+    const hasLocationFilter = !!(locationFilters.county || locationFilters.area)
+
+    let allCars: any[] = []
+    let filteredCars: any[] = []
+
+    if (hasLocationFilter) {
+      // Fetch ALL matching cars (without pagination) to filter by location
+      allCars = await db.car.findMany({
+        where,
+        include: {
+          images: {
+            orderBy: { orderIndex: 'asc' },
           },
-        },
-        // Include likes if user is authenticated
-        ...(currentUserId && {
-          likes: {
-            where: {
-              userId: currentUserId
+          user: {
+            include: {
+              dealerProfile: true,
             },
-            select: {
-              id: true
+          },
+          // Include likes if user is authenticated
+          ...(currentUserId && {
+            likes: {
+              where: {
+                userId: currentUserId
+              },
+              select: {
+                id: true
+              }
             }
-          }
-        })
-      },
-      orderBy,
-      skip: offset,
-      take: limit,
-    })
+          })
+        },
+        orderBy,
+      })
+
+      // Filter by location in-memory
+      filteredCars = allCars.filter(car => {
+        if (!car.location || typeof car.location !== 'object') return false
+
+        const location = car.location as any
+
+        // Check county filter (case-insensitive)
+        if (locationFilters.county) {
+          const carCounty = location.county?.toLowerCase() || ''
+          const filterCounty = locationFilters.county.toLowerCase()
+          if (!carCounty.includes(filterCounty)) return false
+        }
+
+        // Check area filter (case-insensitive)
+        // Note: location can have 'area', 'city', or 'town' fields
+        if (locationFilters.area) {
+          const carArea = (location.area || location.city || location.town || '').toLowerCase()
+          const filterArea = locationFilters.area.toLowerCase()
+          if (!carArea.includes(filterArea)) return false
+        }
+
+        return true
+      })
+
+      // Update total count based on filtered results
+      totalCount = filteredCars.length
+
+      // Apply pagination to filtered results
+      filteredCars = filteredCars.slice(offset, offset + limit)
+    } else {
+      // No location filter - use normal pagination
+      filteredCars = await db.car.findMany({
+        where,
+        include: {
+          images: {
+            orderBy: { orderIndex: 'asc' },
+          },
+          user: {
+            include: {
+              dealerProfile: true,
+            },
+          },
+          // Include likes if user is authenticated
+          ...(currentUserId && {
+            likes: {
+              where: {
+                userId: currentUserId
+              },
+              select: {
+                id: true
+              }
+            }
+          })
+        },
+        orderBy,
+        skip: offset,
+        take: limit,
+      })
+    }
 
     // Transform data for frontend (existing logic)
-    const transformedCars = cars.map(car => ({
+    const transformedCars = filteredCars.map(car => ({
       id: car.id,
       title: car.title,
       make: car.make,
