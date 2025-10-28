@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { getAllCounties, getAreasForCounty } from '@/data/irish-locations';
-import { 
-  Users, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Shield, 
-  ShieldCheck, 
-  Eye, 
+import {
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  Shield,
+  ShieldCheck,
+  Eye,
   EyeOff,
   Mail,
   Calendar,
@@ -34,7 +34,9 @@ import {
   Activity,
   RefreshCw,
   WifiOff,
-  Server
+  Server,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 
 interface User {
@@ -111,6 +113,7 @@ interface EditUserData {
   dealerProfile?: {
     businessName: string;
     description?: string;
+    logo?: string;
     website?: string;
     subscriptionType: string;
     verified: boolean;
@@ -136,6 +139,7 @@ export default function UnifiedUserManagement() {
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
   
   // Form states
   const [createAdminForm, setCreateAdminForm] = useState<CreateAdminData>({
@@ -304,6 +308,7 @@ export default function UnifiedUserManagement() {
       dealerProfile: user.dealerProfile ? {
         businessName: user.dealerProfile.businessName,
         description: user.dealerProfile.description || '',
+        logo: user.dealerProfile.logo || '',
         website: user.dealerProfile.website || '',
         subscriptionType: user.dealerProfile.subscriptionType,
         verified: user.dealerProfile.verified
@@ -375,6 +380,83 @@ export default function UnifiedUserManagement() {
 
   const handleAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedArea(e.target.value);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size should be less than 5MB');
+      return;
+    }
+
+    setLogoUploading(true);
+    setError(null);
+
+    try {
+      // Get upload signature
+      const signResponse = await fetch('/api/upload/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: 'irish_auto_market/dealers' })
+      });
+
+      if (!signResponse.ok) {
+        throw new Error('Failed to get upload signature');
+      }
+
+      const { signature, timestamp, cloudName, apiKey } = await signResponse.json();
+
+      // Upload to Cloudinary
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('signature', signature);
+      formData.append('timestamp', timestamp.toString());
+      formData.append('api_key', apiKey);
+      formData.append('folder', 'irish_auto_market/dealers');
+
+      const uploadResponse = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload logo');
+      }
+
+      const uploadData = await uploadResponse.json();
+
+      // Update form data with uploaded logo URL
+      setEditUserForm(prev => ({
+        ...prev,
+        dealerProfile: {
+          ...prev.dealerProfile,
+          logo: uploadData.secure_url,
+          businessName: prev.dealerProfile?.businessName || '',
+          description: prev.dealerProfile?.description || '',
+          website: prev.dealerProfile?.website || '',
+          subscriptionType: prev.dealerProfile?.subscriptionType || 'BASIC',
+          verified: prev.dealerProfile?.verified || false
+        }
+      }));
+
+    } catch (error: any) {
+      console.error('Logo upload error:', error);
+      setError(error.message || 'Failed to upload logo');
+    } finally {
+      setLogoUploading(false);
+    }
   };
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
@@ -1705,6 +1787,7 @@ export default function UnifiedUserManagement() {
                             ...prev.dealerProfile,
                             businessName: e.target.value,
                             description: prev.dealerProfile?.description || '',
+                            logo: prev.dealerProfile?.logo || '',
                             website: prev.dealerProfile?.website || '',
                             subscriptionType: prev.dealerProfile?.subscriptionType || 'BASIC',
                             verified: prev.dealerProfile?.verified || false
@@ -1727,6 +1810,7 @@ export default function UnifiedUserManagement() {
                             subscriptionType: e.target.value,
                             businessName: prev.dealerProfile?.businessName || '',
                             description: prev.dealerProfile?.description || '',
+                            logo: prev.dealerProfile?.logo || '',
                             website: prev.dealerProfile?.website || '',
                             verified: prev.dealerProfile?.verified || false
                           }
@@ -1753,12 +1837,77 @@ export default function UnifiedUserManagement() {
                             website: e.target.value,
                             businessName: prev.dealerProfile?.businessName || '',
                             description: prev.dealerProfile?.description || '',
+                            logo: prev.dealerProfile?.logo || '',
                             subscriptionType: prev.dealerProfile?.subscriptionType || 'BASIC',
                             verified: prev.dealerProfile?.verified || false
                           }
                         }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
+                    </div>
+
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Dealer Logo
+                      </label>
+
+                      {/* File Upload Button */}
+                      <div className="mb-3">
+                        <label className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                          <ImageIcon className="w-4 h-4 mr-2" />
+                          {logoUploading ? 'Uploading...' : 'Choose Logo from Computer'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                            disabled={logoUploading}
+                            className="hidden"
+                          />
+                        </label>
+                        <p className="text-xs text-gray-500 mt-1">Max size: 5MB. Recommended: Square logo (500x500px)</p>
+                      </div>
+
+                      {/* Or divider */}
+                      <div className="flex items-center my-3">
+                        <div className="flex-1 border-t border-gray-300"></div>
+                        <span className="px-3 text-sm text-gray-500">OR</span>
+                        <div className="flex-1 border-t border-gray-300"></div>
+                      </div>
+
+                      {/* URL Input */}
+                      <input
+                        type="url"
+                        value={editUserForm.dealerProfile?.logo || ''}
+                        onChange={(e) => setEditUserForm(prev => ({
+                          ...prev,
+                          dealerProfile: {
+                            ...prev.dealerProfile,
+                            logo: e.target.value,
+                            businessName: prev.dealerProfile?.businessName || '',
+                            description: prev.dealerProfile?.description || '',
+                            website: prev.dealerProfile?.website || '',
+                            subscriptionType: prev.dealerProfile?.subscriptionType || 'BASIC',
+                            verified: prev.dealerProfile?.verified || false
+                          }
+                        }))}
+                        placeholder="https://example.com/logo.jpg"
+                        disabled={logoUploading}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                      />
+
+                      {/* Logo Preview */}
+                      {editUserForm.dealerProfile?.logo && (
+                        <div className="mt-3">
+                          <img
+                            src={editUserForm.dealerProfile.logo}
+                            alt="Dealer logo preview"
+                            className="w-32 h-32 object-contain border border-gray-300 rounded-md"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="col-span-2">
@@ -1773,6 +1922,7 @@ export default function UnifiedUserManagement() {
                             ...prev.dealerProfile,
                             description: e.target.value,
                             businessName: prev.dealerProfile?.businessName || '',
+                            logo: prev.dealerProfile?.logo || '',
                             website: prev.dealerProfile?.website || '',
                             subscriptionType: prev.dealerProfile?.subscriptionType || 'BASIC',
                             verified: prev.dealerProfile?.verified || false
@@ -1795,6 +1945,7 @@ export default function UnifiedUserManagement() {
                               verified: e.target.checked,
                               businessName: prev.dealerProfile?.businessName || '',
                               description: prev.dealerProfile?.description || '',
+                              logo: prev.dealerProfile?.logo || '',
                               website: prev.dealerProfile?.website || '',
                               subscriptionType: prev.dealerProfile?.subscriptionType || 'BASIC'
                             }

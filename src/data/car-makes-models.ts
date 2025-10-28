@@ -52,9 +52,9 @@ export const CAR_MAKES_MODELS: CarDatabase = {
   ],
   "Citroen": [
     "AMI", "Berlingo", "Berlingo Multispace", "C-Crosser", "C1", "C2", "C3", "C3 Aircross", "C3 Picasso",
-    "C4", "C4 Picasso", "C4 Spacetourer", "C4 X", "C5", "C5 Aircross", "C5 X", "C6", "Dispatch", 
-    "DS 4", "DS 5", "e-C4", "e-C4 X", "Grand C4 Picasso", "Grand C4 Spacetourer", "Grand Picasso", 
-    "Jumper", "Nemo", "Relay", "Spacetourer", "Xsara", "Other"
+    "C4", "C4 Picasso", "C4 Spacetourer", "C4 X", "C5", "C5 Aircross", "C5 X", "C6", "Dispatch",
+    "DS 4", "DS 5", "e-C4", "e-C4 X", "Grand C4 Picasso", "Grand C4 Spacetourer", "Grand Picasso",
+    "Jumper", "Nemo", "Relay", "Saxo", "Spacetourer", "Xsara", "Other"
   ],
   "Cupra": [
     "Ateca", "Born", "Formentor", "Leon", "Leon Sportstourer", "Tavascan", "Terramar", "Other"
@@ -111,7 +111,7 @@ export const CAR_MAKES_MODELS: CarDatabase = {
   ],
   "Hyundai": [
     "Accent", "Atos", "Bayon", "Coupe", "Getz", "i10", "i20", "i30", "i40", "iLoad", "INSTER",
-    "IONIQ", "IONIQ 5", "IONIQ 6", "ix20", "ix35", "KONA", "Lantra", "Matrix", "Montana", 
+    "IONIQ", "IONIQ 5", "IONIQ 6", "IONIQ 9", "ix20", "ix35", "KONA", "Lantra", "Matrix", "Montana",
     "Santa Fe", "Sonata", "Trajet", "Tucson", "Veloster", "Other"
   ],
   "INEOS": [

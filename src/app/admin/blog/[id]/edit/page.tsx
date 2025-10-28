@@ -35,6 +35,7 @@ export default function EditBlogPost() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -91,6 +92,75 @@ export default function EditBlogPost() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size should be less than 5MB');
+      return;
+    }
+
+    setImageUploading(true);
+    setError(null);
+
+    try {
+      // Get upload signature
+      const signResponse = await fetch('/api/upload/sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder: 'irish_auto_market/blog' })
+      });
+
+      if (!signResponse.ok) {
+        throw new Error('Failed to get upload signature');
+      }
+
+      const { signature, timestamp, cloudName, apiKey } = await signResponse.json();
+
+      // Upload to Cloudinary
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('signature', signature);
+      formData.append('timestamp', timestamp.toString());
+      formData.append('api_key', apiKey);
+      formData.append('folder', 'irish_auto_market/blog');
+
+      const uploadResponse = await fetch(
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const uploadData = await uploadResponse.json();
+
+      // Update form data with uploaded image URL
+      setFormData(prev => ({
+        ...prev,
+        featuredImage: uploadData.secure_url
+      }));
+
+    } catch (error: any) {
+      console.error('Image upload error:', error);
+      setError(error.message || 'Failed to upload image');
+    } finally {
+      setImageUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent, status?: string) => {
@@ -321,15 +391,41 @@ export default function EditBlogPost() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Image URL
+                    Upload Image or Enter URL
                   </label>
+
+                  {/* File Upload Button */}
+                  <div className="mb-3">
+                    <label className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      <ImageIcon className="w-4 h-4 mr-2" />
+                      {imageUploading ? 'Uploading...' : 'Choose Image from Computer'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={imageUploading}
+                        className="hidden"
+                      />
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1">Max size: 5MB. Supported formats: JPG, PNG, GIF, WebP</p>
+                  </div>
+
+                  {/* Or divider */}
+                  <div className="flex items-center my-3">
+                    <div className="flex-1 border-t border-gray-300"></div>
+                    <span className="px-3 text-sm text-gray-500">OR</span>
+                    <div className="flex-1 border-t border-gray-300"></div>
+                  </div>
+
+                  {/* URL Input */}
                   <input
                     type="url"
                     name="featuredImage"
                     value={formData.featuredImage}
                     onChange={handleChange}
                     placeholder="https://example.com/image.jpg"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    disabled={imageUploading}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100"
                   />
                 </div>
 
