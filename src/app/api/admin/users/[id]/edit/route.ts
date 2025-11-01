@@ -19,6 +19,7 @@ const EditUserSchema = z.object({
   dealerProfile: z.object({
     businessName: z.string().min(1),
     description: z.string().optional(),
+    logo: z.string().optional(),
     website: z.string().url().optional().or(z.literal('')),
     subscriptionType: z.string(),
     verified: z.boolean()
@@ -186,6 +187,7 @@ export async function PUT(
               data: {
                 businessName: userData.dealerProfile.businessName,
                 description: userData.dealerProfile.description || null,
+                logo: userData.dealerProfile.logo || null,
                 website: userData.dealerProfile.website || null,
                 subscriptionType: userData.dealerProfile.subscriptionType as any,
                 verified: userData.dealerProfile.verified,
@@ -199,6 +201,7 @@ export async function PUT(
                 userId: userId,
                 businessName: userData.dealerProfile.businessName,
                 description: userData.dealerProfile.description || null,
+                logo: userData.dealerProfile.logo || null,
                 website: userData.dealerProfile.website || null,
                 subscriptionType: userData.dealerProfile.subscriptionType as any,
                 verified: userData.dealerProfile.verified
