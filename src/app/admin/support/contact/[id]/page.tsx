@@ -99,11 +99,14 @@ export default function ContactMessagePage() {
         })
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        throw new Error(`Failed to send reply: ${response.status}`)
+        // Show detailed error message from API
+        const errorMessage = data.details?.join(', ') || data.message || `Failed to send reply: ${response.status}`
+        throw new Error(errorMessage)
       }
 
-      const data = await response.json()
       if (data.success) {
         // Update contact status
         setContact(prev => prev ? { ...prev, status: 'RESOLVED' } : null)
@@ -296,15 +299,22 @@ export default function ContactMessagePage() {
                       onChange={(e) => setReplyMessage(e.target.value)}
                       rows={6}
                       required
+                      minLength={5}
                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Type your response here..."
+                      placeholder="Type your response here... (minimum 5 characters)"
                     />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>Minimum 5 characters required</span>
+                      <span className={replyMessage.length < 5 ? 'text-red-500' : 'text-green-600'}>
+                        {replyMessage.length} characters
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <button
                       type="submit"
-                      disabled={sending || !replyMessage.trim()}
-                      className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+                      disabled={sending || !replyMessage.trim() || replyMessage.length < 5}
+                      className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {sending ? (
                         <>

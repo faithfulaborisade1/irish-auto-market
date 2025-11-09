@@ -160,7 +160,11 @@ export default function AdminAddCarsPage() {
     { value: 'DIESEL', label: 'Diesel' },
     { value: 'ELECTRIC', label: 'Electric' },
     { value: 'HYBRID', label: 'Hybrid' },
+    { value: 'PETROL_HYBRID', label: 'Petrol Hybrid' },
+    { value: 'DIESEL_HYBRID', label: 'Diesel Hybrid' },
     { value: 'PLUGIN_HYBRID', label: 'Plug-in Hybrid' },
+    { value: 'PETROL_PLUGIN_HYBRID', label: 'Petrol Plug-in Hybrid' },
+    { value: 'DIESEL_PLUGIN_HYBRID', label: 'Diesel Plug-in Hybrid' },
     { value: 'LPG', label: 'LPG' },
     { value: 'CNG', label: 'CNG' },
   ];
@@ -846,6 +850,7 @@ const BODY_TYPES = [
                   >
                     <option value="">Select Seats</option>
                     <option value="2">2 Seats</option>
+                    <option value="3">3 Seats</option>
                     <option value="4">4 Seats</option>
                     <option value="5">5 Seats</option>
                     <option value="7">7 Seats</option>
@@ -1122,14 +1127,15 @@ const BODY_TYPES = [
                 <textarea
                   value={carForm.description}
                   onChange={(e) => updateCarForm('description', e.target.value)}
-                  rows={4}
+                  rows={8}
+                  maxLength={5000}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Detailed description of the car's condition, features, and any relevant information..."
                   required
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>Be detailed and honest to attract serious buyers</span>
-                  <span>{carForm.description.length}/2000</span>
+                  <span>{carForm.description.length}/5000</span>
                 </div>
               </div>
 

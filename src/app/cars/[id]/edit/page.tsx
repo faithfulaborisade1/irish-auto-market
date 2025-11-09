@@ -362,7 +362,11 @@ export default function EditCarPage({ params }: EditCarPageProps) {
                   <option value="DIESEL">Diesel</option>
                   <option value="ELECTRIC">Electric</option>
                   <option value="HYBRID">Hybrid</option>
+                  <option value="PETROL_HYBRID">Petrol Hybrid</option>
+                  <option value="DIESEL_HYBRID">Diesel Hybrid</option>
                   <option value="PLUGIN_HYBRID">Plugin Hybrid</option>
+                  <option value="PETROL_PLUGIN_HYBRID">Petrol Plug-in Hybrid</option>
+                  <option value="DIESEL_PLUGIN_HYBRID">Diesel Plug-in Hybrid</option>
                 </select>
               </div>
 
@@ -465,6 +469,7 @@ export default function EditCarPage({ params }: EditCarPageProps) {
                 >
                   <option value="">Select seats</option>
                   <option value="2">2 seats</option>
+                  <option value="3">3 seats</option>
                   <option value="4">4 seats</option>
                   <option value="5">5 seats</option>
                   <option value="7">7 seats</option>

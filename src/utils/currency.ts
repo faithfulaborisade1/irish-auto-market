@@ -45,14 +45,35 @@ export const EXCHANGE_RATES = {
 
 export function convertCurrency(amount: number, fromCurrency: string, toCurrency: string): number {
   if (fromCurrency === toCurrency) return amount;
-  
+
   if (fromCurrency === 'EUR' && toCurrency === 'GBP') {
     return Math.round(amount * EXCHANGE_RATES.EUR_TO_GBP);
   }
-  
+
   if (fromCurrency === 'GBP' && toCurrency === 'EUR') {
     return Math.round(amount * EXCHANGE_RATES.GBP_TO_EUR);
   }
-  
+
   return amount;
+}
+
+// Format fuel type for display
+export function formatFuelType(fuelType: string | null | undefined): string {
+  if (!fuelType) return 'N/A';
+
+  const fuelTypeMap: { [key: string]: string } = {
+    'PETROL': 'Petrol',
+    'DIESEL': 'Diesel',
+    'ELECTRIC': 'Electric',
+    'HYBRID': 'Hybrid',
+    'PETROL_HYBRID': 'Petrol Hybrid',
+    'DIESEL_HYBRID': 'Diesel Hybrid',
+    'PLUGIN_HYBRID': 'Plug-in Hybrid',
+    'PETROL_PLUGIN_HYBRID': 'Petrol Plug-in Hybrid',
+    'DIESEL_PLUGIN_HYBRID': 'Diesel Plug-in Hybrid',
+    'LPG': 'LPG',
+    'CNG': 'CNG'
+  };
+
+  return fuelTypeMap[fuelType] || fuelType;
 }

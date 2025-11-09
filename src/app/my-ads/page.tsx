@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import { Car, Eye, MessageCircle, Heart, MapPin, Calendar, Gauge, Fuel, Euro, Edit, Trash2, Plus, MoreVertical, Star, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { formatFuelType } from '@/utils/currency';
 
 interface UserCar {
   id: string;
@@ -388,7 +389,7 @@ export default function MyAdsPage() {
                             {car.fuelType && (
                               <div className="flex items-center">
                                 <Fuel className="w-4 h-4 mr-1" />
-                                {car.fuelType.charAt(0) + car.fuelType.slice(1).toLowerCase()}
+                                {formatFuelType(car.fuelType)}
                               </div>
                             )}
                           </div>

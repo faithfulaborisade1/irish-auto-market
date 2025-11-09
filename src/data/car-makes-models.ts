@@ -176,10 +176,10 @@ export const CAR_MAKES_MODELS: CarDatabase = {
   ],
   "Mercedes-Benz": [
     "180", "190", "200", "220", "230", "250", "300", "300 SL", "350", "450", "500", "560", "600",
-    "A-Class", "Actros", "AMG", "Axor", "B-Class", "C-Class", "CL-Class", "CLA Class", "CLC-Class", 
-    "CLE-Class", "CLK-Class", "CLS-Class", "E-Class", "EQA", "EQB", "EQC", "EQE", "EQS", "EQV", 
-    "G-Class", "GL Class", "GLA-Class", "GLB", "GLB-Class", "GLC-Class", "GLE-Class", "GLS-Class", 
-    "M-Class", "ML-Class", "R-Class", "S-Class", "SL-Class", "SLC", "SLK-Class", "Sprinter", 
+    "A-Class", "Actros", "AMG", "Axor", "B-Class", "C-Class", "Citan", "CL-Class", "CLA Class", "CLC-Class",
+    "CLE-Class", "CLK-Class", "CLS-Class", "E-Class", "EQA", "EQB", "EQC", "EQE", "EQS", "EQV",
+    "G-Class", "GL Class", "GLA-Class", "GLB", "GLB-Class", "GLC-Class", "GLE-Class", "GLS-Class",
+    "M-Class", "ML-Class", "R-Class", "S-Class", "SL-Class", "SLC", "SLK-Class", "Sprinter",
     "Sprinter Traveliner", "V-Class", "Viano", "Vito", "Vito Combi", "X-Class", "Other"
   ],
   "MG": [
@@ -202,9 +202,9 @@ export const CAR_MAKES_MODELS: CarDatabase = {
   ],
   "Nissan": [
     "180SX", "300 ZX", "350Z", "370Z", "Almera", "Almera Tino", "Ariya", "Cabstar", "Cube", "Dayz",
-    "Elgrand", "Figaro", "GT-R", "Interstar", "Juke", "Laurel", "Leaf", "March", "Maxima", "Micra", 
-    "Murano", "Navara", "Note", "NV200", "NV300", "Pathfinder", "Patrol", "Pixo", "President", 
-    "Primastar", "Primera", "Pulsar", "Qashqai", "Qashqai+2", "Serena", "Silvia", "Skyline", 
+    "Elgrand", "Figaro", "GT-R", "Interstar", "Juke", "Laurel", "Leaf", "March", "Maxima", "Micra",
+    "Murano", "Navara", "Note", "NV200", "NV300", "NV400", "Pathfinder", "Patrol", "Pixo", "President",
+    "Primastar", "Primera", "Pulsar", "Qashqai", "Qashqai+2", "Serena", "Silvia", "Skyline",
     "Stagea", "Terrano", "Tiida", "Townstar", "X-Trail", "ZX", "Other"
   ],
   "Opel": [

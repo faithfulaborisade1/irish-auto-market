@@ -12,6 +12,7 @@ import PromotionalRibbon from '@/components/PromotionalRibbon'
 import LoanittFinanceButton from '@/components/LoanittFinanceButton'
 import { CAR_MAKES_MODELS, getAllCarMakes, getModelsForMake } from '@/data/car-makes-models'
 import { IRISH_LOCATIONS } from '@/data/irish-locations'
+import { formatFuelType } from '@/utils/currency'
 
 // Price ranges for dropdown
 const PRICE_RANGES = [
@@ -611,7 +612,7 @@ export default function HomePage() {
                       </div>
                       <div className="text-sm">
                         <span className="text-gray-500">Fuel:</span>
-                        <span className="font-medium ml-1 capitalize">{car.fuelType?.toLowerCase()}</span>
+                        <span className="font-medium ml-1">{formatFuelType(car.fuelType)}</span>
                       </div>
                       <div className="text-sm">
                         <span className="text-gray-500">Transmission:</span>

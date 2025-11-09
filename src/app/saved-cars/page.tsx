@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import { Heart, Eye, MessageCircle, MapPin, Calendar, Gauge, Fuel, Euro, Trash2, Search, Filter } from 'lucide-react';
+import { formatFuelType } from '@/utils/currency';
 
 interface SavedCar {
   id: string;
@@ -343,7 +344,7 @@ export default function SavedCarsPage() {
                         {car.fuelType && (
                           <div className="flex items-center">
                             <Fuel className="w-4 h-4 mr-1" />
-                            {car.fuelType.charAt(0) + car.fuelType.slice(1).toLowerCase()}
+                            {formatFuelType(car.fuelType)}
                           </div>
                         )}
                         {car.transmission && (

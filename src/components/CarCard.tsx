@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Heart, Calendar, Gauge, Fuel, Settings, MapPin, Eye, MessageCircle, Star, Shield, User, CheckCircle } from 'lucide-react'
 import type { Car } from '@/types/car'
 import FavoriteButton from './FavoriteButton'
-import { formatPrice } from '@/utils/currency'
+import { formatPrice, formatFuelType } from '@/utils/currency'
 
 // ✅ FIXED: Updated interface to use centralized Car type
 interface CarCardProps {
@@ -277,7 +277,7 @@ const CarContent = React.memo(({ car, variant, showPerformance, showSavedDate }:
         </div>
         <div className="flex items-center text-gray-600">
           <Fuel className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 text-gray-400" />
-          <span className="capitalize">{car.fuelType?.toLowerCase() || 'N/A'}</span>
+          <span>{formatFuelType(car.fuelType)}</span>
         </div>
         <div className="flex items-center text-gray-600">
           <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 text-gray-400" />

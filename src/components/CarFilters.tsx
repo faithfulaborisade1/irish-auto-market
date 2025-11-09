@@ -111,8 +111,12 @@ const FUEL_TYPES = [
   { value: 'PETROL', label: 'Petrol' },
   { value: 'DIESEL', label: 'Diesel' },
   { value: 'HYBRID', label: 'Hybrid' },
+  { value: 'PETROL_HYBRID', label: 'Petrol Hybrid' },
+  { value: 'DIESEL_HYBRID', label: 'Diesel Hybrid' },
   { value: 'ELECTRIC', label: 'Electric' },
-  { value: 'PLUG_IN_HYBRID', label: 'Plug-in Hybrid' }
+  { value: 'PLUGIN_HYBRID', label: 'Plug-in Hybrid' },
+  { value: 'PETROL_PLUGIN_HYBRID', label: 'Petrol Plug-in Hybrid' },
+  { value: 'DIESEL_PLUGIN_HYBRID', label: 'Diesel Plug-in Hybrid' }
 ] as const
 
 const TRANSMISSION_TYPES = [

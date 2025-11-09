@@ -408,7 +408,11 @@ export default function PlaceAdPage() {
                   <option value="DIESEL">Diesel</option>
                   <option value="ELECTRIC">Electric</option>
                   <option value="HYBRID">Hybrid</option>
+                  <option value="PETROL_HYBRID">Petrol Hybrid</option>
+                  <option value="DIESEL_HYBRID">Diesel Hybrid</option>
                   <option value="PLUGIN_HYBRID">Plug-in Hybrid</option>
+                  <option value="PETROL_PLUGIN_HYBRID">Petrol Plug-in Hybrid</option>
+                  <option value="DIESEL_PLUGIN_HYBRID">Diesel Plug-in Hybrid</option>
                   <option value="LPG">LPG</option>
                   <option value="CNG">CNG</option>
                 </select>
@@ -477,6 +481,7 @@ export default function PlaceAdPage() {
                 >
                   <option value="">Select Seats</option>
                   <option value="2">2 Seats</option>
+                  <option value="3">3 Seats</option>
                   <option value="4">4 Seats</option>
                   <option value="5">5 Seats</option>
                   <option value="7">7 Seats</option>

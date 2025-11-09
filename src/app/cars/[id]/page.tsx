@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight, Phone, Mail, MapPin, Calendar, Gauge, Fuel, Sett
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import LoanittFinanceButton from '@/components/LoanittFinanceButton'
-import { formatPrice } from '@/utils/currency'
+import { formatPrice, formatFuelType } from '@/utils/currency'
 
 interface CarDetailPageProps {
   params: {
@@ -581,7 +581,7 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
                     </div>
                     <div className="bg-gray-50 rounded-lg p-4 text-center">
                       <Fuel className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                      <div className="font-semibold text-gray-900 capitalize">{car.fuelType?.toLowerCase() || 'N/A'}</div>
+                      <div className="font-semibold text-gray-900">{formatFuelType(car.fuelType)}</div>
                       <div className="text-sm text-gray-600">Fuel</div>
                     </div>
                     <div className="bg-gray-50 rounded-lg p-4 text-center">
@@ -808,7 +808,7 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
                         </div>
                         <div className="flex items-center">
                           <Fuel className="w-4 h-4 mr-1 flex-shrink-0" />
-                          <span className="capitalize">{otherCar.fuelType?.toLowerCase() || 'N/A'}</span>
+                          <span>{formatFuelType(otherCar.fuelType)}</span>
                         </div>
                         <div className="flex items-center">
                           <Settings className="w-4 h-4 mr-1 flex-shrink-0" />
