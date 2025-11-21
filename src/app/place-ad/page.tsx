@@ -741,14 +741,18 @@ export default function PlaceAdPage() {
             <textarea
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              rows={6}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              placeholder="Describe your car in detail. Include any special features, recent maintenance, reason for selling, etc."
+              rows={8}
+              maxLength={5000}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono text-sm"
+              placeholder="Example:&#10;&#10;Well-maintained 2019 Toyota Corolla with full service history.&#10;&#10;Features:&#10;- Reverse camera&#10;- Bluetooth&#10;- Air conditioning&#10;&#10;Perfect first car, drives beautifully."
               required
             />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Be detailed and honest to attract serious buyers</span>
-              <span>{formData.description.length}/2000</span>
+            <div className="space-y-1 mt-2">
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>💡 Tip: Use Enter to separate paragraphs & bullet points</span>
+                <span className={formData.description.length > 4500 ? 'text-orange-600 font-semibold' : ''}>{formData.description.length}/5000</span>
+              </div>
+              <p className="text-xs text-gray-500">Clear formatting helps buyers understand your car better</p>
             </div>
           </div>
 

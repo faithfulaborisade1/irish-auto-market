@@ -1129,13 +1129,16 @@ const BODY_TYPES = [
                   onChange={(e) => updateCarForm('description', e.target.value)}
                   rows={8}
                   maxLength={5000}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Detailed description of the car's condition, features, and any relevant information..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                  placeholder="Example format:&#10;&#10;This 2020 BMW 3 Series is in immaculate condition with full service history.&#10;&#10;Key Features:&#10;- Leather interior&#10;- Sat nav&#10;- Parking sensors&#10;- Climate control&#10;&#10;The car has been well maintained and drives perfectly."
                   required
                 />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>Be detailed and honest to attract serious buyers</span>
-                  <span>{carForm.description.length}/5000</span>
+                <div className="space-y-1 mt-2">
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>💡 Tip: Press Enter twice to start a new paragraph</span>
+                    <span className={carForm.description.length > 4500 ? 'text-orange-600 font-semibold' : ''}>{carForm.description.length}/5000</span>
+                  </div>
+                  <p className="text-xs text-gray-500">Use clear paragraphs and bullet points for better readability</p>
                 </div>
               </div>
 

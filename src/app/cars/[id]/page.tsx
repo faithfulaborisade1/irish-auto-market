@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight, Phone, Mail, MapPin, Calendar, Gauge, Fuel, Sett
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import LoanittFinanceButton from '@/components/LoanittFinanceButton'
-import { formatPrice, formatFuelType } from '@/utils/currency'
+import { formatPrice, formatFuelType, formatDescription } from '@/utils/currency'
 
 interface CarDetailPageProps {
   params: {
@@ -694,8 +694,8 @@ export default function CarDetailPage({ params }: CarDetailPageProps) {
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                   <h2 className="text-xl font-semibold mb-4">Description</h2>
-                  <div className="text-gray-700 leading-relaxed">
-                    {car.description || 'No description available for this vehicle.'}
+                  <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {formatDescription(car.description)}
                   </div>
                 </div>
               </div>

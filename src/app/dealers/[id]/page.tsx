@@ -363,7 +363,7 @@ export default function DealerDetailPage() {
                 </div>
               </div>
 
-              <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4 leading-relaxed">{dealer.description}</p>
+              <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4 leading-relaxed whitespace-pre-wrap">{dealer.description}</p>
 
               {dealer.specialties.length > 0 && (
                 <div className="flex flex-wrap gap-1 sm:gap-2 mb-3 sm:mb-4">
@@ -538,7 +538,7 @@ export default function DealerDetailPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-6">About {dealer.businessName}</h2>
 
               <div className="prose prose-gray max-w-none">
-                <p className="text-lg text-gray-700 leading-relaxed mb-6">
+                <p className="text-lg text-gray-700 leading-relaxed mb-6 whitespace-pre-wrap">
                   {dealer.aboutUs || dealer.description}
                 </p>
 

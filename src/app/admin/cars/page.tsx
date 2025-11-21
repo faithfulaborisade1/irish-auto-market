@@ -995,7 +995,7 @@ export default function AdminCarsManagement() {
                             {/* Description */}
                             <div className="md:col-span-2">
                               <h4 className="text-sm font-medium text-gray-900 mb-2">Description</h4>
-                              <p className="text-xs text-gray-600 line-clamp-3">
+                              <p className="text-xs text-gray-600 line-clamp-3 whitespace-pre-wrap">
                                 {car.description || 'No description provided'}
                               </p>
                             </div>
@@ -1662,9 +1662,10 @@ export default function AdminCarsManagement() {
               {selectedCar.description && (
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 mb-3">Description</h4>
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
                     {selectedCar.description}
                   </p>
+                  <p className="text-xs text-gray-500 mt-2 italic">Note: Long descriptions may be reformatted for readability on public pages</p>
                 </div>
               )}
 

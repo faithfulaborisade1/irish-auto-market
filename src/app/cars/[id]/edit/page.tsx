@@ -520,10 +520,17 @@ export default function EditCarPage({ params }: EditCarPageProps) {
             <textarea
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              rows={6}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              placeholder="Describe your car's condition, features, service history, etc."
+              rows={8}
+              maxLength={5000}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono text-sm"
+              placeholder="Example:&#10;&#10;Excellent condition with full service history.&#10;&#10;Features:&#10;- Sat nav&#10;- Heated seats&#10;- Parking sensors&#10;&#10;Well maintained and drives perfectly."
             />
+            <div className="space-y-1 mt-2">
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>💡 Use Enter to separate paragraphs for better readability</span>
+                <span className={formData.description.length > 4500 ? 'text-orange-600 font-semibold' : ''}>{formData.description.length}/5000</span>
+              </div>
+            </div>
           </div>
 
           {/* Error Display */}
