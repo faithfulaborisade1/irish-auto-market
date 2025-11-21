@@ -714,7 +714,13 @@ export default function AdminCarsManagement() {
                 <option value="DIESEL">Diesel</option>
                 <option value="ELECTRIC">Electric</option>
                 <option value="HYBRID">Hybrid</option>
+                <option value="PETROL_HYBRID">Petrol Hybrid</option>
+                <option value="DIESEL_HYBRID">Diesel Hybrid</option>
                 <option value="PLUGIN_HYBRID">Plug-in Hybrid</option>
+                <option value="PETROL_PLUGIN_HYBRID">Petrol Plug-in Hybrid</option>
+                <option value="DIESEL_PLUGIN_HYBRID">Diesel Plug-in Hybrid</option>
+                <option value="LPG">LPG</option>
+                <option value="CNG">CNG</option>
               </select>
 
               {/* Price Range */}
@@ -1284,7 +1290,13 @@ export default function AdminCarsManagement() {
                       <option value="DIESEL">Diesel</option>
                       <option value="ELECTRIC">Electric</option>
                       <option value="HYBRID">Hybrid</option>
+                      <option value="PETROL_HYBRID">Petrol Hybrid</option>
+                      <option value="DIESEL_HYBRID">Diesel Hybrid</option>
                       <option value="PLUGIN_HYBRID">Plug-in Hybrid</option>
+                      <option value="PETROL_PLUGIN_HYBRID">Petrol Plug-in Hybrid</option>
+                      <option value="DIESEL_PLUGIN_HYBRID">Diesel Plug-in Hybrid</option>
+                      <option value="LPG">LPG</option>
+                      <option value="CNG">CNG</option>
                     </select>
                   </div>
 
@@ -1337,6 +1349,7 @@ export default function AdminCarsManagement() {
                       <option value="SUV">SUV</option>
                       <option value="COUPE">Coupe</option>
                       <option value="CONVERTIBLE">Convertible</option>
+                      <option value="MPV">MPV</option>
                       <option value="VAN">Van</option>
                       <option value="PICKUP">Pickup</option>
                       <option value="OTHER">Other</option>
