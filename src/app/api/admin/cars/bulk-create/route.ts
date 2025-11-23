@@ -55,8 +55,8 @@ function validateSingleCar(car: any, index: number) {
   if (!car.year || car.year < 1900 || car.year > new Date().getFullYear() + 1) {
     errors.push(`${prefix} Valid year is required`);
   }
-  if (!car.price || car.price < 0 || car.price > 1000000) {
-    errors.push(`${prefix} Valid price is required (€0 - €1,000,000)`);
+  if (!car.price || car.price < 0 || car.price > 500000) {
+    errors.push(`${prefix} Valid price is required (€0 - €500,000)`);
   }
   if (!car.title?.trim() || car.title.length > 200) {
     errors.push(`${prefix} Title is required (max 200 characters)`);
@@ -81,8 +81,8 @@ function validateSingleCar(car: any, index: number) {
   }
   
   // Optional field validation
-  if (car.mileage && (car.mileage < 0 || car.mileage > 1000000)) {
-    errors.push(`${prefix} Invalid mileage`);
+  if (car.mileage && (car.mileage < 0 || car.mileage > 600000)) {
+    errors.push(`${prefix} Invalid mileage (max 600,000 km)`);
   }
   if (car.engineSize && (car.engineSize < 0.1 || car.engineSize > 10)) {
     errors.push(`${prefix} Invalid engine size`);

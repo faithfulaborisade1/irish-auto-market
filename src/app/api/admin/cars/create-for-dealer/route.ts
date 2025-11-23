@@ -15,8 +15,8 @@ function validateCarData(data: any) {
   if (!data.year || data.year < 1900 || data.year > new Date().getFullYear() + 1) {
     errors.push('Valid year is required')
   }
-  if (!data.price || data.price < 0 || data.price > 1000000) {
-    errors.push('Valid price is required (€0 - €1,000,000)')
+  if (!data.price || data.price < 0 || data.price > 500000) {
+    errors.push('Valid price is required (€0 - €500,000)')
   }
   if (!data.title?.trim() || data.title.length > 200) {
     errors.push('Title is required (max 200 characters)')
@@ -36,8 +36,8 @@ function validateCarData(data: any) {
   }
   
   // Optional field validation
-  if (data.mileage && (data.mileage < 0 || data.mileage > 1000000)) {
-    errors.push('Invalid mileage')
+  if (data.mileage && (data.mileage < 0 || data.mileage > 600000)) {
+    errors.push('Invalid mileage (max 600,000 km)')
   }
   if (data.engineSize && (data.engineSize < 0.1 || data.engineSize > 10)) {
     errors.push('Invalid engine size')

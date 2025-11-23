@@ -41,7 +41,9 @@ const PRICE_RANGES = [
   { value: '125000', label: '€125,000' },
   { value: '150000', label: '€150,000' },
   { value: '200000', label: '€200,000' },
-  { value: '250000', label: '€250,000' }
+  { value: '250000', label: '€250,000' },
+  { value: '300000', label: '€300,000' },
+  { value: '350000', label: '€350,000' }
 ]
 
 // Year ranges for dropdown

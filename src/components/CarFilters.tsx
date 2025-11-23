@@ -60,7 +60,10 @@ const PRICE_OPTIONS = [
   { value: '75000', label: '€75,000' },
   { value: '100000', label: '€100,000' },
   { value: '150000', label: '€150,000' },
-  { value: '200000', label: '€200,000' }
+  { value: '200000', label: '€200,000' },
+  { value: '250000', label: '€250,000' },
+  { value: '300000', label: '€300,000' },
+  { value: '350000', label: '€350,000' }
 ] as const
 
 const YEAR_OPTIONS = Array.from({ length: 26 }, (_, i) => {
@@ -78,7 +81,13 @@ const MILEAGE_OPTIONS = [
   { value: '100000', label: '100,000 km' },
   { value: '150000', label: '150,000 km' },
   { value: '200000', label: '200,000 km' },
-  { value: '250000', label: '250,000 km' }
+  { value: '250000', label: '250,000 km' },
+  { value: '300000', label: '300,000 km' },
+  { value: '350000', label: '350,000 km' },
+  { value: '400000', label: '400,000 km' },
+  { value: '450000', label: '450,000 km' },
+  { value: '500000', label: '500,000 km' },
+  { value: '550000', label: '550,000 km' }
 ] as const
 
 const BODY_TYPES = [
