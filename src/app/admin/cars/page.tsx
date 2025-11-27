@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Car, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Eye, 
+import {
+  Car,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
   Search,
   Filter,
   RefreshCw,
@@ -31,6 +31,7 @@ import {
   ExternalLink,
   MoreVertical
 } from 'lucide-react';
+import CarPhotoManager from '@/components/admin/CarPhotoManager';
 
 interface CarUser {
   id: string;
@@ -157,6 +158,7 @@ export default function AdminCarsManagement() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFormData, setEditFormData] = useState<EditFormData | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [editModalTab, setEditModalTab] = useState<'details' | 'photos'>('details');
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -379,6 +381,7 @@ export default function AdminCarsManagement() {
       locationEircode: location?.eircode || location?.postalCode || ''
     });
     setSelectedCar(car);
+    setEditModalTab('details');
     setShowEditModal(true);
   };
 
@@ -1146,11 +1149,11 @@ export default function AdminCarsManagement() {
       </div>
 
       {/* Edit Car Modal */}
-      {showEditModal && editFormData && (
+      {showEditModal && editFormData && selectedCar && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Edit Car: {editFormData.year} {editFormData.make} {editFormData.model}
                 </h3>
@@ -1165,10 +1168,38 @@ export default function AdminCarsManagement() {
                   <X className="w-5 h-5" />
                 </button>
               </div>
+
+              {/* Tabs */}
+              <div className="flex gap-2 border-b border-gray-200">
+                <button
+                  onClick={() => setEditModalTab('details')}
+                  className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
+                    editModalTab === 'details'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Edit className="w-4 h-4 inline mr-2" />
+                  Car Details
+                </button>
+                <button
+                  onClick={() => setEditModalTab('photos')}
+                  className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 ${
+                    editModalTab === 'photos'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Image className="w-4 h-4 inline mr-2" />
+                  Manage Photos
+                </button>
+              </div>
             </div>
 
             <div className="p-6">
-              <form onSubmit={(e) => { e.preventDefault(); handleEditSubmit(); }} className="space-y-6">
+              {/* Details Tab */}
+              {editModalTab === 'details' && (
+                <form onSubmit={(e) => { e.preventDefault(); handleEditSubmit(); }} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Title */}
                   <div className="md:col-span-2">
@@ -1557,6 +1588,17 @@ export default function AdminCarsManagement() {
                   </button>
                 </div>
               </form>
+              )}
+
+              {/* Photos Tab */}
+              {editModalTab === 'photos' && (
+                <CarPhotoManager
+                  carId={selectedCar.id}
+                  onPhotosUpdated={() => {
+                    fetchCars();
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>
