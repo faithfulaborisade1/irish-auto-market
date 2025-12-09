@@ -127,3 +127,5 @@ prisma/seed.ts
 
 scripts/
 *.tsbuildinfo
+
+.vercel

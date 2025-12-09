@@ -71,20 +71,29 @@ export default function HomePage() {
 
   // Available models based on selected make
   const availableModels = searchFilters.make ? getModelsForMake(searchFilters.make) : []
-  
+
   // Available areas based on selected county
   const availableAreas = searchFilters.county ? IRISH_LOCATIONS[searchFilters.county as keyof typeof IRISH_LOCATIONS] || [] : []
+
+  // Fetch car count
+  const fetchCarCount = async () => {
+    try {
+      const countResponse = await fetch('/api/cars/count')
+      const countData = await countResponse.json()
+      if (countData.success) {
+        setCarCount(countData.count)
+      }
+    } catch (error) {
+      console.error('Error fetching car count:', error)
+    }
+  }
 
   // Fetch cars and count on client side only
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch count first (fast query, updates search button immediately)
-        const countResponse = await fetch('/api/cars/count')
-        const countData = await countResponse.json()
-        if (countData.success) {
-          setCarCount(countData.count)
-        }
+        // Fetch count
+        await fetchCarCount()
 
         // Fetch featured cars specifically for homepage display
         const carsResponse = await fetch('/api/cars?featured=true&limit=6')
@@ -109,6 +118,10 @@ export default function HomePage() {
     }
 
     fetchData()
+
+    // Refetch car count every 30 seconds to keep it updated
+    const interval = setInterval(fetchCarCount, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   // Reset model when make changes

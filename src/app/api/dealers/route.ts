@@ -32,7 +32,10 @@ export async function GET(request: NextRequest) {
     // Build where clause for dealers
     const where: any = {
       role: 'DEALER',
-      status: 'ACTIVE'
+      status: 'ACTIVE',
+      dealerProfile: {
+        isNot: null // Must have dealer profile
+      }
     };
 
     // Add search filter - search across multiple fields
@@ -123,7 +126,7 @@ export async function GET(request: NextRequest) {
         dealerProfile: true
       },
       skip: (page - 1) * limit,
-      take: limit * 2, // Fetch more to account for car count filtering
+      take: limit,
       orderBy
     });
 
@@ -195,47 +198,18 @@ export async function GET(request: NextRequest) {
       filteredDealers.sort((a, b) => b.carCount - a.carCount);
     }
 
-    // Apply pagination after filtering
-    const paginatedDealers = filteredDealers.slice(0, limit);
-
-    // Get total count for pagination
-    // Note: For count queries with nested searches, we need to build a simpler where clause
-    let countWhere: any = {
-      role: 'DEALER',
-      status: 'ACTIVE'
-    };
-
-    // For count query, we need to handle search differently since we can't use include
-    if (search && search.trim()) {
-      const searchTerm = search.trim();
-      // We'll get an approximate count by searching user fields only
-      // The exact pagination might be slightly off, but it's better than an error
-      countWhere.OR = [
-        { firstName: { contains: searchTerm, mode: 'insensitive' } },
-        { lastName: { contains: searchTerm, mode: 'insensitive' } },
-        { email: { contains: searchTerm, mode: 'insensitive' } }
-      ];
-    }
-
-    // Add county filter for count
-    if (county && county !== 'All Counties') {
-      countWhere.location = {
-        path: ['county'],
-        equals: county
-      };
-    }
-
-    const totalCount = await prisma.user.count({ where: countWhere });
+    // Get total count for pagination - use the same where clause as the main query
+    const totalCount = await prisma.user.count({ where });
 
     console.log(`Total dealers found: ${totalCount}`);
 
     const response = {
-      dealers: paginatedDealers,
+      dealers: filteredDealers,
       pagination: {
         page,
         limit,
-        total: filteredDealers.length,
-        pages: Math.ceil(filteredDealers.length / limit)
+        total: totalCount,
+        pages: Math.ceil(totalCount / limit)
       }
     };
 
