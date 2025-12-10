@@ -93,8 +93,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 👨‍💻 Author
 
 **Faithful Aborisade**
-- Email: your-email@example.com
-- LinkedIn: [Your LinkedIn Profile]
 
 ## 🤝 Contributing
 
